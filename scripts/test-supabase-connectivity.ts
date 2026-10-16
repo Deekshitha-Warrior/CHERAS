@@ -154,7 +154,7 @@ async function main() {
   // RPC: complete_pos_sale_with_inventory (Signature Verification via App Client)
   await runTest('RPC: complete_pos_sale_with_inventory (Exact Signature)', async () => {
     // Calling with empty items array tests that the RPC exists, parses parameters, and validates
-    const { data, error } = await appClient.rpc('complete_pos_sale_with_inventory', {
+    const { error } = await appClient.rpc('complete_pos_sale_with_inventory', {
       p_customer_name: 'Connectivity Probe',
       p_phone: '9876543210',
       p_address: 'Store Counter',
@@ -266,7 +266,7 @@ async function main() {
     console.log('\n─── 4. Database Indexes Verification (via Admin Client) ───')
 
     await runTest('Index: customer_birthdays_phone_idx', async () => {
-      const { data, error } = await adminClient.rpc('exec_sql', {
+      const { error } = await adminClient.rpc('exec_sql', {
         sql: `
           SELECT indexname FROM pg_indexes 
           WHERE tablename = 'customer_birthdays' AND indexname = 'customer_birthdays_phone_idx';
@@ -277,7 +277,7 @@ async function main() {
     })
 
     await runTest('Index: idx_inv_movements_ref', async () => {
-      const { data, error } = await adminClient.rpc('exec_sql', {
+      const { error } = await adminClient.rpc('exec_sql', {
         sql: `
           SELECT indexname FROM pg_indexes 
           WHERE tablename = 'inventory_movements' AND indexname = 'idx_inv_movements_ref';
@@ -288,7 +288,7 @@ async function main() {
     })
 
     await runTest('Index: barcode_registry indexes', async () => {
-      const { data, error } = await adminClient.rpc('exec_sql', {
+      const { error } = await adminClient.rpc('exec_sql', {
         sql: `
           SELECT indexname FROM pg_indexes 
           WHERE tablename = 'barcode_registry';

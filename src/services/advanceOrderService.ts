@@ -101,6 +101,12 @@ const saveLocalPayments = (payments: AdvancePayment[]) => {
   } catch { /* ignore */ }
 }
 
+const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
+  const isCompleted = row.status === 'completed'
+  const total = Number(row.total_amount || 0)
+  const deposit = Number(row.deposit_amount || 0)
+  const calculatedRemaining = Number(row.remaining_balance ?? (total - deposit))
+
   const subtotalRaw = row.subtotal !== null && row.subtotal !== undefined ? Number(row.subtotal) : undefined
   const deliveryCharge = Number(row.delivery_charge || 0)
   const discountAmount = Number(row.discount_amount || 0)

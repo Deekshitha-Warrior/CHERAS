@@ -403,8 +403,46 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
   }
 
   const productRows = (order: AdvanceOrder) => order.products.length ? order.products : [{ name: order.product_name, quantity: 1, base_price: order.total_amount, line_total: order.total_amount, unit: 'piece', unit_type: 'unit' }]
-  const invoiceFile = (order: AdvanceOrder) => invoicePdfFile({ invoiceNo: order.invoice_number || order.deposit_id, date: order.completed_at || new Date().toISOString(), customerName: order.customer_name, phone: order.phone, address: order.address, items: productRows(order), subtotal: order.total_amount, shipping: 0, total: order.total_amount, paymentMode: order.final_payment_method || 'Paid' })
-  const printFinal = (order: AdvanceOrder) => printThermalReceipt({ invoiceNo: order.invoice_number || order.deposit_id, date: order.completed_at || new Date().toISOString(), customerName: order.customer_name, phone: order.phone, items: productRows(order).map(item => ({ name: String(item.name || 'Product'), qty: Number(item.quantity || 1), unit: String(item.unit || 'piece'), price: Number(item.base_price || 0), line_total: Number(item.line_total || 0) })), subtotal: order.total_amount, shipping: 0, total: order.total_amount })
+  const invoiceFile = (order: AdvanceOrder) => invoicePdfFile({
+    invoiceNo: order.invoice_number || order.deposit_id,
+    date: order.completed_at || new Date().toISOString(),
+    customerName: order.customer_name,
+    phone: order.phone,
+    address: order.address,
+    items: productRows(order),
+    subtotal: order.subtotal ?? order.total_amount,
+    shipping: order.delivery_charge ?? 0,
+    couponDiscount: order.coupon_discount ?? 0,
+    couponCode: order.coupon_code,
+    manualDiscount: order.manual_discount ?? 0,
+    cgstAmount: order.cgst_amount,
+    sgstAmount: order.sgst_amount,
+    gstRate: order.gst_rate,
+    total: order.total_amount,
+    paymentMode: order.final_payment_method || 'Paid'
+  })
+  const printFinal = (order: AdvanceOrder) => printThermalReceipt({
+    invoiceNo: order.invoice_number || order.deposit_id,
+    date: order.completed_at || new Date().toISOString(),
+    customerName: order.customer_name,
+    phone: order.phone,
+    items: productRows(order).map(item => ({
+      name: String(item.name || 'Product'),
+      qty: Number(item.quantity || 1),
+      unit: String(item.unit || 'piece'),
+      price: Number(item.base_price || 0),
+      line_total: Number(item.line_total || 0)
+    })),
+    subtotal: order.subtotal ?? order.total_amount,
+    shipping: order.delivery_charge ?? 0,
+    couponDiscount: order.coupon_discount ?? 0,
+    couponCode: order.coupon_code,
+    manualDiscount: order.manual_discount ?? 0,
+    cgstAmount: order.cgst_amount,
+    sgstAmount: order.sgst_amount,
+    gstRate: order.gst_rate,
+    total: order.total_amount
+  })
   
   const whatsappDepositReceipt = (order: AdvanceOrder) => {
     const message = buildAdvanceDepositWhatsAppMessage({
@@ -749,44 +787,142 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
 
           {/* Scrollable Drawer Body */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-6">
-            <div className="grid grid-cols-2 gap-3">
-              {[
+            {(() => {
+              const subtotal = Number(selected.subtotal ?? (
+                selected.products && selected.products.length > 0
+                  ? selected.products.reduce((acc, p) => acc + (Number(p.quantity ?? p.qty ?? 1) * Number(p.base_price ?? p.price ?? 0)), 0)
+                  : selected.total_amount
+              )) || selected.total_amount
+
+              const deliveryCharge = Number(selected.delivery_charge || 0)
+              const couponDiscount = Number(selected.coupon_discount || (selected.coupon_code ? selected.discount_amount : 0) || 0)
+              const manualDiscount = Number(selected.manual_discount || (!selected.coupon_code && !selected.coupon_discount ? selected.discount_amount : 0) || 0)
+
+              let totalGst = Number(selected.total_gst || 0)
+              let cgstAmount = Number(selected.cgst_amount || 0)
+              let sgstAmount = Number(selected.sgst_amount || 0)
+              let gstRate = Number(selected.gst_rate || 0)
+
+              if (totalGst === 0 && cgstAmount === 0 && sgstAmount === 0) {
+                const diff = Math.round((selected.total_amount - (subtotal + deliveryCharge - couponDiscount - manualDiscount)) * 100) / 100
+                if (diff > 0) {
+                  totalGst = diff
+                  cgstAmount = Math.round((diff / 2) * 100) / 100
+                  sgstAmount = Math.round((diff / 2) * 100) / 100
+                  const baseForGst = Math.max(1, subtotal - couponDiscount - manualDiscount)
+                  gstRate = Math.round((totalGst / baseForGst) * 10000) / 100
+                }
+              } else if (totalGst > 0 && cgstAmount === 0 && sgstAmount === 0) {
+                cgstAmount = Math.round((totalGst / 2) * 100) / 100
+                sgstAmount = Math.round((totalGst / 2) * 100) / 100
+              }
+
+              const gstLabel = gstRate > 0 ? ` (${(gstRate / 2).toFixed(1).replace(/\.0$/, '')}%)` : ''
+
+              const infoCards: Array<[string, string]> = [
                 ['Customer', selected.customer_name],
                 ['Phone', formatPhoneDisplay(selected.phone)],
                 ['Address', selected.address || '-'],
                 ['Product', selected.product_name],
                 ['Category', selected.category || '-'],
-                ['Total', formatCurrency(selected.total_amount)],
-                selected.status === 'completed'
-                  ? ['Initial Deposit', formatCurrency(selected.deposit_amount)]
-                  : ['Deposit Paid', formatCurrency(selected.deposit_amount)],
-                ...(selected.status === 'completed' ? (() => {
-                  const remPayment = payments.find(p => p.payment_type === 'remaining')
-                  const actualFinalPaid = remPayment ? Number(remPayment.amount) : Math.max(0, selected.total_amount - selected.deposit_amount)
-                  const totalPaid = selected.deposit_amount + actualFinalPaid
-                  const discountGiven = Math.max(0, Math.round((selected.total_amount - totalPaid) * 100) / 100)
-                  return [
-                    ['Final Payment', formatCurrency(actualFinalPaid)],
-                    ...(discountGiven > 0.01 ? [['Discount Given', `-${formatCurrency(discountGiven)}`]] : []),
-                    ['Remaining Balance', '₹0.00 (Fully Settled)'],
-                  ]
-                })() : [
-                  ['Remaining Balance', formatCurrency(selected.remaining_balance)],
-                ]),
                 ['Delivery Date', new Date(`${selected.expected_delivery_date}T00:00:00`).toLocaleDateString('en-IN')],
-                ['Created Date', new Date(selected.created_at).toLocaleDateString('en-IN')],
-                ['Created Time', new Date(selected.created_at).toLocaleTimeString('en-IN')],
-                ['Created By', selected.created_by_name || '-'],
-                ['Current Status', STATUS_LABELS[selected.status]],
-                ['Invoice Number', selected.invoice_number || 'Not generated'],
                 ['Reference No', selected.reference_number || '—'],
-              ].map(([k, v]) => (
-                <div key={k} className="rounded-xl bg-slate-50 p-3 border border-slate-200">
-                  <p className="text-[10px] font-black uppercase text-gray-500">{k}</p>
-                  <p className="mt-1 break-words text-sm font-bold text-gray-900">{v}</p>
-                </div>
-              ))}
-            </div>
+                ['Invoice Number', selected.invoice_number || 'Not generated'],
+                ['Created Date', new Date(selected.created_at).toLocaleDateString('en-IN')],
+                ['Current Status', STATUS_LABELS[selected.status]],
+              ]
+
+              return (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    {infoCards.map(([k, v]) => (
+                      <div key={k} className="rounded-xl bg-slate-50 p-3 border border-slate-200">
+                        <p className="text-[10px] font-black uppercase text-gray-500">{k}</p>
+                        <p className="mt-1 break-words text-sm font-bold text-gray-900">{v}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Financial Breakdown Card */}
+                  <div className="rounded-xl border border-gray-200 bg-[#FBFAF6] p-4 space-y-2.5">
+                    <p className="text-[11px] font-black uppercase tracking-wider text-[#7B1E2B]">Financial Summary & Taxes</p>
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between text-gray-700">
+                        <span>Subtotal</span>
+                        <span className="font-bold text-gray-900">{formatCurrency(subtotal)}</span>
+                      </div>
+                      {deliveryCharge > 0 && (
+                        <div className="flex justify-between text-gray-700">
+                          <span>Delivery Charges</span>
+                          <span className="font-bold text-gray-900">+{formatCurrency(deliveryCharge)}</span>
+                        </div>
+                      )}
+                      {couponDiscount > 0 && (
+                        <div className="flex justify-between text-emerald-700">
+                          <span>Coupon Discount {selected.coupon_code ? `(${selected.coupon_code})` : ''}</span>
+                          <span className="font-bold">-{formatCurrency(couponDiscount)}</span>
+                        </div>
+                      )}
+                      {manualDiscount > 0 && (
+                        <div className="flex justify-between text-emerald-700">
+                          <span>Manual Discount</span>
+                          <span className="font-bold">-{formatCurrency(manualDiscount)}</span>
+                        </div>
+                      )}
+                      {cgstAmount > 0 && (
+                        <div className="flex justify-between text-gray-700">
+                          <span>CGST{gstLabel}</span>
+                          <span className="font-bold text-gray-900">+{formatCurrency(cgstAmount)}</span>
+                        </div>
+                      )}
+                      {sgstAmount > 0 && (
+                        <div className="flex justify-between text-gray-700">
+                          <span>SGST{gstLabel}</span>
+                          <span className="font-bold text-gray-900">+{formatCurrency(sgstAmount)}</span>
+                        </div>
+                      )}
+                      <div className="border-t border-gray-200 pt-2 flex justify-between font-black text-sm text-gray-900">
+                        <span>Total Order Amount</span>
+                        <span>{formatCurrency(selected.total_amount)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-700">
+                        <span>Advance Paid</span>
+                        <span className="font-bold text-gray-900">{formatCurrency(selected.deposit_amount)}</span>
+                      </div>
+                      <div className="border-t border-dashed border-amber-300 pt-2 flex justify-between font-black text-sm text-[#B45309]">
+                        <span>Remaining Balance</span>
+                        <span>{selected.status === 'completed' ? '₹0.00 (Fully Settled)' : formatCurrency(selected.remaining_balance)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Itemized Products breakdown if available */}
+                  {Array.isArray(selected.products) && selected.products.length > 0 && (
+                    <div className="rounded-xl border border-gray-200 bg-white p-3.5 space-y-2">
+                      <p className="text-[11px] font-black uppercase text-gray-600">Booked Items ({selected.products.length})</p>
+                      <div className="divide-y divide-gray-100 text-xs">
+                        {selected.products.map((p, idx) => {
+                          const pName = String(p.name ?? p.product_name ?? 'Item')
+                          const pQty = Number(p.quantity ?? p.qty ?? 1)
+                          const pRate = Number(p.base_price ?? p.price ?? 0)
+                          const pTotal = Number(p.line_total ?? (pQty * pRate))
+                          const pUnit = p.unit ? ` (${p.unit})` : ''
+                          return (
+                            <div key={idx} className="py-1.5 flex justify-between items-center">
+                              <div className="min-w-0 pr-2">
+                                <p className="font-bold text-gray-900 truncate">{pName}</p>
+                                <p className="text-[10px] text-gray-500">{pQty}{pUnit} × {formatCurrency(pRate)}</p>
+                              </div>
+                              <span className="font-black text-gray-900 shrink-0">{formatCurrency(pTotal)}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )
+            })()}
 
             {selected.remarks && (
               <div className="rounded-xl border border-gray-200 bg-[#F9FAFB] p-3.5">

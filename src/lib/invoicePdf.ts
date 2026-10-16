@@ -15,9 +15,15 @@ export type InvoicePdfData = {
   subtotal: number
   shipping: number
   total: number
+  discount?: number
   discountAmount?: number
+  couponDiscount?: number
+  manualDiscount?: number
   manualDiscountAmount?: number
   gstAmount?: number
+  cgstAmount?: number
+  sgstAmount?: number
+  gstRate?: number
   couponCode?: string | null
   paymentMode?: string
   gstin?: string
@@ -144,10 +150,20 @@ export function createInvoicePdf(data: InvoicePdfData): Blob {
 
   y = Math.max(y + 6, 150)
   const rows: Array<[string, string, string]> = [['Subtotal', money(data.subtotal), ink]]
-  if ((data.discountAmount || 0) > 0) rows.push([`Coupon${data.couponCode ? ` (${data.couponCode})` : ''}`, `-${money(data.discountAmount || 0)}`, '#D4AF37'])
-  if ((data.manualDiscountAmount || 0) > 0) rows.push(['Discount', `-${money(data.manualDiscountAmount || 0)}`, '#D4AF37'])
-  if ((data.gstAmount || 0) > 0) rows.push(['GST', money(data.gstAmount || 0), ink])
-  rows.push(['Delivery', (data.shipping || 0) > 0 ? money(data.shipping) : 'FREE', ink])
+  const couponDisc = (data.couponDiscount ?? data.discountAmount ?? 0)
+  const manualDisc = (data.manualDiscount ?? data.manualDiscountAmount ?? 0)
+  const rawCgst = data.cgstAmount ?? (data.gstAmount ? Math.round(((data.gstAmount || 0) / 2) * 100) / 100 : 0)
+  const rawSgst = data.sgstAmount ?? (data.gstAmount ? Math.round(((data.gstAmount || 0) / 2) * 100) / 100 : 0)
+  const rateLabel = data.gstRate ? ` (${(data.gstRate / 2).toFixed(1).replace(/\.0$/, '')}%)` : ''
+
+  if ((data.shipping || 0) > 0) rows.push(['Delivery Charges', `+${money(data.shipping)}`, ink])
+  if (couponDisc > 0) rows.push([`Coupon Disc.${data.couponCode ? ` (${data.couponCode})` : ''}`, `-${money(couponDisc)}`, '#D4AF37'])
+  if (manualDisc > 0) rows.push(['Manual Discount', `-${money(manualDisc)}`, '#D4AF37'])
+  if (rawCgst > 0) rows.push([`CGST${rateLabel}`, `+${money(rawCgst)}`, ink])
+  if (rawSgst > 0) rows.push([`SGST${rateLabel}`, `+${money(rawSgst)}`, ink])
+  if (!rawCgst && !rawSgst && (data.gstAmount || 0) > 0) {
+    rows.push(['GST', `+${money(data.gstAmount || 0)}`, ink])
+  }
   doc.setFontSize(9)
   rows.forEach(([label, value, color]) => { doc.setFont('helvetica', 'normal'); doc.setTextColor(color); doc.text(label, 143, y, { align: 'right' }); doc.text(value, right - 4, y, { align: 'right' }); y += 7 })
   doc.setDrawColor(primaryColor)

@@ -17,8 +17,12 @@ export interface ThermalReceiptData {
   subtotal: number
   shipping: number
   couponDiscount?: number
+  couponCode?: string | null
   manualDiscount?: number
   totalGst?: number
+  cgstAmount?: number
+  sgstAmount?: number
+  gstRate?: number
   total: number
   storeName?: string
   storePhone?: string
@@ -58,21 +62,42 @@ export function printThermalReceipt(data: ThermalReceiptData) {
         <style>
           @page {
             margin: 0;
+            margin-left: 0;
             size: 80mm auto;
           }
+          @media print {
+            @page {
+              margin: 0;
+              margin-left: 0;
+              size: 80mm auto;
+            }
+            html, body {
+              width: 76mm !important;
+              max-width: 76mm !important;
+              margin: 0 !important;
+              margin-left: 0 !important;
+              margin-right: auto !important;
+              padding: 2mm 1.5mm !important;
+              float: left !important;
+            }
+          }
           * {
-            font-weight: normal !important;
             box-sizing: border-box;
           }
-          body {
-            font-family: 'Courier New', Courier, monospace, sans-serif;
-            font-size: 12px;
+          html, body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 11px;
             color: #000;
-            font-weight: normal;
             margin: 0;
-            padding: 4mm;
-            width: 80mm;
+            margin-left: 0;
+            margin-right: auto;
+            padding: 3mm 2mm;
+            width: 76mm;
+            max-width: 76mm;
             box-sizing: border-box;
+            text-align: left;
+            float: left;
+            line-height: 1.35;
           }
           .text-center { text-align: center; }
           .text-right { text-align: right; }
@@ -81,14 +106,15 @@ export function printThermalReceipt(data: ThermalReceiptData) {
           .mb-2 { margin-bottom: 8px; }
           .mt-1 { margin-top: 4px; }
           .mt-2 { margin-top: 8px; }
-          .border-bottom { border-bottom: 1px dashed #000; padding-bottom: 4px; margin-bottom: 4px; }
-          .border-top { border-top: 1px dashed #000; padding-top: 4px; margin-top: 4px; }
+          .border-bottom { border-bottom: 1.5px dashed #000; padding-bottom: 4px; margin-bottom: 4px; }
+          .border-top { border-top: 1.5px dashed #000; padding-top: 4px; margin-top: 4px; }
           table { width: 100%; border-collapse: collapse; }
-          th, td { padding: 2px 0; vertical-align: top; font-weight: normal; }
-          .item-name { font-size: 11px; padding-right: 4px; font-weight: normal; }
+          th, td { padding: 2px 0; vertical-align: top; }
+          .item-name { font-size: 11px; padding-right: 4px; font-weight: 600; }
         </style>
       </head>
       <body>
+        <div class="receipt-container" style="width: 76mm; max-width: 76mm; margin: 0; margin-left: 0; margin-right: auto; text-align: left;">
         <div class="text-center mb-2">
           <div style="font-size: 28px; line-height: 1; margin: 0 auto 4px auto; letter-spacing: 1px;">${(data.storeName || BRAND_EN).charAt(0).toUpperCase()}</div>
           <div style="font-size: 15px; letter-spacing: 1px;">${(data.storeName || BRAND_EN).toUpperCase()}</div>
@@ -136,17 +162,23 @@ export function printThermalReceipt(data: ThermalReceiptData) {
           </tbody>
         </table>
 
-        <div class="border-bottom" style="font-size: 12px;">
+        <div class="border-bottom" style="font-size: 11.5px;">
           <table style="width: 100%;">
-            ${data.subtotal !== data.total ? `
+            ${data.subtotal > 0 ? `
               <tr>
                 <td class="text-left">Subtotal</td>
-                <td class="text-right">${formatCurrency(data.subtotal)}</td>
+                <td class="text-right" style="font-weight: 700;">${formatCurrency(data.subtotal)}</td>
+              </tr>
+            ` : ''}
+            ${(data.shipping || 0) > 0 ? `
+              <tr>
+                <td class="text-left">Delivery</td>
+                <td class="text-right">+${formatCurrency(data.shipping)}</td>
               </tr>
             ` : ''}
             ${(data.couponDiscount || 0) > 0 ? `
               <tr>
-                <td class="text-left">Coupon</td>
+                <td class="text-left">Coupon Disc.${data.couponCode ? ` (${data.couponCode})` : ''}</td>
                 <td class="text-right">-${formatCurrency(data.couponDiscount || 0)}</td>
               </tr>
             ` : ''}
@@ -156,21 +188,35 @@ export function printThermalReceipt(data: ThermalReceiptData) {
                 <td class="text-right">-${formatCurrency(data.manualDiscount || 0)}</td>
               </tr>
             ` : ''}
-            ${(data.totalGst || 0) > 0 ? `
-              <tr>
-                <td class="text-left">GST</td>
-                <td class="text-right">+${formatCurrency(data.totalGst || 0)}</td>
-              </tr>
-            ` : ''}
-            ${data.shipping > 0 ? `
-              <tr>
-                <td class="text-left">Delivery</td>
-                <td class="text-right">${formatCurrency(data.shipping)}</td>
-              </tr>
-            ` : ''}
-            <tr style="font-size: 13px;">
-              <td class="text-left">Total</td>
-              <td class="text-right">${formatCurrency(data.total)}</td>
+            ${(() => {
+              const cgst = data.cgstAmount ?? ((data.totalGst || 0) > 0 ? Math.round(((data.totalGst || 0) / 2) * 100) / 100 : 0)
+              const sgst = data.sgstAmount ?? ((data.totalGst || 0) > 0 ? Math.round(((data.totalGst || 0) / 2) * 100) / 100 : 0)
+              const rate = data.gstRate ? ` (${(data.gstRate / 2).toFixed(1).replace(/\.0$/, '')}%)` : ''
+              if (cgst > 0 || sgst > 0) {
+                return `
+                  <tr>
+                    <td class="text-left">CGST${rate}</td>
+                    <td class="text-right">+${formatCurrency(cgst)}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-left">SGST${rate}</td>
+                    <td class="text-right">+${formatCurrency(sgst)}</td>
+                  </tr>
+                `
+              }
+              if ((data.totalGst || 0) > 0) {
+                return `
+                  <tr>
+                    <td class="text-left">GST</td>
+                    <td class="text-right">+${formatCurrency(data.totalGst || 0)}</td>
+                  </tr>
+                `
+              }
+              return ''
+            })()}
+            <tr style="font-size: 13px; font-weight: 900;">
+              <td class="text-left" style="padding-top: 3px;">Total</td>
+              <td class="text-right" style="padding-top: 3px;">${formatCurrency(data.total)}</td>
             </tr>
           </table>
         </div>
@@ -178,6 +224,7 @@ export function printThermalReceipt(data: ThermalReceiptData) {
         <div class="text-center mt-2" style="font-size: 11px;">
           <div>Thank you for shopping at ${(data.storeName || BRAND_EN).toUpperCase()}!</div>
           <div>Follow us on Instagram: @${BRAND_INSTAGRAM}</div>
+        </div>
         </div>
       </body>
     </html>

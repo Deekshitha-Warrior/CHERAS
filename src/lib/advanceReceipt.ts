@@ -237,25 +237,45 @@ export function printAdvanceReceipt(order: AdvanceOrder) {
   <meta name="robots" content="noindex,nofollow">
   <title>Advance Receipt - ${esc(order.deposit_id)}</title>
   <style>
-    @page { size: 80mm auto; margin: 0; }
+    @page {
+      size: 80mm auto;
+      margin: 0;
+      margin-left: 0;
+    }
     @media print {
-      @page { size: 80mm auto; margin: 0; }
-      body { width: 72mm; margin: 0 auto; padding: 3mm 1mm; }
+      @page {
+        size: 80mm auto;
+        margin: 0;
+        margin-left: 0;
+      }
+      html, body {
+        width: 76mm !important;
+        max-width: 76mm !important;
+        margin: 0 !important;
+        margin-left: 0 !important;
+        margin-right: auto !important;
+        padding: 2mm 1.5mm !important;
+        float: left !important;
+      }
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
+    html, body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       font-size: 11px;
       color: #000;
-      margin: 0 auto;
-      padding: 4mm 3mm;
-      width: 72mm;
-      max-width: 72mm;
+      margin: 0;
+      margin-left: 0;
+      margin-right: auto;
+      padding: 3mm 2mm;
+      width: 76mm;
+      max-width: 76mm;
       box-sizing: border-box;
       line-height: 1.35;
       background: #fff;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      text-align: left;
+      float: left;
     }
     .text-center { text-align: center; }
     .text-right { text-align: right; }
@@ -291,6 +311,7 @@ export function printAdvanceReceipt(order: AdvanceOrder) {
   </style>
 </head>
 <body>
+  <div class="receipt-container" style="width: 76mm; max-width: 76mm; margin: 0; margin-left: 0; margin-right: auto; text-align: left;">
   <!-- Header / Circular Badge -->
   <div class="text-center" style="margin-bottom: 4px;">
     <div style="display: flex; justify-content: center; margin-bottom: 6px;">
@@ -359,6 +380,7 @@ export function printAdvanceReceipt(order: AdvanceOrder) {
   <!-- Footer Notice -->
   <div class="text-center" style="font-size: 9.5px; font-weight: 900; letter-spacing: 0.3px; line-height: 1.3;">
     ADVANCE PAYMENT ONLY — NOT A FINAL INVOICE
+  </div>
   </div>
 </body>
 </html>`

@@ -359,24 +359,31 @@ export default function DigitalInvoice() {
   }
 
   const printReceipt = () => {
-    const subtotal = invoice.total - (invoice.delivery_charge || 0) + (invoice.discount_amount || 0)
+    const rawGst = Number(invoice.total_gst || invoice.gst_amount || 0)
+    const rawCgst = Number(invoice.cgst_amount || (rawGst > 0 ? rawGst / 2 : 0))
+    const rawSgst = Number(invoice.sgst_amount || (rawGst > 0 ? rawGst / 2 : 0))
+    const subtotal = invoice.total - (invoice.delivery_charge || 0) - rawGst + (invoice.discount_amount || 0) + (invoice.manual_discount_amount || 0)
     printThermalReceipt({
       invoiceNo: invoice.invoice_no,
       date: invoice.created_at,
       customerName: invoice.customer_name,
       phone: invoice.phone,
       items: (invoice.items || []).map((item: Record<string, unknown>) => ({
-        name: item.name || item.product_name,
-        qty: item.qty || item.quantity,
-        unit: item.unit,
-        price: item.price || item.base_price || 0,
-        line_total: item.line_total
+        name: String(item.name || item.product_name || ''),
+        qty: Number(item.qty || item.quantity || 1),
+        unit: item.unit ? String(item.unit) : undefined,
+        price: Number(item.price || item.base_price || 0),
+        line_total: item.line_total !== undefined ? Number(item.line_total) : undefined
       })),
       subtotal,
-      shipping: invoice.delivery_charge || 0,
-      couponDiscount: invoice.discount_amount || 0,
-      totalGst: invoice.total_gst || invoice.gst_amount || 0,
-      total: invoice.total > 0 ? invoice.total : (subtotal + (invoice.delivery_charge || 0) + (invoice.total_gst || invoice.gst_amount || 0) - (invoice.discount_amount || 0) - (invoice.manual_discount_amount || 0))
+      shipping: Number(invoice.delivery_charge || 0),
+      couponDiscount: Number(invoice.discount_amount || 0),
+      manualDiscount: Number(invoice.manual_discount_amount || 0),
+      totalGst: rawGst,
+      cgstAmount: rawCgst,
+      sgstAmount: rawSgst,
+      gstRate: Number(invoice.gst_rate || 0),
+      total: invoice.total > 0 ? invoice.total : (subtotal + Number(invoice.delivery_charge || 0) + rawGst - Number(invoice.discount_amount || 0) - Number(invoice.manual_discount_amount || 0))
     })
   }
 
@@ -432,12 +439,16 @@ export default function DigitalInvoice() {
             address={invoice.address}
             items={invoice.items || []}
             subtotal={subtotal}
-            shipping={invoice.delivery_charge || 0}
-            discountAmount={invoice.discount_amount || 0}
-            manualDiscountAmount={invoice.manual_discount_amount || 0}
-            gstAmount={invoice.total_gst || invoice.gst_amount || 0}
+            shipping={Number(invoice.delivery_charge || 0)}
+            deliveryCharge={Number(invoice.delivery_charge || 0)}
+            discountAmount={Number(invoice.discount_amount || 0)}
+            manualDiscountAmount={Number(invoice.manual_discount_amount || 0)}
+            gstAmount={Number(invoice.total_gst || invoice.gst_amount || 0)}
+            cgstAmount={Number(invoice.cgst_amount || ((invoice.total_gst || invoice.gst_amount) ? Number(invoice.total_gst || invoice.gst_amount) / 2 : 0))}
+            sgstAmount={Number(invoice.sgst_amount || ((invoice.total_gst || invoice.gst_amount) ? Number(invoice.total_gst || invoice.gst_amount) / 2 : 0))}
+            gstRate={Number(invoice.gst_rate || 0)}
             couponCode={invoice.coupon_code}
-            total={invoice.total > 0 ? invoice.total : (subtotal + (invoice.delivery_charge || 0) + (invoice.total_gst || invoice.gst_amount || 0) - (invoice.discount_amount || 0) - (invoice.manual_discount_amount || 0))}
+            total={invoice.total > 0 ? invoice.total : (subtotal + Number(invoice.delivery_charge || 0) + Number(invoice.total_gst || invoice.gst_amount || 0) - Number(invoice.discount_amount || 0) - Number(invoice.manual_discount_amount || 0))}
             status={invoice.status}
             paymentMode={formatPaymentLabel(invoice.payment_mode || invoice.payment_method, invoice.split_details) || invoice.payment_mode || invoice.payment_method}
           />

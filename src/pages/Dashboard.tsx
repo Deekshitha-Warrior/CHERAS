@@ -1169,7 +1169,10 @@ export default function Dashboard() {
   const handlePrintReceipt = (order: DashboardOrder) => {
     const preview = getOrderWhatsAppPreview(order)
     if (!preview) { alert('This order has no invoice details available.'); return }
-    const subtotal = order.total - (order.delivery_charge || 0) + (order.discount_amount || 0)
+    const rawGst = Number(order.total_gst || 0)
+    const rawCgst = rawGst > 0 ? Math.round((rawGst / 2) * 100) / 100 : 0
+    const rawSgst = rawGst > 0 ? Math.round((rawGst / 2) * 100) / 100 : 0
+    const subtotal = order.total - (order.delivery_charge || 0) - rawGst + (order.discount_amount || 0) + (order.manual_discount_amount || 0)
 
     printThermalReceipt({
       invoiceNo: order.invoice_no || order.id,
@@ -1195,7 +1198,10 @@ export default function Dashboard() {
       subtotal,
       shipping: order.delivery_charge || 0,
       couponDiscount: order.discount_amount || 0,
-      totalGst: order.total_gst || 0,
+      manualDiscount: order.manual_discount_amount || 0,
+      totalGst: rawGst,
+      cgstAmount: rawCgst,
+      sgstAmount: rawSgst,
       total: order.total
     })
   }
@@ -1229,6 +1235,7 @@ export default function Dashboard() {
       discountAmount: order.discount_amount,
       manualDiscountAmount: order.manual_discount_amount,
       gstAmount: order.total_gst,
+      couponCode: order.coupon_code || null,
       paymentMode: formatPaymentLabel(order.payment_mode, order.split_details) || order.payment_mode,
       total: order.total,
     })
@@ -3666,6 +3673,13 @@ export default function Dashboard() {
                 {filteredSearchResults.slice(0, 200).map(o => {
                   const billTypeLabel = normalizeOrderType(o.order_type) === 'manual_sale' ? 'MANUAL' : normalizeOrderMode(o.order_mode) === 'online' ? 'ONLINE' : 'OFFLINE'
                   const billTypeClass = normalizeOrderType(o.order_type) === 'manual_sale' ? 'bg-gray-50 text-gray-700' : normalizeOrderMode(o.order_mode) === 'online' ? 'bg-gray-50 text-gray-700' : 'bg-orange-50 text-orange-700'
+                  const parsedItems = parseOrderItems(o.items)
+                  const itemSubtotal = parsedItems.reduce((acc, it) => acc + (toNumber(it.line_total ?? it.lineTotal, 0) || (toNumber(it.base_price ?? it.price, 0) * Math.max(1, toNumber(it.quantity, 1)))), 0)
+                  const orderTotal = getOrderTotal(o)
+                  const rawGst = Number(o.total_gst || 0)
+                  const effectiveSubtotal = itemSubtotal > 0 ? itemSubtotal : Math.max(0, orderTotal - (o.delivery_charge || 0) - rawGst + (o.discount_amount || 0) + (o.manual_discount_amount || 0))
+                  const cgstAmount = Math.round((rawGst / 2) * 100) / 100
+                  const sgstAmount = Math.round((rawGst / 2) * 100) / 100
                   return (
                     <div key={o.id} className="rounded-2xl border border-[#F3F4F6]/60 bg-[#FBFAF6] p-3 sm:p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
@@ -3685,21 +3699,45 @@ export default function Dashboard() {
                           <p className="font-semibold text-[#374151] break-words">{formatPhoneDisplay(o.phone) || '—'}</p>
                         </div>
                         <div className="min-w-0">
+                          <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black">Subtotal</p>
+                          <p className="font-bold text-[#111111]">{formatCurrency(effectiveSubtotal)}</p>
+                        </div>
+                        <div className="min-w-0">
                           <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black">Total</p>
-                          <p className="font-black text-[#111111]">{formatCurrency(getOrderTotal(o))}</p>
+                          <p className="font-black text-[#111111]">{formatCurrency(orderTotal)}</p>
                         </div>
                         <div className="min-w-0">
                           <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Coupon</p>
                           <p className="font-semibold text-[#374151] break-words">{o.coupon_code || '—'}</p>
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Discount</p>
+                          <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Coupon Disc.</p>
                           <p className="font-semibold text-emerald-700">{o.discount_amount > 0 ? `-${formatCurrency(o.discount_amount)}` : '—'}</p>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Delivery</p>
-                          <p className="font-semibold text-[#111111]">{o.delivery_charge > 0 ? formatCurrency(o.delivery_charge) : '—'}</p>
-                        </div>
+                        {o.manual_discount_amount > 0 && (
+                          <div className="min-w-0">
+                            <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Manual Disc.</p>
+                            <p className="font-semibold text-emerald-700">-{formatCurrency(o.manual_discount_amount)}</p>
+                          </div>
+                        )}
+                        {o.delivery_charge > 0 && (
+                          <div className="min-w-0">
+                            <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Delivery</p>
+                            <p className="font-semibold text-[#111111]">+{formatCurrency(o.delivery_charge)}</p>
+                          </div>
+                        )}
+                        {cgstAmount > 0 && (
+                          <div className="min-w-0">
+                            <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">CGST</p>
+                            <p className="font-semibold text-[#111111]">+{formatCurrency(cgstAmount)}</p>
+                          </div>
+                        )}
+                        {sgstAmount > 0 && (
+                          <div className="min-w-0">
+                            <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">SGST</p>
+                            <p className="font-semibold text-[#111111]">+{formatCurrency(sgstAmount)}</p>
+                          </div>
+                        )}
                         <div className="min-w-0 col-span-2">
                           <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Payment</p>
                           <p className="font-semibold text-[#374151] break-words">{formatPaymentLabel(o.payment_mode || o.payment_method, o.split_details) || '—'}</p>
@@ -3843,24 +3881,132 @@ export default function Dashboard() {
                                   <span>{l('Edit Order Details', 'விவரங்களை திருத்து')}</span>
                                 </button>
                               </div>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[12px]">
-                                <div>
-                                  <p className="text-[10px] font-black uppercase text-[#9CA3AF] tracking-wider mb-1">Reference No</p>
-                                  <p className="font-semibold text-[#111111] break-words">{o.reference_number || '—'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-black uppercase text-[#9CA3AF] tracking-wider mb-1">Remarks</p>
-                                  <p className="font-semibold text-[#374151] break-words">{o.remarks || '—'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-black uppercase text-[#9CA3AF] tracking-wider mb-1">Customer</p>
-                                  <p className="font-semibold text-[#111111] break-words">{o.customer_name || '—'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[10px] font-black uppercase text-[#9CA3AF] tracking-wider mb-1">Address</p>
-                                  <p className="font-semibold text-[#374151] break-words">{o.address || '—'}</p>
-                                </div>
-                              </div>
+                              {(() => {
+                                const parsedItems = parseOrderItems(o.items)
+                                const itemSubtotal = parsedItems.reduce((acc, it) => acc + (toNumber(it.line_total ?? it.lineTotal, 0) || (toNumber(it.base_price ?? it.price, 0) * Math.max(1, toNumber(it.quantity, 1)))), 0)
+                                const orderTotal = getOrderTotal(o)
+                                const rawGst = Number(o.total_gst || 0)
+                                const effectiveSubtotal = itemSubtotal > 0 ? itemSubtotal : Math.max(0, orderTotal - (o.delivery_charge || 0) - rawGst + (o.discount_amount || 0) + (o.manual_discount_amount || 0))
+                                const cgst = Math.round((rawGst / 2) * 100) / 100
+                                const sgst = Math.round((rawGst / 2) * 100) / 100
+
+                                return (
+                                  <div className="space-y-4">
+                                    {/* Order Info Grid */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-[12px]">
+                                      <div className="rounded-xl bg-white p-2.5 border border-gray-100 shadow-xs">
+                                        <p className="text-[10px] font-black uppercase text-[#9CA3AF] tracking-wider mb-1">Customer & Phone</p>
+                                        <p className="font-bold text-[#111111] break-words">{o.customer_name || '—'}</p>
+                                        <p className="text-[11px] text-[#374151] mt-0.5">{formatPhoneDisplay(o.phone) || '—'}</p>
+                                      </div>
+                                      <div className="rounded-xl bg-white p-2.5 border border-gray-100 shadow-xs">
+                                        <p className="text-[10px] font-black uppercase text-[#9CA3AF] tracking-wider mb-1">Reference & Remarks</p>
+                                        <p className="font-semibold text-[#111111] break-words">{o.reference_number || '—'}</p>
+                                        <p className="text-[11px] text-[#6B7280] mt-0.5">{o.remarks || 'No remarks'}</p>
+                                      </div>
+                                      <div className="rounded-xl bg-white p-2.5 border border-gray-100 shadow-xs">
+                                        <p className="text-[10px] font-black uppercase text-[#9CA3AF] tracking-wider mb-1">Payment Method</p>
+                                        <p className="font-bold text-[#111111] break-words">{formatPaymentLabel(o.payment_mode || o.payment_method, o.split_details) || '—'}</p>
+                                        <p className="text-[11px] text-[#6B7280] mt-0.5">{new Date(o.created_at).toLocaleString('en-IN')}</p>
+                                      </div>
+                                      <div className="rounded-xl bg-white p-2.5 border border-gray-100 shadow-xs">
+                                        <p className="text-[10px] font-black uppercase text-[#9CA3AF] tracking-wider mb-1">Address</p>
+                                        <p className="font-semibold text-[#374151] break-words">{o.address || 'In-store Counter'}</p>
+                                      </div>
+                                    </div>
+
+                                    {/* Detailed Financial Breakdown & Items Section */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                      {/* Financial Breakdown Card */}
+                                      <div className="lg:col-span-1 rounded-xl bg-white p-3.5 border border-gray-200 shadow-xs space-y-2">
+                                        <p className="text-[11px] font-black uppercase tracking-wider text-[#7B1E2B] pb-1 border-b border-gray-100">
+                                          Financial Breakdown
+                                        </p>
+                                        <div className="space-y-1.5 text-xs">
+                                          <div className="flex justify-between text-gray-700">
+                                            <span>Subtotal</span>
+                                            <span className="font-bold text-gray-900">{formatCurrency(effectiveSubtotal)}</span>
+                                          </div>
+                                          {o.delivery_charge > 0 && (
+                                            <div className="flex justify-between text-gray-700">
+                                              <span>Delivery Charges</span>
+                                              <span className="font-bold text-gray-900">+{formatCurrency(o.delivery_charge)}</span>
+                                            </div>
+                                          )}
+                                          {o.discount_amount > 0 && (
+                                            <div className="flex justify-between text-emerald-700">
+                                              <span>Coupon Disc. {o.coupon_code ? `(${o.coupon_code})` : ''}</span>
+                                              <span className="font-bold">-{formatCurrency(o.discount_amount)}</span>
+                                            </div>
+                                          )}
+                                          {o.manual_discount_amount > 0 && (
+                                            <div className="flex justify-between text-emerald-700">
+                                              <span>Manual Discount</span>
+                                              <span className="font-bold">-{formatCurrency(o.manual_discount_amount)}</span>
+                                            </div>
+                                          )}
+                                          {cgst > 0 && (
+                                            <div className="flex justify-between text-gray-700">
+                                              <span>CGST</span>
+                                              <span className="font-bold text-gray-900">+{formatCurrency(cgst)}</span>
+                                            </div>
+                                          )}
+                                          {sgst > 0 && (
+                                            <div className="flex justify-between text-gray-700">
+                                              <span>SGST</span>
+                                              <span className="font-bold text-gray-900">+{formatCurrency(sgst)}</span>
+                                            </div>
+                                          )}
+                                          <div className="border-t border-gray-200 pt-2 flex justify-between font-black text-sm text-gray-900">
+                                            <span>Total Bill Amount</span>
+                                            <span className="text-[#7B1E2B]">{formatCurrency(orderTotal)}</span>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Purchased Items Table */}
+                                      <div className="lg:col-span-2 rounded-xl bg-white p-3.5 border border-gray-200 shadow-xs space-y-2">
+                                        <p className="text-[11px] font-black uppercase tracking-wider text-gray-700 pb-1 border-b border-gray-100">
+                                          Items in Order ({parsedItems.length})
+                                        </p>
+                                        {parsedItems.length === 0 ? (
+                                          <p className="text-xs text-gray-400 italic">No structured item records stored for this bill.</p>
+                                        ) : (
+                                          <div className="overflow-x-auto max-h-48 overflow-y-auto">
+                                            <table className="w-full text-left text-xs">
+                                              <thead>
+                                                <tr className="text-[10px] text-gray-500 uppercase border-b border-gray-100">
+                                                  <th className="pb-1 text-left">Item</th>
+                                                  <th className="pb-1 text-center">Qty</th>
+                                                  <th className="pb-1 text-right">Price</th>
+                                                  <th className="pb-1 text-right">Total</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody className="divide-y divide-gray-50">
+                                                {parsedItems.map((it, idx) => {
+                                                  const itName = String(it.name || it.product_name || 'Item')
+                                                  const itQty = Number(it.quantity ?? it.qty ?? 1)
+                                                  const itPrice = Number(it.base_price ?? it.price ?? 0)
+                                                  const itLine = Number(it.line_total ?? (itQty * itPrice))
+                                                  const itUnit = it.unit ? ` ${it.unit}` : ''
+                                                  return (
+                                                    <tr key={idx} className="hover:bg-gray-50/50">
+                                                      <td className="py-1.5 font-semibold text-gray-800 pr-2 truncate max-w-[200px]">{itName}</td>
+                                                      <td className="py-1.5 text-center text-gray-700 font-bold">{itQty}{itUnit}</td>
+                                                      <td className="py-1.5 text-right text-gray-600">{formatCurrency(itPrice)}</td>
+                                                      <td className="py-1.5 text-right font-black text-gray-900">{formatCurrency(itLine)}</td>
+                                                    </tr>
+                                                  )
+                                                })}
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })()}
                             </td>
                           </tr>
                         )}
@@ -4867,6 +5013,7 @@ export default function Dashboard() {
                     shipping={invoicePreviewOrder.delivery_charge}
                     deliveryCharge={invoicePreviewOrder.delivery_charge}
                     discountAmount={invoicePreviewOrder.discount_amount}
+                    couponCode={invoicePreviewOrder.coupon_code || undefined}
                     manualDiscountAmount={invoicePreviewOrder.manual_discount_amount}
                     gstAmount={invoicePreviewOrder.total_gst}
                     paymentMode={formatPaymentLabel(invoicePreviewOrder.payment_mode, invoicePreviewOrder.split_details) || invoicePreviewOrder.payment_mode}

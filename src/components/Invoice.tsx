@@ -33,6 +33,9 @@ export interface InvoiceProps {
   discountAmount?: number
   manualDiscountAmount?: number
   gstAmount?: number
+  cgstAmount?: number
+  sgstAmount?: number
+  gstRate?: number
   couponCode?: string
   total: number
   status?: string
@@ -55,6 +58,9 @@ export const Invoice: React.FC<InvoiceProps> = ({
   discountAmount = 0,
   manualDiscountAmount = 0,
   gstAmount = 0,
+  cgstAmount,
+  sgstAmount,
+  gstRate,
   couponCode,
   total,
   status = 'completed',
@@ -207,16 +213,38 @@ export const Invoice: React.FC<InvoiceProps> = ({
                 <span style={{ fontSize: 12, fontWeight: 700, color: '#B48811', fontVariantNumeric: 'tabular-nums' }}>−{formatCurrency(manualDiscountAmount)}</span>
               </div>
             )}
-            {gstAmount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 12, color: '#666' }}>GST</span>
-                <span style={{ fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>+{formatCurrency(gstAmount)}</span>
-              </div>
-            )}
+            {(() => {
+              const cgst = cgstAmount ?? (gstAmount > 0 ? Math.round((gstAmount / 2) * 100) / 100 : 0)
+              const sgst = sgstAmount ?? (gstAmount > 0 ? Math.round((gstAmount / 2) * 100) / 100 : 0)
+              const rateLabel = gstRate ? ` (${(gstRate / 2).toFixed(1).replace(/\.0$/, '')}%)` : ''
+              if (cgst > 0 || sgst > 0) {
+                return (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, color: '#666' }}>CGST{rateLabel}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>+{formatCurrency(cgst)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, color: '#666' }}>SGST{rateLabel}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>+{formatCurrency(sgst)}</span>
+                    </div>
+                  </>
+                )
+              }
+              if (gstAmount > 0) {
+                return (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, color: '#666' }}>GST</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>+{formatCurrency(gstAmount)}</span>
+                  </div>
+                )
+              }
+              return null
+            })()}
             {effectiveDelivery > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: 12, color: '#666' }}>Delivery</span>
-                <span style={{ fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(effectiveDelivery)}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>+{formatCurrency(effectiveDelivery)}</span>
               </div>
             )}
             <div

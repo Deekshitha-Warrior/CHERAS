@@ -890,6 +890,14 @@ export default function Pos(props: PosProps = {}) {
           source: 'advance_order', note: item.note || null,
         }
       })
+      const deliveryCharge = Number(shipping || 0) || 0
+      const effectiveCouponDiscount = couponDiscount
+      const effectiveManualDiscount = manualDiscountAmount
+      const totalDiscount = effectiveCouponDiscount + effectiveManualDiscount
+      const effectiveGstRate = billGstEnabled && gstType === 'percent'
+        ? Number(gstInput) || 0
+        : (billGstEnabled && discountedSubtotal > 0 ? Math.round((totalGst / discountedSubtotal) * 10000) / 100 : 0)
+
       const created = await createAdvanceOrder({
         customerName: customer.name.trim(), phone: customer.phone.trim(), address: depositForm.address.trim(),
         productName: items.map(item => `${item.qty}× ${item.name}`).join(', '),
@@ -899,6 +907,17 @@ export default function Pos(props: PosProps = {}) {
         remarks: depositForm.remarks, referenceNumber: depositForm.referenceNumber, paymentMethod: depositForm.paymentMethod, createdByName: role || 'Staff',
         products: productsSnapshot,
         splitDetails: depositForm.paymentMethod === 'split' ? splitInputToDetails(depositSplit) : undefined,
+        subtotal,
+        deliveryCharge,
+        discountAmount: totalDiscount,
+        couponCode: isValidCoupon && appliedCoupon ? appliedCoupon.code : null,
+        couponDiscount: effectiveCouponDiscount,
+        manualDiscount: effectiveManualDiscount,
+        gstEnabled: billGstEnabled,
+        totalGst,
+        gstRate: effectiveGstRate,
+        cgstAmount: billGstEnabled ? Math.round((totalGst / 2) * 100) / 100 : 0,
+        sgstAmount: billGstEnabled ? Math.round((totalGst / 2) * 100) / 100 : 0,
       })
       setDepositCreated(created)
       setDepositOpen(false)

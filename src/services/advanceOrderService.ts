@@ -31,6 +31,17 @@ export type AdvanceOrder = {
   final_payment_method: string | null
   /** Full cash / QR / card amounts collected for this order (deposit + final payment). */
   split_details?: SplitDetails
+  subtotal?: number
+  delivery_charge?: number
+  discount_amount?: number
+  coupon_code?: string | null
+  coupon_discount?: number
+  manual_discount?: number
+  gst_enabled?: boolean
+  total_gst?: number
+  gst_rate?: number
+  cgst_amount?: number
+  sgst_amount?: number
 }
 
 export type AdvanceTimeline = { id: number; advance_order_id: string; event_type: string; label: string; remarks: string; created_at: string }
@@ -90,11 +101,44 @@ const saveLocalPayments = (payments: AdvancePayment[]) => {
   } catch { /* ignore */ }
 }
 
-const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
-  const isCompleted = row.status === 'completed'
-  const total = Number(row.total_amount || 0)
-  const deposit = Number(row.deposit_amount || 0)
-  const calculatedRemaining = Number(row.remaining_balance ?? (total - deposit))
+  const subtotalRaw = row.subtotal !== null && row.subtotal !== undefined ? Number(row.subtotal) : undefined
+  const deliveryCharge = Number(row.delivery_charge || 0)
+  const discountAmount = Number(row.discount_amount || 0)
+  const couponCode = row.coupon_code ? String(row.coupon_code) : null
+  const couponDiscount = Number(row.coupon_discount || 0)
+  const manualDiscount = Number(row.manual_discount || 0)
+  const gstEnabled = Boolean(row.gst_enabled)
+  const totalGst = Number(row.total_gst || 0)
+  const gstRate = Number(row.gst_rate || 0)
+  const cgstAmount = Number(row.cgst_amount || 0)
+  const sgstAmount = Number(row.sgst_amount || 0)
+
+  const prods = Array.isArray(row.products) ? (row.products as Array<Record<string, unknown>>) : []
+  let resolvedSubtotal = subtotalRaw
+  let resolvedTotalGst = totalGst
+  let resolvedCgst = cgstAmount
+  let resolvedSgst = sgstAmount
+  let resolvedGstEnabled = gstEnabled
+  let resolvedGstRate = gstRate
+
+  if (resolvedSubtotal === undefined && prods.length > 0) {
+    const sumBase = prods.reduce((acc, p) => acc + (Number(p.quantity ?? p.qty ?? 1) * Number(p.base_price ?? p.price ?? 0)), 0)
+    if (sumBase > 0) {
+      resolvedSubtotal = sumBase
+      const diff = total - sumBase
+      if (diff > 0 && resolvedTotalGst === 0 && deliveryCharge === 0) {
+        resolvedGstEnabled = true
+        resolvedTotalGst = diff
+        resolvedCgst = Math.round((diff / 2) * 100) / 100
+        resolvedSgst = Math.round((diff / 2) * 100) / 100
+        resolvedGstRate = Math.round((diff / sumBase) * 10000) / 100
+      }
+    } else {
+      resolvedSubtotal = total
+    }
+  } else if (resolvedSubtotal === undefined) {
+    resolvedSubtotal = total
+  }
 
   return {
     ...row,
@@ -104,7 +148,7 @@ const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
     phone: String(row.phone || ''),
     address: String(row.address || ''),
     product_name: String(row.product_name || ''),
-    products: Array.isArray(row.products) ? (row.products as Array<Record<string, unknown>>) : [],
+    products: prods,
     category: String(row.category || ''),
     description: String(row.description || ''),
     total_amount: total,
@@ -121,6 +165,17 @@ const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
     completed_order_id: row.completed_order_id ? String(row.completed_order_id) : null,
     invoice_number: row.invoice_number ? String(row.invoice_number) : null,
     final_payment_method: row.final_payment_method ? String(row.final_payment_method) : null,
+    subtotal: resolvedSubtotal,
+    delivery_charge: deliveryCharge,
+    discount_amount: discountAmount,
+    coupon_code: couponCode,
+    coupon_discount: couponDiscount,
+    manual_discount: manualDiscount,
+    gst_enabled: resolvedGstEnabled,
+    total_gst: resolvedTotalGst,
+    gst_rate: resolvedGstRate,
+    cgst_amount: resolvedCgst,
+    sgst_amount: resolvedSgst,
   }
 }
 
@@ -616,6 +671,9 @@ export async function createAdvanceOrder(input: {
   totalAmount: number; depositAmount: number; expectedDeliveryDate: string; remarks: string; referenceNumber: string
   paymentMethod: AdvancePaymentMethod; createdByName: string; products?: Array<Record<string, unknown>>
   splitDetails?: SplitDetails
+  subtotal?: number; deliveryCharge?: number; discountAmount?: number; couponCode?: string | null
+  couponDiscount?: number; manualDiscount?: number; gstEnabled?: boolean; totalGst?: number
+  gstRate?: number; cgstAmount?: number; sgstAmount?: number
 }): Promise<AdvanceOrder> {
   if (input.paymentMethod === 'split') {
     if (Math.abs(splitTotal(parseSplit(input.splitDetails)) - Number(input.depositAmount)) >= 0.01) {
@@ -639,16 +697,34 @@ export async function createAdvanceOrder(input: {
         console.error('[createAdvanceOrder] Supabase error:', error.message)
       } else if (data) {
         createdOrder = normalizeOrder(rpcRow(data))
-        // Patch reference_number (not in RPC params)
-        if (input.referenceNumber.trim()) {
-          const { error: referenceError } = await supabase.from('advance_orders').update({ reference_number: input.referenceNumber.trim() }).eq('id', createdOrder.id)
-          if (referenceError) throw new Error(referenceError.message)
-          createdOrder.reference_number = input.referenceNumber.trim()
+        // Patch reference_number and financial breakdown fields
+        const patchPayload: Record<string, unknown> = {}
+        if (input.referenceNumber.trim()) patchPayload.reference_number = input.referenceNumber.trim()
+        if (input.subtotal !== undefined) patchPayload.subtotal = input.subtotal
+        if (input.deliveryCharge !== undefined) patchPayload.delivery_charge = input.deliveryCharge
+        if (input.discountAmount !== undefined) patchPayload.discount_amount = input.discountAmount
+        if (input.couponCode) patchPayload.coupon_code = input.couponCode
+        if (input.couponDiscount !== undefined) patchPayload.coupon_discount = input.couponDiscount
+        if (input.manualDiscount !== undefined) patchPayload.manual_discount = input.manualDiscount
+        if (input.gstEnabled !== undefined) patchPayload.gst_enabled = input.gstEnabled
+        if (input.totalGst !== undefined) patchPayload.total_gst = input.totalGst
+        if (input.gstRate !== undefined) patchPayload.gst_rate = input.gstRate
+        if (input.cgstAmount !== undefined) patchPayload.cgst_amount = input.cgstAmount
+        if (input.sgstAmount !== undefined) patchPayload.sgst_amount = input.sgstAmount
+
+        if (Object.keys(patchPayload).length > 0) {
+          try {
+            const { error: patchError } = await supabase.from('advance_orders').update(patchPayload).eq('id', createdOrder.id)
+            if (patchError) console.warn('[createAdvanceOrder] Failed to patch financial details:', patchError.message)
+            Object.assign(createdOrder, patchPayload)
+          } catch (patchErr) {
+            console.warn('[createAdvanceOrder] Failed to patch financial details:', patchErr)
+          }
         }
       }
     } catch (err) {
       console.error('[createAdvanceOrder] Exception:', err)
-      if (createdOrder) throw new Error(`Advance order was created, but its reference number could not be saved: ${err instanceof Error ? err.message : String(err)}`)
+      if (createdOrder) throw new Error(`Advance order was created, but its details could not be saved: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
@@ -683,6 +759,17 @@ export async function createAdvanceOrder(input: {
       completed_order_id: null,
       invoice_number: null,
       final_payment_method: null,
+      subtotal: input.subtotal ?? Number(input.totalAmount),
+      delivery_charge: input.deliveryCharge ?? 0,
+      discount_amount: input.discountAmount ?? 0,
+      coupon_code: input.couponCode ?? null,
+      coupon_discount: input.couponDiscount ?? 0,
+      manual_discount: input.manualDiscount ?? 0,
+      gst_enabled: input.gstEnabled ?? false,
+      total_gst: input.totalGst ?? 0,
+      gst_rate: input.gstRate ?? 0,
+      cgst_amount: input.cgstAmount ?? 0,
+      sgst_amount: input.sgstAmount ?? 0,
     }
 
     const currentTimeline = loadLocalTimeline()

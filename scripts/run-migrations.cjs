@@ -1,5 +1,5 @@
 /**
- * Automated Sequential Supabase Migration Runner for Universal Look POS
+ * Automated Sequential Supabase Migration Runner for RASI TEX POS
  * 
  * Sequentially executes all .sql migration files in supabase/migrations/ one-by-one.
  * 
@@ -33,15 +33,17 @@ const projectRefMatch = SUPABASE_URL.match(/https:\/\/([a-z0-9_-]+)\.supabase\.c
 const projectRef = projectRefMatch ? projectRefMatch[1] : '';
 
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'supabase', 'migrations');
+const PROPOSED_MIGRATIONS_DIR = path.join(__dirname, '..', 'supabase', 'proposed_migrations');
 const CONSOLIDATED_FILE = path.join(__dirname, '..', 'supabase', 'all_migrations_consolidated.sql');
 
 /**
  * Regenerates the consolidated SQL file containing all migrations in order
+ * including active production migrations and proposed migrations.
  */
 function syncConsolidatedSql(files) {
   let consolidated = '-- ==========================================================================\n';
-  consolidated += '-- UNIVERSAL LOOK POS - CONSOLIDATED SUPABASE DATABASE MIGRATIONS\n';
-  consolidated += '-- Total Migrations: ' + files.length + '\n';
+  consolidated += '-- RASI TEX POS - CONSOLIDATED SUPABASE DATABASE MIGRATIONS\n';
+  consolidated += '-- Total Production Migrations: ' + files.length + '\n';
   consolidated += '-- Generated: ' + new Date().toISOString() + '\n';
   consolidated += '-- ==========================================================================\n\n';
 
@@ -59,6 +61,48 @@ function syncConsolidatedSql(files) {
     consolidated += '-- MIGRATION ' + (i + 1) + ' of ' + files.length + ': ' + f + '\n';
     consolidated += '-- ==========================================================================\n\n';
     consolidated += content.trim() + '\n';
+  }
+
+  // Include proposed migrations if present
+  if (fs.existsSync(PROPOSED_MIGRATIONS_DIR)) {
+    const proposedFiles = fs.readdirSync(PROPOSED_MIGRATIONS_DIR)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
+
+    if (proposedFiles.length > 0) {
+      consolidated += '\n\n-- ==========================================================================\n';
+      consolidated += '-- ==========================================================================\n';
+      consolidated += '-- SECTION: PROPOSED / STAGING MIGRATIONS (supabase/proposed_migrations)\n';
+      consolidated += '-- ==========================================================================\n';
+      consolidated += '-- ⚠️ IMPORTANT NOTICE FOR SUPABASE SQL EDITOR USERS:\n';
+      consolidated += '-- Migrations 1 through ' + files.length + ' above are the active production migrations\n';
+      consolidated += '-- required for RASI TEX POS (Catalog, Orders, Inventory, Barcodes, Advances,\n';
+      consolidated += '-- Expenses, Split Payments, and Customer Birthdays & Offers).\n';
+      consolidated += '--\n';
+      consolidated += '-- The migration(s) below are PROPOSED DRAFTS that enforce strict least-privilege RLS\n';
+      consolidated += '-- by revoking permissions from the anonymous ("anon") role and requiring Supabase\n';
+      consolidated += '-- Auth JWT sessions for staff/admin actions.\n';
+      consolidated += '-- Because the standard POS terminal operates with client-side credential verification\n';
+      consolidated += '-- using the Supabase anonymous client key, executing these statements immediately\n';
+      consolidated += '-- will block anonymous POS cashier checkouts (42501 permission denied).\n';
+      consolidated += '--\n';
+      consolidated += '-- They are preserved in full below, wrapped in a block comment /* ... */ so you\n';
+      consolidated += '-- can safely copy and run this entire consolidated file into the Supabase SQL Editor.\n';
+      consolidated += '-- If and when you migrate cashiers and admins to Supabase Auth users, remove the\n';
+      consolidated += '-- block comment markers to apply these security policies.\n';
+      consolidated += '-- ==========================================================================\n\n';
+
+      for (let i = 0; i < proposedFiles.length; i++) {
+        const pf = proposedFiles[i];
+        const pContent = fs.readFileSync(path.join(PROPOSED_MIGRATIONS_DIR, pf), 'utf8');
+        consolidated += '/*\n';
+        consolidated += '-- ==========================================================================\n';
+        consolidated += '-- PROPOSED MIGRATION ' + (i + 1) + ' of ' + proposedFiles.length + ': ' + pf + '\n';
+        consolidated += '-- ==========================================================================\n\n';
+        consolidated += pContent.trim() + '\n';
+        consolidated += '*/\n';
+      }
+    }
   }
 
   fs.writeFileSync(CONSOLIDATED_FILE, consolidated, 'utf8');
@@ -145,7 +189,7 @@ async function connectPgClient(candidates) {
 
 async function main() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('📦 UNIVERSAL LOOK - SEQUENTIAL SUPABASE MIGRATION RUNNER');
+  console.log('📦 RASI TEX - SEQUENTIAL SUPABASE MIGRATION RUNNER');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`Supabase URL      : ${SUPABASE_URL}`);
   console.log(`Project Ref       : ${projectRef || 'unknown'}`);
@@ -300,7 +344,7 @@ async function main() {
       console.log(JSON.stringify(storeRes.rows[0], null, 2));
     }
 
-    console.log('\n✅ Database schema and Universal Look brand are fully synchronized!');
+    console.log('\n✅ Database schema and RASI TEX brand are fully synchronized!');
   } catch (err) {
     console.error('\n❌ Migration failed during sequential execution:');
     console.error(err.message);

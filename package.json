@@ -11,6 +11,7 @@
     "sync:brand": "node scripts/sync-universal-look.cjs",
     "migrate:db": "node scripts/run-migrations.cjs",
     "test": "tsx scripts/test-auth-security.ts && tsx scripts/test-pos-e2e.ts",
+    "test:connectivity": "tsx scripts/test-supabase-connectivity.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },

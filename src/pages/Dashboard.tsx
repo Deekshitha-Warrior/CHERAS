@@ -3860,12 +3860,6 @@ export default function Dashboard() {
                             <p className="font-semibold text-emerald-700">-{formatCurrency(o.manual_discount_amount)}</p>
                           </div>
                         )}
-                        {o.delivery_charge > 0 && (
-                          <div className="min-w-0">
-                            <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Delivery</p>
-                            <p className="font-semibold text-[#111111]">+{formatCurrency(o.delivery_charge)}</p>
-                          </div>
-                        )}
                         {cgstAmount > 0 && (
                           <div className="min-w-0">
                             <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">CGST</p>
@@ -3876,6 +3870,12 @@ export default function Dashboard() {
                           <div className="min-w-0">
                             <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">SGST</p>
                             <p className="font-semibold text-[#111111]">+{formatCurrency(sgstAmount)}</p>
+                          </div>
+                        )}
+                        {o.delivery_charge > 0 && (
+                          <div className="min-w-0">
+                            <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Delivery</p>
+                            <p className="font-semibold text-[#111111]">+{formatCurrency(o.delivery_charge)}</p>
                           </div>
                         )}
                         <div className="min-w-0 col-span-2">
@@ -4069,12 +4069,6 @@ export default function Dashboard() {
                                             <span>Subtotal</span>
                                             <span className="font-bold text-gray-900">{formatCurrency(effectiveSubtotal)}</span>
                                           </div>
-                                          {o.delivery_charge > 0 && (
-                                            <div className="flex justify-between text-gray-700">
-                                              <span>Delivery Charges</span>
-                                              <span className="font-bold text-gray-900">+{formatCurrency(o.delivery_charge)}</span>
-                                            </div>
-                                          )}
                                           {o.discount_amount > 0 && (
                                             <div className="flex justify-between text-emerald-700">
                                               <span>Coupon Disc. {o.coupon_code ? `(${o.coupon_code})` : ''}</span>
@@ -4097,6 +4091,12 @@ export default function Dashboard() {
                                             <div className="flex justify-between text-gray-700">
                                               <span>SGST</span>
                                               <span className="font-bold text-gray-900">+{formatCurrency(sgst)}</span>
+                                            </div>
+                                          )}
+                                          {o.delivery_charge > 0 && (
+                                            <div className="flex justify-between text-gray-700">
+                                              <span>Delivery Charges</span>
+                                              <span className="font-bold text-gray-900">+{formatCurrency(o.delivery_charge)}</span>
                                             </div>
                                           )}
                                           <div className="border-t border-gray-200 pt-2 flex justify-between font-black text-sm text-gray-900">

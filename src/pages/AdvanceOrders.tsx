@@ -851,12 +851,6 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
                         <span>Subtotal</span>
                         <span className="font-bold text-gray-900">{formatCurrency(subtotal)}</span>
                       </div>
-                      {deliveryCharge > 0 && (
-                        <div className="flex justify-between text-gray-700">
-                          <span>Delivery Charges</span>
-                          <span className="font-bold text-gray-900">+{formatCurrency(deliveryCharge)}</span>
-                        </div>
-                      )}
                       {couponDiscount > 0 && (
                         <div className="flex justify-between text-emerald-700">
                           <span>Coupon Discount {selected.coupon_code ? `(${selected.coupon_code})` : ''}</span>
@@ -879,6 +873,12 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
                         <div className="flex justify-between text-gray-700">
                           <span>SGST{gstLabel}</span>
                           <span className="font-bold text-gray-900">+{formatCurrency(sgstAmount)}</span>
+                        </div>
+                      )}
+                      {deliveryCharge > 0 && (
+                        <div className="flex justify-between text-gray-700">
+                          <span>Delivery Charges</span>
+                          <span className="font-bold text-gray-900">+{formatCurrency(deliveryCharge)}</span>
                         </div>
                       )}
                       <div className="border-t border-gray-200 pt-2 flex justify-between font-black text-sm text-gray-900">

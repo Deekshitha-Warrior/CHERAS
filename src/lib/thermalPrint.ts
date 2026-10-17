@@ -170,12 +170,6 @@ export function printThermalReceipt(data: ThermalReceiptData) {
                 <td class="text-right" style="font-weight: 700;">${formatCurrency(data.subtotal)}</td>
               </tr>
             ` : ''}
-            ${(data.shipping || 0) > 0 ? `
-              <tr>
-                <td class="text-left">Delivery</td>
-                <td class="text-right">+${formatCurrency(data.shipping)}</td>
-              </tr>
-            ` : ''}
             ${(data.couponDiscount || 0) > 0 ? `
               <tr>
                 <td class="text-left">Coupon Disc.${data.couponCode ? ` (${data.couponCode})` : ''}</td>
@@ -214,6 +208,12 @@ export function printThermalReceipt(data: ThermalReceiptData) {
               }
               return ''
             })()}
+            ${(data.shipping || 0) > 0 ? `
+              <tr>
+                <td class="text-left">Delivery</td>
+                <td class="text-right">+${formatCurrency(data.shipping)}</td>
+              </tr>
+            ` : ''}
             <tr style="font-size: 13px; font-weight: 900;">
               <td class="text-left" style="padding-top: 3px;">Total</td>
               <td class="text-right" style="padding-top: 3px;">${formatCurrency(data.total)}</td>

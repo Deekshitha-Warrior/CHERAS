@@ -108,9 +108,6 @@ export function advanceReceiptPdf(order: AdvanceOrder) {
   const moneyRows: Array<{ label: string; value: string; isBold?: boolean; isHighlight?: boolean }> = [
     { label: 'Subtotal', value: pdfMoney(subtotal) },
   ]
-  if (deliveryCharge > 0) {
-    moneyRows.push({ label: 'Delivery Charges', value: `+${pdfMoney(deliveryCharge)}` })
-  }
   if (couponDiscount > 0) {
     moneyRows.push({ label: `Coupon Discount${order.coupon_code ? ` (${order.coupon_code})` : ''}`, value: `-${pdfMoney(couponDiscount)}` })
   }
@@ -122,6 +119,9 @@ export function advanceReceiptPdf(order: AdvanceOrder) {
   }
   if (sgstAmount > 0) {
     moneyRows.push({ label: `SGST (${sgstRate}%)`, value: `+${pdfMoney(sgstAmount)}` })
+  }
+  if (deliveryCharge > 0) {
+    moneyRows.push({ label: 'Delivery Charges', value: `+${pdfMoney(deliveryCharge)}` })
   }
   moneyRows.push(
     { label: 'Total Amount', value: pdfMoney(order.total_amount), isBold: true },
@@ -359,11 +359,11 @@ export function printAdvanceReceipt(order: AdvanceOrder) {
   <!-- Enabled Financial Breakdown (Subtotal, Delivery, Discounts, Taxes) -->
   <div style="font-size: 11.5px; line-height: 1.6;">
     <div class="row"><span>Subtotal</span><span>${esc(formatCurrency(subtotal))}</span></div>
-    ${deliveryCharge > 0 ? `<div class="row"><span>Delivery Charges</span><span>+${esc(formatCurrency(deliveryCharge))}</span></div>` : ''}
     ${couponDiscount > 0 ? `<div class="row"><span>Coupon Discount${order.coupon_code ? ` (${esc(order.coupon_code)})` : ''}</span><span>-${esc(formatCurrency(couponDiscount))}</span></div>` : ''}
     ${manualDiscount > 0 ? `<div class="row"><span>Manual Discount</span><span>-${esc(formatCurrency(manualDiscount))}</span></div>` : ''}
     ${cgstAmount > 0 ? `<div class="row"><span>CGST (${cgstRate}%)</span><span>+${esc(formatCurrency(cgstAmount))}</span></div>` : ''}
     ${sgstAmount > 0 ? `<div class="row"><span>SGST (${sgstRate}%)</span><span>+${esc(formatCurrency(sgstAmount))}</span></div>` : ''}
+    ${deliveryCharge > 0 ? `<div class="row"><span>Delivery Charges</span><span>+${esc(formatCurrency(deliveryCharge))}</span></div>` : ''}
   </div>
 
   <div class="dashed-divider"></div>

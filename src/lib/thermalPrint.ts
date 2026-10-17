@@ -1,4 +1,4 @@
-import { BRAND_ADDRESS, BRAND_EMAIL, BRAND_EN, BRAND_INSTAGRAM, BRAND_PRIMARY_PHONE_DISPLAY, BRAND_GSTIN } from './brand'
+import { BRAND_ADDRESS, BRAND_EMAIL, BRAND_EN, BRAND_PRIMARY_PHONE_DISPLAY, BRAND_GSTIN } from './brand'
 import { formatCurrency, formatInvoiceNo } from './retail'
 import { printHtmlDocument } from './printHtml'
 
@@ -121,7 +121,7 @@ export function printThermalReceipt(data: ThermalReceiptData) {
           <div style="font-size: 9.5px; margin-top: 2px; line-height: 1.3;">${data.storeAddress || BRAND_ADDRESS}</div>
           <div class="mt-1" style="font-size: 10px;">GSTIN: ${data.storeGstin || BRAND_GSTIN}</div>
           <div style="font-size: 10px;">Ph: ${BRAND_PRIMARY_PHONE_DISPLAY}</div>
-          <div style="font-size: 9px; color: #333;">${data.storeEmail || BRAND_EMAIL} | Insta: @${BRAND_INSTAGRAM}</div>
+          <div style="font-size: 9px; color: #333;">${data.storeEmail || BRAND_EMAIL}</div>
         </div>
 
         <div class="border-bottom border-top" style="font-size: 11px;">
@@ -231,7 +231,6 @@ export function printThermalReceipt(data: ThermalReceiptData) {
 
         <div class="text-center mt-2" style="font-size: 11px;">
           <div>Thank you for shopping at ${(data.storeName || BRAND_EN).toUpperCase()}!</div>
-          <div>Follow us on Instagram: @${BRAND_INSTAGRAM}</div>
         </div>
         </div>
       </body>

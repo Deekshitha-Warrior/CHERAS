@@ -102,7 +102,6 @@ export const Invoice: React.FC<InvoiceProps> = ({
         <div style={{ fontSize: 11, color: '#6B7280', marginTop: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span>📞 {BRAND_PRIMARY_PHONE_DISPLAY}</span>
           <span>✉️ {BRAND_EMAIL}</span>
-          <span>📷 @{BRAND_INSTAGRAM}</span>
         </div>
       </div>
 
@@ -282,9 +281,6 @@ export const Invoice: React.FC<InvoiceProps> = ({
       >
         <div style={{ fontSize: 12, fontWeight: 800, color: '#111111', letterSpacing: 0.5 }}>
           Thank you for shopping at {BRAND_EN}!
-        </div>
-        <div style={{ fontSize: 10, color: '#6B7280', marginTop: 3, fontWeight: 500 }}>
-          Follow us on Instagram: @{BRAND_INSTAGRAM}
         </div>
       </div>
     </div>

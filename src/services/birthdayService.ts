@@ -106,7 +106,7 @@ Visit us this week to redeem your gift. Happy Shopping! 🛍️`,
 ]
 
 // Local storage fallback helpers
-const getLocalBirthdaysMap = (): Record<string, { birthday: string; notes?: string; updatedAt: string }> => {
+export const getLocalBirthdaysMap = (): Record<string, { birthday: string; notes?: string; updatedAt: string }> => {
   try {
     const raw = localStorage.getItem(STORAGE_BIRTHDAYS_KEY)
     return raw ? JSON.parse(raw) : {}
@@ -542,6 +542,85 @@ export async function removeCustomerBirthday(phone: string): Promise<{ success: 
       success: false,
       error: err instanceof Error ? err.message : 'Failed to remove birthday',
     }
+  }
+}
+
+/**
+ * Universal lookup for customer details (name, birthday, address) by phone number.
+ * Used by front billing panel (POS), Advance Orders, etc.
+ */
+export async function lookupCustomerByPhone(rawPhone: string): Promise<{
+  name?: string
+  birthday?: string | null
+  address?: string
+} | null> {
+  const digits = rawPhone.replace(/\D/g, '')
+  if (digits.length < 5) return null
+  const phoneKey = normalizePhone(rawPhone) || digits
+  const last10 = digits.slice(-10)
+
+  const localMap = getLocalBirthdaysMap()
+  let resultBirthday: string | null = localMap[phoneKey]?.birthday || null
+  let resultName = ''
+  let resultAddress = ''
+
+  if (isSupabaseConfigured) {
+    try {
+      // 1. Check customer_birthdays
+      const { data: bdayRow } = await supabase
+        .from('customer_birthdays')
+        .select('customer_name, birthday')
+        .eq('phone', phoneKey)
+        .maybeSingle()
+
+      if (bdayRow) {
+        if (bdayRow.birthday) resultBirthday = bdayRow.birthday
+        if (bdayRow.customer_name && bdayRow.customer_name !== 'Valued Customer') {
+          resultName = bdayRow.customer_name
+        }
+      }
+
+      // 2. Check profiles if name or birthday still missing
+      if (!resultBirthday || !resultName) {
+        const { data: profRow } = await supabase
+          .from('profiles')
+          .select('name, birthday')
+          .ilike('mobile', `%${last10}%`)
+          .maybeSingle()
+
+        if (profRow) {
+          if (profRow.birthday && !resultBirthday) resultBirthday = profRow.birthday
+          if (profRow.name && !resultName) resultName = profRow.name
+        }
+      }
+
+      // 3. Check recent order for address and name
+      const { data: orderRow } = await supabase
+        .from('orders')
+        .select('customer_name, address')
+        .ilike('phone', `%${last10}%`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (orderRow) {
+        if (orderRow.customer_name && !resultName && orderRow.customer_name !== 'Customer') {
+          resultName = orderRow.customer_name
+        }
+        if (orderRow.address && orderRow.address !== 'POS Counter') {
+          resultAddress = orderRow.address
+        }
+      }
+    } catch (err) {
+      console.warn('lookupCustomerByPhone remote query caught:', err)
+    }
+  }
+
+  if (!resultName && !resultBirthday && !resultAddress) return null
+  return {
+    name: resultName || undefined,
+    birthday: resultBirthday,
+    address: resultAddress || undefined,
   }
 }
 

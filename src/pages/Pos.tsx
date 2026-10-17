@@ -6,7 +6,7 @@ import {
   RefreshCw, ShoppingBag, MessageCircle,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   Wifi, WifiOff, Layers, X, ChevronDown, Power,
-  Edit2, AlertCircle, Check
+  Edit2, AlertCircle, Check, Cake, Gift
 } from 'lucide-react'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { useProductStore, useVariantStore, useAdminAuthStore, type Product } from '../store/store'
@@ -38,6 +38,13 @@ import { fetchVariantsByProduct, type ProductVariant } from '../services/variant
 import { BarcodeScannerInput, type ScannedItemPayload } from '../components/pos/BarcodeScannerInput'
 import { AddUnregisteredItemModal } from '../components/pos/AddUnregisteredItemModal'
 import { getOrCreateUnregisteredProduct } from '../services/productService'
+import {
+  saveCustomerBirthday,
+  removeCustomerBirthday,
+  lookupCustomerByPhone,
+  getNextBirthday,
+  type NextBirthdayInfo,
+} from '../services/birthdayService'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type PosItem = Product & {
@@ -146,7 +153,13 @@ export default function Pos(props: PosProps = {}) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [activeCategory, setActiveCategory] = useState('All')
   const [items, setItems] = useState<PosItem[]>([])
-  const [customer, setCustomer] = useState({ name: '', phone: '', address: '' })
+  const [customer, setCustomer] = useState<{
+    name: string
+    phone: string
+    address: string
+    birthday: string
+  }>({ name: '', phone: '', address: '', birthday: '' })
+  const [birthdayInfo, setBirthdayInfo] = useState<NextBirthdayInfo | null>(null)
   const [remarks, setRemarks] = useState('')
   const [referenceNumber, setReferenceNumber] = useState('')
   const [billingDate, setBillingDate] = useState('') // '' = use current date/time
@@ -218,6 +231,39 @@ export default function Pos(props: PosProps = {}) {
 
     return () => { void supabase.removeChannel(productChannel) }
   }, [fetchProducts, fetchVariants])
+
+  // Update birthday calculations whenever customer birthday changes
+  useEffect(() => {
+    if (customer.birthday) {
+      setBirthdayInfo(getNextBirthday(customer.birthday))
+    } else {
+      setBirthdayInfo(null)
+    }
+  }, [customer.birthday])
+
+  // Universal Customer Lookup: Auto-populate customer details & birthday as cashier types phone number
+  useEffect(() => {
+    const digits = customer.phone.replace(/\D/g, '')
+    if (digits.length < 10) return
+
+    const timer = setTimeout(async () => {
+      try {
+        const found = await lookupCustomerByPhone(customer.phone)
+        if (found) {
+          setCustomer(prev => ({
+            ...prev,
+            name: prev.name.trim() ? prev.name : (found.name || prev.name),
+            birthday: prev.birthday ? prev.birthday : (found.birthday || prev.birthday),
+            address: prev.address.trim() ? prev.address : (found.address || prev.address),
+          }))
+        }
+      } catch (err) {
+        console.warn('Universal customer lookup failed:', err)
+      }
+    }, 350)
+
+    return () => clearTimeout(timer)
+  }, [customer.phone])
 
   // ── Derived data ──────────────────────────────────────────────────────
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -776,7 +822,8 @@ export default function Pos(props: PosProps = {}) {
 
   const clearAll = () => {
     setItems([])
-    setCustomer({ name: '', phone: '', address: '' })
+    setCustomer({ name: '', phone: '', address: '', birthday: '' })
+    setBirthdayInfo(null)
     setInvoice(null)
     setCashReceived('')
     setCouponInput('')
@@ -922,6 +969,9 @@ export default function Pos(props: PosProps = {}) {
       })
       setDepositCreated(created)
       setDepositOpen(false)
+      if (customer.phone && customer.birthday) {
+        void saveCustomerBirthday(customer.phone, customer.birthday, customer.name.trim())
+      }
       clearAll()
       void fetchProducts(true)
       void fetchVariants()
@@ -1059,8 +1109,12 @@ export default function Pos(props: PosProps = {}) {
       }
       setInvoice(createdInvoice)
       void persistInvoicePdf(createdInvoice)
+      if (normalizedPhone && customer.birthday) {
+        void saveCustomerBirthday(normalizedPhone, customer.birthday, customer.name.trim())
+      }
       setItems([])
-      setCustomer({ name: '', phone: '', address: '' })
+      setCustomer({ name: '', phone: '', address: '', birthday: '' })
+      setBirthdayInfo(null)
       void fetchProducts()
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to generate bill')
@@ -1412,18 +1466,43 @@ export default function Pos(props: PosProps = {}) {
                   className="w-full min-w-0 max-w-full box-border h-10 sm:h-11 px-3 sm:px-4 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#D4AF37] text-[13px] font-bold text-[#111111] placeholder:text-gray-400 placeholder:font-medium"
                 />
               </div>
+
+              {/* Customer Birthday (DOB) */}
               <div className="min-w-0">
-                <label htmlFor="pos-remarks" className="block text-[11px] md:text-[10px] font-bold text-[#374151] mb-1">Remarks (Internal)</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="pos-customer-birthday" className="flex items-center gap-1.5 text-[11px] md:text-[10px] font-bold text-[#374151]">
+                    <Cake size={13} className="text-[#C9A24B]" />
+                    <span>Birthday (DOB)</span>
+                  </label>
+                  {customer.birthday && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomer({ ...customer, birthday: '' })
+                        if (customer.phone) void removeCustomerBirthday(customer.phone)
+                      }}
+                      className="text-[10px] text-gray-400 hover:text-red-500 font-semibold cursor-pointer"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
                 <input
-                  id="pos-remarks"
-                  name="remarks"
-                  type="text"
-                  value={remarks}
-                  onChange={e => setRemarks(e.target.value)}
-                  placeholder="Optional remarks"
-                  className="w-full min-w-0 max-w-full box-border h-10 sm:h-11 px-3 sm:px-4 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#D4AF37] text-[13px] font-bold text-[#111111] placeholder:text-gray-400 placeholder:font-medium"
+                  id="pos-customer-birthday"
+                  name="customerBirthday"
+                  type="date"
+                  value={customer.birthday}
+                  onChange={e => {
+                    const newDob = e.target.value
+                    setCustomer({ ...customer, birthday: newDob })
+                    if (customer.phone && newDob) {
+                      void saveCustomerBirthday(customer.phone, newDob, customer.name)
+                    }
+                  }}
+                  className="w-full min-w-0 max-w-full box-border h-10 sm:h-11 px-3 sm:px-4 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#D4AF37] text-[13px] font-bold text-[#111111]"
                 />
               </div>
+
               <div className="min-w-0">
                 <label htmlFor="pos-reference-number" className="block text-[11px] md:text-[10px] font-bold text-[#374151] mb-1">Reference Number</label>
                 <input
@@ -1436,7 +1515,58 @@ export default function Pos(props: PosProps = {}) {
                   className="w-full min-w-0 max-w-full box-border h-10 sm:h-11 px-3 sm:px-4 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#D4AF37] text-[13px] font-bold text-[#111111] placeholder:text-gray-400 placeholder:font-medium"
                 />
               </div>
-              <div className="min-w-0 md:col-span-2">
+
+              {/* Birthday Celebration Banner if Today */}
+              {birthdayInfo?.isToday && (
+                <div className="md:col-span-2 rounded-xl bg-gradient-to-r from-amber-500/10 via-rose-500/10 to-amber-500/10 border border-amber-300 p-3 flex items-center justify-between gap-3 shadow-xs">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl animate-bounce">🎂</span>
+                    <div>
+                      <p className="text-xs font-black text-[#7B1E2B] flex items-center gap-1.5 uppercase tracking-wide">
+                        <span>Customer's Birthday is Today!</span>
+                        <span className="bg-[#7B1E2B] text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">Offer Eligible</span>
+                      </p>
+                      <p className="text-[11px] text-gray-600 font-medium">
+                        Born on {birthdayInfo.formattedShortDate} • Celebrate with special discount treat!
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCouponInput('BDAY15')
+                      void applyCoupon('BDAY15')
+                    }}
+                    className="shrink-0 px-3 py-1.5 bg-[#7B1E2B] text-[#C9A24B] hover:bg-[#631722] rounded-xl text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
+                  >
+                    <Gift size={13} />
+                    <span>Apply BDAY15</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Birthday Notice if This Week */}
+              {birthdayInfo?.isThisWeek && !birthdayInfo.isToday && (
+                <div className="md:col-span-2 rounded-xl bg-amber-50/90 border border-amber-200 px-3 py-2 flex items-center gap-2 text-amber-900 text-xs font-bold">
+                  <span>🎈</span>
+                  <span>Upcoming Birthday in {birthdayInfo.daysUntil} day{birthdayInfo.daysUntil > 1 ? 's' : ''} ({birthdayInfo.formattedShortDate})</span>
+                </div>
+              )}
+
+              <div className="min-w-0">
+                <label htmlFor="pos-remarks" className="block text-[11px] md:text-[10px] font-bold text-[#374151] mb-1">Remarks (Internal)</label>
+                <input
+                  id="pos-remarks"
+                  name="remarks"
+                  type="text"
+                  value={remarks}
+                  onChange={e => setRemarks(e.target.value)}
+                  placeholder="Optional remarks"
+                  className="w-full min-w-0 max-w-full box-border h-10 sm:h-11 px-3 sm:px-4 bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[#D4AF37] text-[13px] font-bold text-[#111111] placeholder:text-gray-400 placeholder:font-medium"
+                />
+              </div>
+
+              <div className="min-w-0">
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-[11px] md:text-[10px] font-bold text-[#374151]">Billing Date (Optional)</label>
                   {billingDate && (
@@ -1735,6 +1865,33 @@ export default function Pos(props: PosProps = {}) {
                       className={`w-full h-8 px-2 bg-white border rounded-lg text-[12px] font-bold text-[#111111] focus:outline-none ${customer.phone && !normalizePhone(customer.phone) ? 'border-red-400 bg-red-50' : 'border-gray-200 focus:border-[#7B1E2B]'}`}
                     />
                   </div>
+                </div>
+                <div className="p-2 border-b border-gray-200 bg-white">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <label htmlFor="pos-mobile-customer-bday" className="text-[10px] text-[#374151] uppercase flex items-center gap-1 font-bold">
+                      <Cake size={11} className="text-[#C9A24B]" />
+                      <span>Birthday (DOB)</span>
+                    </label>
+                    {birthdayInfo?.isToday && (
+                      <span className="text-[9px] font-black text-[#7B1E2B] uppercase bg-amber-100 px-1.5 py-0.2 rounded-full">
+                        🎂 Today!
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    id="pos-mobile-customer-bday"
+                    name="mobileCustomerBirthday"
+                    type="date"
+                    value={customer.birthday}
+                    onChange={e => {
+                      const newDob = e.target.value
+                      setCustomer({ ...customer, birthday: newDob })
+                      if (customer.phone && newDob) {
+                        void saveCustomerBirthday(customer.phone, newDob, customer.name)
+                      }
+                    }}
+                    className="w-full h-8 px-2 bg-white border border-gray-200 rounded-lg text-[12px] font-bold text-[#111111] focus:outline-none focus:border-[#7B1E2B]"
+                  />
                 </div>
                 {items.length > 0 && (
                   <div className="px-3 py-2 bg-[#F9FAFB] space-y-1 border-b border-gray-200 max-h-[80px] overflow-y-auto">

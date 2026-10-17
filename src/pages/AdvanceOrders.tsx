@@ -7,7 +7,7 @@ import { emptySplitInput, formatPaymentLabel, splitInputToDetails, splitTotal, t
 import { invoicePdfFile } from '../lib/invoicePdf'
 import { printThermalReceipt } from '../lib/thermalPrint'
 import { buildAdvanceDepositWhatsAppMessage, buildProfessionalWhatsAppMessage, publicInvoiceUrl } from '../lib/whatsappMessage'
-import { formatPhoneDisplay, toWhatsAppUrl } from '../lib/phone'
+import { formatPhoneDisplay, normalizePhone, toWhatsAppUrl } from '../lib/phone'
 import { advanceReceiptPdf, downloadFile, printAdvanceReceipt } from '../lib/advanceReceipt'
 import { useAdminAuthStore, useProductStore, useVariantStore } from '../store/store'
 import {
@@ -15,6 +15,7 @@ import {
   type AdvanceOrder, type AdvancePayment, type AdvancePaymentMethod, type AdvanceStatus, type AdvanceTimeline,
 } from '../services/advanceOrderService'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { lookupCustomerByPhone, saveCustomerBirthday, getLocalBirthdaysMap } from '../services/birthdayService'
 
 // Custom Malaysian Ringgit icon
 const RMIcon = ({ size = 20, className = '' }: { size?: number; className?: string }) => (
@@ -34,7 +35,7 @@ const STATUS_STYLES: Record<AdvanceStatus, string> = {
   pending_deposit: 'bg-amber-50 text-amber-700 border-amber-200', ready_for_delivery: 'bg-gray-50 text-gray-700 border-gray-200',
   waiting_final_payment: 'bg-gray-50 text-gray-700 border-gray-200', completed: 'bg-emerald-50 text-emerald-700 border-emerald-200', cancelled: 'bg-red-50 text-red-700 border-red-200',
 }
-const initialForm = { customerName: '', phone: '', address: '', productName: '', category: '', description: '', totalAmount: '', depositAmount: '', expectedDeliveryDate: '', status: 'pending_deposit' as AdvanceStatus, remarks: '', reference_number: '', paymentMethod: 'cash' as AdvancePaymentMethod }
+const initialForm = { customerName: '', phone: '', birthday: '', address: '', productName: '', category: '', description: '', totalAmount: '', depositAmount: '', expectedDeliveryDate: '', status: 'pending_deposit' as AdvanceStatus, remarks: '', reference_number: '', paymentMethod: 'cash' as AdvancePaymentMethod }
 const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
 type AdvanceOrdersProps = {
@@ -183,6 +184,30 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
       .subscribe()
     return () => { void supabase.removeChannel(ch) }
   }, [load])
+
+  // Universal customer lookup when typing customer phone in Advance Orders
+  useEffect(() => {
+    const digits = form.phone.replace(/\D/g, '')
+    if (digits.length < 10) return
+
+    const timer = setTimeout(async () => {
+      try {
+        const found = await lookupCustomerByPhone(form.phone)
+        if (found) {
+          setForm(prev => ({
+            ...prev,
+            customerName: prev.customerName.trim() ? prev.customerName : (found.name || prev.customerName),
+            birthday: prev.birthday ? prev.birthday : (found.birthday || prev.birthday),
+            address: prev.address.trim() ? prev.address : (found.address || prev.address),
+          }))
+        }
+      } catch (err) {
+        console.warn('Customer lookup in advance orders caught:', err)
+      }
+    }, 350)
+
+    return () => clearTimeout(timer)
+  }, [form.phone])
 
   const handleDeleteOrder = async (orderId: string, orderName: string) => {
     if (!window.confirm(`Are you sure you want to delete advance order "${orderName}"? This action cannot be undone.`)) return
@@ -341,6 +366,9 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
           source: matchedProd ? 'catalogue' : 'advance_order'
         }]
       })
+      if (form.phone && form.birthday) {
+        void saveCustomerBirthday(form.phone, form.birthday, form.customerName)
+      }
       setOrders(current => [created, ...current]); setForm(initialForm); setDepositSplit(emptySplitInput()); setCreateOpen(false); setNotice(`${created.deposit_id} created. Deposit is tracked separately and stock has been reserved.`)
       void useProductStore.getState().fetchProducts(true)
       void useVariantStore.getState().fetchVariants()
@@ -687,6 +715,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Customer Name *" htmlFor="adv-customer-name"><input id="adv-customer-name" name="customerName" autoComplete="name" required className={inputClass} value={form.customerName} onChange={e=>setForm({...form,customerName:e.target.value})}/></Field>
             <Field label="Phone Number *" htmlFor="adv-phone-number"><input id="adv-phone-number" name="phone" autoComplete="tel" required className={inputClass} value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/></Field>
+            <Field label="Customer Birthday (DOB)" htmlFor="adv-customer-birthday"><input id="adv-customer-birthday" name="customerBirthday" type="date" className={inputClass} value={form.birthday} onChange={e=>setForm({...form,birthday:e.target.value})}/></Field>
             <Field label="Address" htmlFor="adv-address"><textarea id="adv-address" name="address" autoComplete="street-address" className={inputClass} value={form.address} onChange={e=>setForm({...form,address:e.target.value})}/></Field>
             <Field label="Product Name *" htmlFor="adv-product-name"><input id="adv-product-name" name="productName" required list="advance-products" className={inputClass} value={form.productName} onChange={e=>{const product=products.find(p=>p.name===e.target.value);setForm({...form,productName:e.target.value,category:product?.category||form.category})}}/><datalist id="advance-products">{products.map(p=><option key={p.id} value={p.name}/>)}</datalist></Field>
             <Field label="Category" htmlFor="adv-category"><input id="adv-category" name="category" className={inputClass} value={form.category} onChange={e=>setForm({...form,category:e.target.value})}/></Field>
@@ -819,9 +848,14 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
 
               const gstLabel = gstRate > 0 ? ` (${(gstRate / 2).toFixed(1).replace(/\.0$/, '')}%)` : ''
 
+              const bdayMap = getLocalBirthdaysMap()
+              const phoneKey = normalizePhone(selected.phone) || selected.phone.replace(/\D/g, '')
+              const custBday = bdayMap[phoneKey]?.birthday
+
               const infoCards: Array<[string, string]> = [
                 ['Customer', selected.customer_name],
                 ['Phone', formatPhoneDisplay(selected.phone)],
+                ...(custBday ? [['Birthday (DOB)', `${new Date(`${custBday}T00:00:00`).toLocaleDateString('en-IN')} 🎂`]] as Array<[string, string]> : []),
                 ['Address', selected.address || '-'],
                 ['Product', selected.product_name],
                 ['Category', selected.category || '-'],

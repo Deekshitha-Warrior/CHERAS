@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { CalendarDays, CheckCircle2, Clock3, Download, Edit2, Eye, FileText, MessageCircle, PackageCheck, Printer, RefreshCw, Search, X, Trash2 } from 'lucide-react'
-import { formatCurrency } from '../lib/retail'
+import { formatCurrency, formatInvoiceNo } from '../lib/retail'
 import SplitPaymentInputs from '../components/common/SplitPaymentInputs'
 import { emptySplitInput, formatPaymentLabel, splitInputToDetails, splitTotal, type SplitInputValue } from '../lib/payments'
 import { invoicePdfFile } from '../lib/invoicePdf'
@@ -64,6 +64,8 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
   const [paymentForm, setPaymentForm] = useState({ method: 'cash' as AdvancePaymentMethod, remarks: '' })
   const [depositSplit, setDepositSplit] = useState<SplitInputValue>(emptySplitInput())
   const [finalSplit, setFinalSplit] = useState<SplitInputValue>(emptySplitInput())
+  const [completionModalOrder, setCompletionModalOrder] = useState<AdvanceOrder | null>(null)
+  const [createdDepositModal, setCreatedDepositModal] = useState<AdvanceOrder | null>(null)
 
   // Edit Advance Order state
   const [editingOrder, setEditingOrder] = useState<AdvanceOrder | null>(null)
@@ -198,10 +200,12 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
 
   // Close modals or drawer on Escape key
   useEffect(() => {
-    if (!selected && !createOpen && !paymentOrder && !editingOrder) return
+    if (!selected && !createOpen && !paymentOrder && !editingOrder && !completionModalOrder && !createdDepositModal) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (editingOrder) setEditingOrder(null)
+        if (completionModalOrder) setCompletionModalOrder(null)
+        else if (createdDepositModal) setCreatedDepositModal(null)
+        else if (editingOrder) setEditingOrder(null)
         else if (selected) setSelected(null)
         else if (paymentOrder) setPaymentOrder(null)
         else if (createOpen) setCreateOpen(false)
@@ -209,11 +213,11 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selected, createOpen, paymentOrder, editingOrder])
+  }, [selected, createOpen, paymentOrder, editingOrder, completionModalOrder, createdDepositModal])
 
   // Prevent background scroll when modal or drawer is open
   useEffect(() => {
-    const isAnyOpen = !!(selected || createOpen || paymentOrder || editingOrder)
+    const isAnyOpen = !!(selected || createOpen || paymentOrder || editingOrder || completionModalOrder || createdDepositModal)
     if (isAnyOpen) {
       document.body.style.overflow = 'hidden'
     } else {
@@ -222,7 +226,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
     return () => {
       document.body.style.overflow = ''
     }
-  }, [selected, createOpen, paymentOrder, editingOrder])
+  }, [selected, createOpen, paymentOrder, editingOrder, completionModalOrder, createdDepositModal])
 
   const openDetails = async (order: AdvanceOrder) => {
     setSelected(order); setTimeline([]); setPayments([])
@@ -341,18 +345,8 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
       void useProductStore.getState().fetchProducts(true)
       void useVariantStore.getState().fetchVariants()
 
-      // Redirect to WhatsApp with advance deposit receipt
-      const advanceMsg = buildAdvanceDepositWhatsAppMessage({
-        customerName: created.customer_name,
-        depositId: created.deposit_id,
-        productName: created.product_name,
-        totalAmount: created.total_amount,
-        depositAmount: created.deposit_amount,
-        remainingBalance: created.remaining_balance,
-        expectedDeliveryDate: created.expected_delivery_date,
-        paymentMethod: form.paymentMethod === 'split' ? formatPaymentLabel('split', splitInputToDetails(depositSplit)) : form.paymentMethod,
-      })
-      window.open(toWhatsAppUrl(created.phone, advanceMsg), '_blank', 'noopener,noreferrer')
+      // Show deposit created popup with options for Print Receipt, WhatsApp, and PDF download
+      setCreatedDepositModal(created)
     } catch (err) { setError(err instanceof Error ? err.message : 'Unable to create advance order') } finally { setSaving(false) }
   }
 
@@ -395,10 +389,16 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
         paymentForm.method === 'split' ? splitInputToDetails(finalSplit) : undefined
       )
       const completed: AdvanceOrder = { ...paymentOrder, status: 'completed', remaining_balance: 0, completed_at: result.completed_at, completed_order_id: result.order_id, invoice_number: result.invoice_no, final_payment_method: paymentForm.method, split_details: result.split_details }
-      setOrders(rows => rows.map(row => row.id === completed.id ? completed : row)); onOrderCompleted?.(completed); setPaymentOrder(null); setPaymentForm({ method: 'cash', remarks: '' }); setFinalSplit(emptySplitInput()); setNotice(`${result.invoice_no} generated once. The full ${formatCurrency(completed.total_amount)} is now recognized as revenue.`)
+      setOrders(rows => rows.map(row => row.id === completed.id ? completed : row))
+      if (selected?.id === completed.id) setSelected(completed)
+      onOrderCompleted?.(completed)
+      setPaymentOrder(null)
+      setPaymentForm({ method: 'cash', remarks: '' })
+      setFinalSplit(emptySplitInput())
+      setNotice(`${result.invoice_no} generated once. The full ${formatCurrency(completed.total_amount)} is now recognized as revenue.`)
 
-      // Redirect to WhatsApp with final invoice URL + Instagram + Feedback form
-      whatsappInvoice(completed)
+      // Open completion popup with Print Receipt, WhatsApp, and Download PDF options
+      setCompletionModalOrder(completed)
     } catch (err) { setError(err instanceof Error ? err.message : 'Unable to complete payment') } finally { setSaving(false) }
   }
 
@@ -1118,6 +1118,182 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
             </button>
           </div>
         </form>
+      </div>,
+      document.body
+    )}
+
+    {/* Modal: Order Completed & Final Payment Received */}
+    {completionModalOrder && createPortal(
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+        <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl border border-[#F3F4F6] text-center animate-in zoom-in-95 duration-150">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-xs">
+            <CheckCircle2 size={32} />
+          </div>
+          
+          <h3 className="text-xl font-black text-[#111111]">Payment Received & Completed!</h3>
+          <p className="mt-1 text-xs text-[#6B7280]">
+            Invoice <span className="font-mono font-bold text-[#7B1E2B]">#{formatInvoiceNo(completionModalOrder.invoice_number || completionModalOrder.deposit_id)}</span> generated successfully.
+          </p>
+
+          <div className="mt-4 rounded-2xl bg-gray-50 border border-gray-100 p-4 text-left space-y-2 text-xs">
+            <div className="flex justify-between">
+              <span className="text-gray-500 font-semibold">Customer</span>
+              <span className="font-bold text-gray-900 break-words max-w-[200px] text-right">{completionModalOrder.customer_name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 font-semibold">Phone</span>
+              <span className="font-bold text-gray-900">{formatPhoneDisplay(completionModalOrder.phone) || completionModalOrder.phone}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 font-semibold">Payment Mode</span>
+              <span className="font-bold text-gray-900">{formatPaymentLabel(completionModalOrder.final_payment_method, completionModalOrder.split_details)}</span>
+            </div>
+            {completionModalOrder.coupon_code && (
+              <div className="flex justify-between">
+                <span className="text-emerald-700 font-semibold">Coupon ({completionModalOrder.coupon_code})</span>
+                <span className="font-bold text-emerald-700">-{formatCurrency(completionModalOrder.coupon_discount || completionModalOrder.discount_amount || 0)}</span>
+              </div>
+            )}
+            {Number(completionModalOrder.manual_discount || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-emerald-700 font-semibold">Manual Discount</span>
+                <span className="font-bold text-emerald-700">-{formatCurrency(Number(completionModalOrder.manual_discount || 0))}</span>
+              </div>
+            )}
+            {Number(completionModalOrder.delivery_charge || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-500 font-semibold">Delivery Charge</span>
+                <span className="font-bold text-gray-900">+{formatCurrency(Number(completionModalOrder.delivery_charge || 0))}</span>
+              </div>
+            )}
+            <div className="flex justify-between pt-2 border-t border-gray-200 text-sm font-black">
+              <span className="text-gray-900">Total Settled</span>
+              <span className="text-emerald-700">{formatCurrency(completionModalOrder.total_amount)}</span>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => printFinal(completionModalOrder)}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#7B1E2B] hover:bg-[#631722] text-[#C9A24B] border border-[#C9A24B]/40 py-3 text-xs font-black shadow-sm transition active:scale-95 cursor-pointer"
+            >
+              <Printer size={16} />
+              <span>Print Receipt</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => whatsappInvoice(completionModalOrder)}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] py-3 text-xs font-black text-white shadow-sm transition active:scale-95 cursor-pointer"
+            >
+              <MessageCircle size={16} />
+              <span>WhatsApp</span>
+            </button>
+          </div>
+
+          <div className="mt-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                const file = invoiceFile(completionModalOrder)
+                downloadFile(file)
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 py-2.5 text-xs font-bold text-gray-700 transition cursor-pointer"
+            >
+              <Download size={14} />
+              <span>Download Invoice PDF</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setCompletionModalOrder(null)}
+            className="mt-3 w-full rounded-xl bg-gray-100 hover:bg-gray-200 py-2.5 text-xs font-bold text-gray-600 transition cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
+      </div>,
+      document.body
+    )}
+
+    {/* Modal: Advance Deposit Created */}
+    {createdDepositModal && createPortal(
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+        <div className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl border border-[#F3F4F6] text-center animate-in zoom-in-95 duration-150">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-[#B38018] border border-amber-200 shadow-xs">
+            <PackageCheck size={32} />
+          </div>
+          
+          <h3 className="text-xl font-black text-[#111111]">Advance Order Created!</h3>
+          <p className="mt-1 text-xs text-[#6B7280]">
+            Deposit Slip <span className="font-mono font-bold text-[#7B1E2B]">{createdDepositModal.deposit_id}</span> generated.
+          </p>
+
+          <div className="mt-4 rounded-2xl bg-gray-50 border border-gray-100 p-4 text-left space-y-2 text-xs">
+            <div className="flex justify-between">
+              <span className="text-gray-500 font-semibold">Customer</span>
+              <span className="font-bold text-gray-900 break-words max-w-[200px] text-right">{createdDepositModal.customer_name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 font-semibold">Phone</span>
+              <span className="font-bold text-gray-900">{formatPhoneDisplay(createdDepositModal.phone) || createdDepositModal.phone}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 font-semibold">Total Order Value</span>
+              <span className="font-bold text-gray-900">{formatCurrency(createdDepositModal.total_amount)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-emerald-700 font-semibold">Deposit Paid</span>
+              <span className="font-bold text-emerald-700">{formatCurrency(createdDepositModal.deposit_amount)}</span>
+            </div>
+            <div className="flex justify-between pt-2 border-t border-gray-200 text-sm font-black">
+              <span className="text-amber-800">Remaining Balance</span>
+              <span className="text-amber-800">{formatCurrency(createdDepositModal.remaining_balance)}</span>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => printAdvanceReceipt(createdDepositModal)}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#7B1E2B] hover:bg-[#631722] text-[#C9A24B] border border-[#C9A24B]/40 py-3 text-xs font-black shadow-sm transition active:scale-95 cursor-pointer"
+            >
+              <Printer size={16} />
+              <span>Print Receipt</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => whatsappDepositReceipt(createdDepositModal)}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] py-3 text-xs font-black text-white shadow-sm transition active:scale-95 cursor-pointer"
+            >
+              <MessageCircle size={16} />
+              <span>WhatsApp</span>
+            </button>
+          </div>
+
+          <div className="mt-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                const file = advanceReceiptPdf(createdDepositModal)
+                downloadFile(file)
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 py-2.5 text-xs font-bold text-gray-700 transition cursor-pointer"
+            >
+              <Download size={14} />
+              <span>Download Deposit PDF</span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setCreatedDepositModal(null)}
+            className="mt-3 w-full rounded-xl bg-gray-100 hover:bg-gray-200 py-2.5 text-xs font-bold text-gray-600 transition cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
       </div>,
       document.body
     )}

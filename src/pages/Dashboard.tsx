@@ -81,7 +81,7 @@ type DashboardOrder = {
   id: string; invoice_no: string; customer_name: string; phone: string; address: string
   created_at: string; total: number; subtotal?: number; status: string; order_mode: string; order_type: string; user_id: string | null; items: unknown
   coupon_code: string; discount_amount: number; manual_discount_amount: number; delivery_charge: number
-  total_gst: number; gst_amount?: number; payment_mode: string; payment_method?: string; split_details?: unknown; invoice_pdf_url: string; remarks?: string; reference_number?: string
+  total_gst: number; gst_amount?: number; cgst_amount?: number; sgst_amount?: number; gst_rate?: number; payment_mode: string; payment_method?: string; split_details?: unknown; invoice_pdf_url: string; remarks?: string; reference_number?: string
 }
 type DashboardOrderItem = { order_id: string; product_id?: string | null; variant_id?: string | null; product_name: string; category?: string; quantity: number; line_total: number; is_manual?: boolean | null }
 type DashboardCoupon = {
@@ -416,6 +416,9 @@ export default function Dashboard() {
     manual_discount_amount: toNumber(row.manual_discount_amount, 0),
     delivery_charge: toNumber(row.delivery_charge ?? row.shipping, 0),
     total_gst: toNumber(row.total_gst ?? row.gst_amount, 0),
+    cgst_amount: toNumber(row.cgst_amount, 0),
+    sgst_amount: toNumber(row.sgst_amount, 0),
+    gst_rate: toNumber(row.gst_rate, 0),
     payment_mode: String(row.payment_mode || row.payment_method || ''),
     split_details: row.split_details,
     invoice_pdf_url: String(row.invoice_pdf_url || ''),
@@ -1270,6 +1273,9 @@ export default function Dashboard() {
     }
     const preview = getOrderWhatsAppPreview(order)
     if (!preview) { alert('This order has no invoice details available.'); return }
+    const rawGst = Number(order.total_gst || 0)
+    const rawCgst = Number(order.cgst_amount || (rawGst > 0 ? rawGst / 2 : 0))
+    const rawSgst = Number(order.sgst_amount || (rawGst > 0 ? rawGst / 2 : 0))
     const file = invoicePdfFile({
       invoiceNo: order.invoice_no || order.id,
       date: order.created_at,
@@ -1281,7 +1287,10 @@ export default function Dashboard() {
       shipping: order.delivery_charge,
       discountAmount: order.discount_amount,
       manualDiscountAmount: order.manual_discount_amount,
-      gstAmount: order.total_gst,
+      gstAmount: rawGst,
+      cgstAmount: rawCgst,
+      sgstAmount: rawSgst,
+      gstRate: Number(order.gst_rate || 0),
       couponCode: order.coupon_code || null,
       paymentMode: formatPaymentLabel(order.payment_mode, order.split_details) || order.payment_mode,
       total: order.total,
@@ -3820,6 +3829,10 @@ export default function Dashboard() {
                   const cgstAmount = Math.round((rawGst / 2) * 100) / 100
                   const sgstAmount = Math.round((rawGst / 2) * 100) / 100
                   const totalDiscount = Number(o.discount_amount || 0) + Number(o.manual_discount_amount || 0)
+                  const taxableBase = Math.max(0, effectiveSubtotal - totalDiscount)
+                  const resolvedRate = Number(o.gst_rate || 0) || (rawGst > 0 && taxableBase > 0 ? Math.round((rawGst / taxableBase) * 1000) / 10 : 0)
+                  const halfRateStr = resolvedRate > 0 ? (resolvedRate / 2).toFixed(1).replace(/\.0$/, '') : (rawGst > 0 ? '2.5' : '')
+                  const gstRateLabel = halfRateStr ? ` (${halfRateStr}%)` : ''
                   return (
                     <div key={o.id} className="rounded-2xl border border-[#F3F4F6]/60 bg-[#FBFAF6] p-3 sm:p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
@@ -3862,13 +3875,13 @@ export default function Dashboard() {
                         )}
                         {cgstAmount > 0 && (
                           <div className="min-w-0">
-                            <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">CGST</p>
+                            <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">CGST{gstRateLabel}</p>
                             <p className="font-semibold text-[#111111]">+{formatCurrency(cgstAmount)}</p>
                           </div>
                         )}
                         {sgstAmount > 0 && (
                           <div className="min-w-0">
-                            <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">SGST</p>
+                            <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">SGST{gstRateLabel}</p>
                             <p className="font-semibold text-[#111111]">+{formatCurrency(sgstAmount)}</p>
                           </div>
                         )}
@@ -4031,6 +4044,11 @@ export default function Dashboard() {
                                 const effectiveSubtotal = (o.subtotal && o.subtotal > 0) ? o.subtotal : (itemSubtotal > 0 ? itemSubtotal : Math.max(0, orderTotal - (o.delivery_charge || 0) - rawGst + (o.discount_amount || 0) + (o.manual_discount_amount || 0)))
                                 const cgst = Math.round((rawGst / 2) * 100) / 100
                                 const sgst = Math.round((rawGst / 2) * 100) / 100
+                                const orderDisc = Number(o.discount_amount || 0) + Number(o.manual_discount_amount || 0)
+                                const orderTaxableBase = Math.max(0, effectiveSubtotal - orderDisc)
+                                const resolvedOrderGstRate = Number(o.gst_rate || 0) || (rawGst > 0 && orderTaxableBase > 0 ? Math.round((rawGst / orderTaxableBase) * 1000) / 10 : 0)
+                                const halfOrderRateStr = resolvedOrderGstRate > 0 ? (resolvedOrderGstRate / 2).toFixed(1).replace(/\.0$/, '') : (rawGst > 0 ? '2.5' : '')
+                                const orderGstRateLabel = halfOrderRateStr ? ` (${halfOrderRateStr}%)` : ''
 
                                 return (
                                   <div className="space-y-4">
@@ -4083,13 +4101,13 @@ export default function Dashboard() {
                                           )}
                                           {cgst > 0 && (
                                             <div className="flex justify-between text-gray-700">
-                                              <span>CGST</span>
+                                              <span>CGST{orderGstRateLabel}</span>
                                               <span className="font-bold text-gray-900">+{formatCurrency(cgst)}</span>
                                             </div>
                                           )}
                                           {sgst > 0 && (
                                             <div className="flex justify-between text-gray-700">
-                                              <span>SGST</span>
+                                              <span>SGST{orderGstRateLabel}</span>
                                               <span className="font-bold text-gray-900">+{formatCurrency(sgst)}</span>
                                             </div>
                                           )}

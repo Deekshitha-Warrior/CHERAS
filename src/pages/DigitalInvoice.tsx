@@ -234,6 +234,9 @@ export default function DigitalInvoice() {
     setDownloadingPdf(true)
     try {
       // Direct vector PDF data
+      const rawGst = Number(invoice.total_gst || invoice.gst_amount || 0)
+      const rawCgst = Number(invoice.cgst_amount || (rawGst > 0 ? rawGst / 2 : 0))
+      const rawSgst = Number(invoice.sgst_amount || (rawGst > 0 ? rawGst / 2 : 0))
       const pdfData = {
         invoiceNo: invoice.invoice_no,
         date: invoice.created_at,
@@ -245,10 +248,13 @@ export default function DigitalInvoice() {
         shipping: invoice.delivery_charge || 0,
         discountAmount: invoice.discount_amount || 0,
         manualDiscountAmount: invoice.manual_discount_amount || 0,
-        gstAmount: invoice.total_gst || invoice.gst_amount || 0,
+        gstAmount: rawGst,
+        cgstAmount: rawCgst,
+        sgstAmount: rawSgst,
+        gstRate: Number(invoice.gst_rate || 0),
         couponCode: invoice.coupon_code,
         paymentMode: formatPaymentLabel(invoice.payment_mode || invoice.payment_method, invoice.split_details) || invoice.payment_mode,
-        total: invoice.total > 0 ? invoice.total : (subtotal + (invoice.delivery_charge || 0) + (invoice.total_gst || invoice.gst_amount || 0) - (invoice.discount_amount || 0) - (invoice.manual_discount_amount || 0)),
+        total: invoice.total > 0 ? invoice.total : (subtotal + (invoice.delivery_charge || 0) + rawGst - (invoice.discount_amount || 0) - (invoice.manual_discount_amount || 0)),
       }
 
       // On iOS Safari: WebKit blocks blob: URL downloads and shows a blank white page.

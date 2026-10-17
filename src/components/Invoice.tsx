@@ -216,7 +216,13 @@ export const Invoice: React.FC<InvoiceProps> = ({
             {(() => {
               const cgst = cgstAmount ?? (gstAmount > 0 ? Math.round((gstAmount / 2) * 100) / 100 : 0)
               const sgst = sgstAmount ?? (gstAmount > 0 ? Math.round((gstAmount / 2) * 100) / 100 : 0)
-              const rateLabel = gstRate ? ` (${(gstRate / 2).toFixed(1).replace(/\.0$/, '')}%)` : ''
+              const totalTax = (cgst + sgst) || Number(gstAmount || 0)
+              const taxableBase = Number(subtotal || 0) - (discountAmount || 0) - (manualDiscountAmount || 0)
+              const resolvedGstRate = Number(gstRate || 0) || (totalTax > 0 && taxableBase > 0 ? Math.round((totalTax / taxableBase) * 1000) / 10 : 0)
+              const halfRateStr = resolvedGstRate > 0
+                ? (resolvedGstRate / 2).toFixed(1).replace(/\.0$/, '')
+                : (totalTax > 0 ? '2.5' : '')
+              const rateLabel = halfRateStr ? ` (${halfRateStr}%)` : ''
               if (cgst > 0 || sgst > 0) {
                 return (
                   <>

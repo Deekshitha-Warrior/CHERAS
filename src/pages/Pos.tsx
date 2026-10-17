@@ -1097,7 +1097,9 @@ export default function Pos(props: PosProps = {}) {
         manualDiscountType,
         manualDiscountValue: manualDiscountNumeric,
         gstAmount: totalGst,
-        gstRate: billGstEnabled && gstType === 'percent' ? (Number(gstInput) || 5) : undefined,
+        gstRate: billGstEnabled && gstType === 'percent'
+          ? (Number(gstInput) || 5)
+          : (billGstEnabled && discountedSubtotal > 0 ? Math.round((totalGst / discountedSubtotal) * 10000) / 100 : undefined),
         total,
         customerName: customer.name.trim() || 'Walk-in Customer',
         phone: normalizedPhone,

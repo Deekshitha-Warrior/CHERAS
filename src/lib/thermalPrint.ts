@@ -185,7 +185,15 @@ export function printThermalReceipt(data: ThermalReceiptData) {
             ${(() => {
               const cgst = data.cgstAmount ?? ((data.totalGst || 0) > 0 ? Math.round(((data.totalGst || 0) / 2) * 100) / 100 : 0)
               const sgst = data.sgstAmount ?? ((data.totalGst || 0) > 0 ? Math.round(((data.totalGst || 0) / 2) * 100) / 100 : 0)
-              const rate = data.gstRate ? ` (${(data.gstRate / 2).toFixed(1).replace(/\.0$/, '')}%)` : ''
+              const totalTax = (cgst + sgst) || Number(data.totalGst || 0)
+              const couponDisc = data.couponDiscount || 0
+              const manualDisc = data.manualDiscount || 0
+              const taxableBase = Number(data.subtotal || 0) - couponDisc - manualDisc
+              const resolvedGstRate = Number(data.gstRate || 0) || (totalTax > 0 && taxableBase > 0 ? Math.round((totalTax / taxableBase) * 1000) / 10 : 0)
+              const halfRateStr = resolvedGstRate > 0
+                ? (resolvedGstRate / 2).toFixed(1).replace(/\.0$/, '')
+                : (totalTax > 0 ? '2.5' : '')
+              const rate = halfRateStr ? ` (${halfRateStr}%)` : ''
               if (cgst > 0 || sgst > 0) {
                 return `
                   <tr>

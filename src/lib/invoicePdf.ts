@@ -154,14 +154,20 @@ export function createInvoicePdf(data: InvoicePdfData): Blob {
   const manualDisc = (data.manualDiscount ?? data.manualDiscountAmount ?? 0)
   const rawCgst = data.cgstAmount ?? (data.gstAmount ? Math.round(((data.gstAmount || 0) / 2) * 100) / 100 : 0)
   const rawSgst = data.sgstAmount ?? (data.gstAmount ? Math.round(((data.gstAmount || 0) / 2) * 100) / 100 : 0)
-  const rateLabel = data.gstRate ? ` (${(data.gstRate / 2).toFixed(1).replace(/\.0$/, '')}%)` : ''
+  const totalTax = (rawCgst + rawSgst) || Number(data.gstAmount || 0)
+  const taxableBase = (Number(data.subtotal) || 0) - couponDisc - manualDisc
+  const resolvedGstRate = Number(data.gstRate || 0) || (totalTax > 0 && taxableBase > 0 ? Math.round((totalTax / taxableBase) * 1000) / 10 : 0)
+  const halfRateStr = resolvedGstRate > 0
+    ? (resolvedGstRate / 2).toFixed(1).replace(/\.0$/, '')
+    : (totalTax > 0 ? '2.5' : '')
+  const rateLabel = halfRateStr ? ` (${halfRateStr}%)` : ''
 
   if (couponDisc > 0) rows.push([`Coupon Disc.${data.couponCode ? ` (${data.couponCode})` : ''}`, `-${money(couponDisc)}`, '#D4AF37'])
   if (manualDisc > 0) rows.push(['Manual Discount', `-${money(manualDisc)}`, '#D4AF37'])
   if (rawCgst > 0) rows.push([`CGST${rateLabel}`, `+${money(rawCgst)}`, ink])
   if (rawSgst > 0) rows.push([`SGST${rateLabel}`, `+${money(rawSgst)}`, ink])
   if (!rawCgst && !rawSgst && (data.gstAmount || 0) > 0) {
-    rows.push(['GST', `+${money(data.gstAmount || 0)}`, ink])
+    rows.push([`GST${resolvedGstRate > 0 ? ` (${resolvedGstRate}%)` : ''}`, `+${money(data.gstAmount || 0)}`, ink])
   }
   if ((data.shipping || 0) > 0) rows.push(['Delivery Charges', `+${money(data.shipping)}`, ink])
   doc.setFontSize(9)

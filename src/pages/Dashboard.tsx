@@ -79,7 +79,7 @@ import {
 type Category = { id: string | number; name_en: string; name_ta: string; is_active?: boolean; sort_order?: number }
 type DashboardOrder = {
   id: string; invoice_no: string; customer_name: string; phone: string; address: string
-  created_at: string; total: number; status: string; order_mode: string; order_type: string; user_id: string | null; items: unknown
+  created_at: string; total: number; subtotal?: number; status: string; order_mode: string; order_type: string; user_id: string | null; items: unknown
   coupon_code: string; discount_amount: number; manual_discount_amount: number; delivery_charge: number
   total_gst: number; gst_amount?: number; payment_mode: string; payment_method?: string; split_details?: unknown; invoice_pdf_url: string; remarks?: string; reference_number?: string
 }
@@ -405,6 +405,7 @@ export default function Dashboard() {
     customer_name: String(row.customer_name || ''), phone: String(row.phone || ''),
     address: String(row.address || ''),
     created_at: String(row.created_at || ''), total: toNumber(row.total, 0),
+    subtotal: toNumber(row.subtotal, 0),
     status: String(row.status || 'pending'),
     order_mode: normalizeOrderMode(row.order_mode),
     order_type: normalizeOrderType(row.order_type),
@@ -413,7 +414,7 @@ export default function Dashboard() {
     coupon_code: String(row.coupon_code || ''),
     discount_amount: toNumber(row.discount_amount, 0),
     manual_discount_amount: toNumber(row.manual_discount_amount, 0),
-    delivery_charge: toNumber(row.delivery_charge, 0),
+    delivery_charge: toNumber(row.delivery_charge ?? row.shipping, 0),
     total_gst: toNumber(row.total_gst ?? row.gst_amount, 0),
     payment_mode: String(row.payment_mode || row.payment_method || ''),
     split_details: row.split_details,
@@ -436,6 +437,13 @@ export default function Dashboard() {
       source: 'advance_order',
     }
     const completedItems = advance.products.length ? advance.products : [fallbackItem]
+    const completedCouponCode = advance.coupon_code || ''
+    const completedCouponDisc = advance.coupon_discount || (advance.coupon_code ? advance.discount_amount : 0) || 0
+    const completedManualDisc = advance.manual_discount || 0
+    const completedDelivery = advance.delivery_charge || 0
+    const completedGst = advance.total_gst || (Number(advance.cgst_amount || 0) + Number(advance.sgst_amount || 0)) || 0
+    const completedSubtotal = advance.subtotal ?? Math.max(0, advance.total_amount - completedDelivery - completedGst + completedCouponDisc + completedManualDisc)
+
     const completed: DashboardOrder = {
       id: advance.completed_order_id,
       invoice_no: advance.invoice_number,
@@ -444,16 +452,17 @@ export default function Dashboard() {
       address: advance.address,
       created_at: createdAt,
       total: advance.total_amount,
+      subtotal: completedSubtotal,
       status: 'completed',
       order_mode: 'offline',
       order_type: 'advance_order',
       user_id: user?.id || null,
       items: completedItems,
-      coupon_code: '',
-      discount_amount: 0,
-      manual_discount_amount: 0,
-      delivery_charge: 0,
-      total_gst: 0,
+      coupon_code: completedCouponCode,
+      discount_amount: completedCouponDisc,
+      manual_discount_amount: completedManualDisc,
+      delivery_charge: completedDelivery,
+      total_gst: completedGst,
       payment_mode: advance.final_payment_method || '',
       payment_method: advance.final_payment_method || '',
       split_details: advance.split_details,
@@ -1005,7 +1014,7 @@ export default function Dashboard() {
       const [cRes, oRes, couponRes, expList] = await Promise.all([
         supabase.from('categories').select('id, name_en, name_ta, is_active, sort_order').order('sort_order'),
         supabase.from('orders')
-          .select('id, invoice_no, customer_name, phone, address, created_at, total, status, order_mode, order_type, user_id, items, coupon_code, discount_amount, manual_discount_amount, delivery_charge, total_gst, gst_amount, payment_mode, payment_method, split_details, remarks, reference_number')
+          .select('id, invoice_no, customer_name, phone, address, created_at, total, subtotal, status, order_mode, order_type, user_id, items, coupon_code, discount_amount, manual_discount_amount, delivery_charge, total_gst, gst_amount, payment_mode, payment_method, split_details, remarks, reference_number')
           .order('created_at', { ascending: false })
           .limit(1000),
         supabase.from('coupons')
@@ -1490,7 +1499,7 @@ export default function Dashboard() {
       const effectiveDateTo = overrideDates !== undefined ? (overrideDates.dateTo ?? '') : search.dateTo
 
       let q = supabase.from('orders')
-        .select('id, invoice_no, customer_name, phone, address, created_at, total, status, order_mode, order_type, items, coupon_code, discount_amount, manual_discount_amount, delivery_charge, total_gst, gst_amount, payment_mode, payment_method, split_details, remarks, reference_number')
+        .select('id, invoice_no, customer_name, phone, address, created_at, total, subtotal, status, order_mode, order_type, items, coupon_code, discount_amount, manual_discount_amount, delivery_charge, total_gst, gst_amount, payment_mode, payment_method, split_details, remarks, reference_number')
         .neq('order_type', 'online_request')
         .order('created_at', { ascending: false })
         .limit(hasQuery ? 1000 : 500)
@@ -3807,9 +3816,10 @@ export default function Dashboard() {
                   const itemSubtotal = parsedItems.reduce((acc, it) => acc + (toNumber(it.line_total ?? it.lineTotal, 0) || (toNumber(it.base_price ?? it.price, 0) * Math.max(1, toNumber(it.quantity, 1)))), 0)
                   const orderTotal = getOrderTotal(o)
                   const rawGst = Number(o.total_gst || 0)
-                  const effectiveSubtotal = itemSubtotal > 0 ? itemSubtotal : Math.max(0, orderTotal - (o.delivery_charge || 0) - rawGst + (o.discount_amount || 0) + (o.manual_discount_amount || 0))
+                  const effectiveSubtotal = (o.subtotal && o.subtotal > 0) ? o.subtotal : (itemSubtotal > 0 ? itemSubtotal : Math.max(0, orderTotal - (o.delivery_charge || 0) - rawGst + (o.discount_amount || 0) + (o.manual_discount_amount || 0)))
                   const cgstAmount = Math.round((rawGst / 2) * 100) / 100
                   const sgstAmount = Math.round((rawGst / 2) * 100) / 100
+                  const totalDiscount = Number(o.discount_amount || 0) + Number(o.manual_discount_amount || 0)
                   return (
                     <div key={o.id} className="rounded-2xl border border-[#F3F4F6]/60 bg-[#FBFAF6] p-3 sm:p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
@@ -3838,13 +3848,13 @@ export default function Dashboard() {
                         </div>
                         <div className="min-w-0">
                           <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Coupon</p>
-                          <p className="font-semibold text-[#374151] break-words">{o.coupon_code || '—'}</p>
+                          <p className="font-semibold text-[#374151] break-words">{o.coupon_code ? <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">{o.coupon_code}</span> : '—'}</p>
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Coupon Disc.</p>
-                          <p className="font-semibold text-emerald-700">{o.discount_amount > 0 ? `-${formatCurrency(o.discount_amount)}` : '—'}</p>
+                          <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Discount</p>
+                          <p className="font-semibold text-emerald-700">{totalDiscount > 0 ? `-${formatCurrency(totalDiscount)}` : '—'}</p>
                         </div>
-                        {o.manual_discount_amount > 0 && (
+                        {o.manual_discount_amount > 0 && o.discount_amount > 0 && (
                           <div className="min-w-0">
                             <p className="text-[#9CA3AF] uppercase text-[10px] sm:text-[11px] font-black leading-tight">Manual Disc.</p>
                             <p className="font-semibold text-emerald-700">-{formatCurrency(o.manual_discount_amount)}</p>
@@ -3949,7 +3959,9 @@ export default function Dashboard() {
                             {o.coupon_code ? <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">{o.coupon_code}</span> : <span className="text-[#9CA3AF]">—</span>}
                           </td>
                           <td className="px-2 py-3 text-[11px]">
-                            {o.discount_amount > 0 ? <span className="font-bold text-emerald-700">-{formatCurrency(o.discount_amount)}</span> : <span className="text-[#9CA3AF]">—</span>}
+                            {(Number(o.discount_amount || 0) + Number(o.manual_discount_amount || 0)) > 0 ? (
+                              <span className="font-bold text-emerald-700">-{formatCurrency(Number(o.discount_amount || 0) + Number(o.manual_discount_amount || 0))}</span>
+                            ) : <span className="text-[#9CA3AF]">—</span>}
                           </td>
                           <td className="px-2 py-3 text-[11px]">
                             {o.delivery_charge > 0 ? <span className="font-bold text-[#111111]">{formatCurrency(o.delivery_charge)}</span> : <span className="text-[#9CA3AF]">—</span>}
@@ -4016,7 +4028,7 @@ export default function Dashboard() {
                                 const itemSubtotal = parsedItems.reduce((acc, it) => acc + (toNumber(it.line_total ?? it.lineTotal, 0) || (toNumber(it.base_price ?? it.price, 0) * Math.max(1, toNumber(it.quantity, 1)))), 0)
                                 const orderTotal = getOrderTotal(o)
                                 const rawGst = Number(o.total_gst || 0)
-                                const effectiveSubtotal = itemSubtotal > 0 ? itemSubtotal : Math.max(0, orderTotal - (o.delivery_charge || 0) - rawGst + (o.discount_amount || 0) + (o.manual_discount_amount || 0))
+                                const effectiveSubtotal = (o.subtotal && o.subtotal > 0) ? o.subtotal : (itemSubtotal > 0 ? itemSubtotal : Math.max(0, orderTotal - (o.delivery_charge || 0) - rawGst + (o.discount_amount || 0) + (o.manual_discount_amount || 0)))
                                 const cgst = Math.round((rawGst / 2) * 100) / 100
                                 const sgst = Math.round((rawGst / 2) * 100) / 100
 
@@ -4117,7 +4129,7 @@ export default function Dashboard() {
                                                   const itName = String(it.name || it.product_name || 'Item')
                                                   const itQty = Number(it.quantity ?? it.qty ?? 1)
                                                   const itPrice = Number(it.base_price ?? it.price ?? 0)
-                                                  const itLine = Number(it.line_total ?? (itQty * itPrice))
+                                                  const itLine = (itQty > 0 && itPrice > 0) ? (itQty * itPrice) : Number(it.line_total ?? 0)
                                                   const itUnit = it.unit ? ` ${it.unit}` : ''
                                                   return (
                                                     <tr key={idx} className="hover:bg-gray-50/50">

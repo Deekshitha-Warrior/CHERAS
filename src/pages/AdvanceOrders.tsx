@@ -388,10 +388,10 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
         paymentOrder.id, 
         paymentForm.method, 
         finalAmount,
-        null,
+        paymentOrder.coupon_code || null,
         0,
-        0,
-        paymentForm.remarks,
+        paymentOrder.manual_discount || 0,
+        paymentForm.remarks || paymentOrder.remarks || '',
         paymentForm.method === 'split' ? splitInputToDetails(finalSplit) : undefined
       )
       const completed: AdvanceOrder = { ...paymentOrder, status: 'completed', remaining_balance: 0, completed_at: result.completed_at, completed_order_id: result.order_id, invoice_number: result.invoice_no, final_payment_method: paymentForm.method, split_details: result.split_details }

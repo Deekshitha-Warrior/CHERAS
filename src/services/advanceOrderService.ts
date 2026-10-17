@@ -1094,6 +1094,40 @@ export async function completeAdvanceOrder(
           const { data: orderRow } = await supabase.from('orders').select('split_details').eq('id', result.order_id).maybeSingle()
           if (orderRow && splitTotal(parseSplit(orderRow.split_details)) > 0) result.split_details = parseSplit(orderRow.split_details)
         } catch { /* optional */ }
+
+        // Guarantee advance order financial breakdown (subtotal, delivery, coupon, discount, GST) is synchronized to orders table
+        try {
+          const { data: adv } = await supabase.from('advance_orders').select('*').eq('id', orderId).maybeSingle()
+          if (adv && result.order_id) {
+            const totalGst = Number(adv.total_gst || (Number(adv.cgst_amount || 0) + Number(adv.sgst_amount || 0)) || 0)
+            const delivery = Number(adv.delivery_charge || 0)
+            const code = adv.coupon_code || couponCode || null
+            const couponDisc = Number(adv.coupon_discount || (code ? adv.discount_amount : 0) || 0)
+            const manualDisc = Number(adv.manual_discount || manualDiscountAmount || 0)
+            const totalDisc = couponDisc + manualDisc
+            const subtotal = Number(adv.subtotal ?? (Number(adv.total_amount || 0) - delivery - totalGst + totalDisc))
+
+            await supabase.from('orders').update({
+              subtotal,
+              total: Number(adv.total_amount || finalAmount),
+              delivery_charge: delivery,
+              shipping: delivery,
+              coupon_code: code,
+              discount_amount: couponDisc,
+              manual_discount_amount: manualDisc,
+              manual_discount_value: manualDisc,
+              manual_discount_type: 'flat',
+              total_gst: totalGst,
+              gst_amount: totalGst,
+              gst_enabled: Boolean(adv.gst_enabled || totalGst > 0),
+              reference_number: adv.reference_number || undefined,
+              remarks: remarks || adv.remarks || undefined,
+              address: adv.address || undefined
+            }).eq('id', result.order_id)
+          }
+        } catch (syncErr) {
+          console.warn('[completeAdvanceOrder] Order financial sync warning:', syncErr)
+        }
       }
     } catch (err: unknown) {
       if (!result) {

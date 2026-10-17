@@ -26,9 +26,9 @@ export interface VariantInputRow {
   id: string
   variantName: string
   sizeLabel?: string
-  price: number
-  costPrice: number
-  stock: number
+  price: number | ''
+  costPrice: number | ''
+  stock: number | ''
   customBarcode?: string
 }
 
@@ -245,7 +245,7 @@ export const AddEditProductView: React.FC<{
     const baseC = parseFloat(purchasePrice) || 0
     setVariantRows((prev) => {
       // Remove any unedited blank row when adding a full pack
-      const cleaned = prev.filter((r) => r.variantName.trim() !== '' || r.stock > 0)
+      const cleaned = prev.filter((r) => r.variantName.trim() !== '' || Number(r.stock) > 0)
       const existing = new Set(cleaned.map((r) => r.variantName.trim().toUpperCase()))
       const toAdd: VariantInputRow[] = []
       for (const s of list) {
@@ -994,6 +994,7 @@ export const AddEditProductView: React.FC<{
                   min="1"
                   placeholder="5"
                   value={lowStockAlert}
+                  onFocus={(e) => e.target.select()}
                   onChange={(e) => setLowStockAlert(e.target.value)}
                   className="w-full h-10 px-3.5 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#7B1E2B]"
                 />
@@ -1016,6 +1017,7 @@ export const AddEditProductView: React.FC<{
                     required={!hasVariants}
                     placeholder="0.00"
                     value={price}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setPrice(e.target.value)}
                     className="w-full h-10 px-3.5 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#7B1E2B]"
                   />
@@ -1033,6 +1035,7 @@ export const AddEditProductView: React.FC<{
                     step="0.01"
                     placeholder="0.00"
                     value={purchasePrice}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setPurchasePrice(e.target.value)}
                     className="w-full h-10 px-3.5 rounded-xl border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#7B1E2B]"
                   />
@@ -1050,6 +1053,7 @@ export const AddEditProductView: React.FC<{
                     min="0"
                     placeholder="0"
                     value={stockQuantity}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setStockQuantity(e.target.value)}
                     className="w-full h-10 px-3.5 rounded-xl border border-emerald-300 bg-emerald-50/50 text-xs font-bold text-emerald-950 outline-none focus:border-emerald-600 focus:bg-white"
                   />
@@ -1281,8 +1285,9 @@ export const AddEditProductView: React.FC<{
                             step="0.01"
                             required
                             placeholder="0.00"
-                            value={v.price || ''}
-                            onChange={(e) => handleUpdateVariantRow(v.id, 'price', parseFloat(e.target.value) || 0)}
+                            value={v.price}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => handleUpdateVariantRow(v.id, 'price', e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
                             className="w-full h-8 px-2.5 rounded-lg border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#7B1E2B]"
                           />
                         </div>
@@ -1296,8 +1301,9 @@ export const AddEditProductView: React.FC<{
                             min="0"
                             step="0.01"
                             placeholder="0.00"
-                            value={v.costPrice || ''}
-                            onChange={(e) => handleUpdateVariantRow(v.id, 'costPrice', parseFloat(e.target.value) || 0)}
+                            value={v.costPrice}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => handleUpdateVariantRow(v.id, 'costPrice', e.target.value === '' ? '' : parseFloat(e.target.value) || 0)}
                             className="w-full h-8 px-2.5 rounded-lg border border-gray-300 bg-white text-xs font-bold text-gray-900 outline-none focus:border-[#7B1E2B]"
                           />
                         </div>
@@ -1310,8 +1316,9 @@ export const AddEditProductView: React.FC<{
                             type="number"
                             min="0"
                             placeholder="0"
-                            value={v.stock || ''}
-                            onChange={(e) => handleUpdateVariantRow(v.id, 'stock', parseInt(e.target.value) || 0)}
+                            value={v.stock}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(e) => handleUpdateVariantRow(v.id, 'stock', e.target.value === '' ? '' : parseInt(e.target.value) || 0)}
                             className="w-full h-8 px-2.5 rounded-lg border border-emerald-300 bg-emerald-50/40 text-xs font-black text-emerald-950 outline-none focus:border-emerald-600"
                           />
                         </div>

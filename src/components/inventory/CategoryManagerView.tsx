@@ -11,7 +11,7 @@ export const CategoryManagerView: React.FC = () => {
   // Form State for Add / Edit
   const [nameEn, setNameEn] = useState('')
   const [nameTa, setNameTa] = useState('')
-  const [sortOrder, setSortOrder] = useState<number>(0)
+  const [sortOrder, setSortOrder] = useState<number | string>(0)
   const [isActive, setIsActive] = useState<boolean>(true)
   const [saving, setSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
@@ -70,13 +70,14 @@ export const CategoryManagerView: React.FC = () => {
     }
 
     setSaving(true)
+    const finalSortOrder = sortOrder === '' ? 0 : parseInt(String(sortOrder), 10) || 0
     try {
       if (editingId) {
         // Update
         await inventoryService.updateCategory(editingId, {
           name_en: trimmedEn,
           name_ta: nameTa.trim() || undefined,
-          sort_order: sortOrder,
+          sort_order: finalSortOrder,
           is_active: isActive,
         })
         setSuccessMessage(`Category "${trimmedEn}" updated successfully!`)
@@ -85,7 +86,7 @@ export const CategoryManagerView: React.FC = () => {
         await inventoryService.createCategory({
           name_en: trimmedEn,
           name_ta: nameTa.trim() || undefined,
-          sort_order: sortOrder,
+          sort_order: finalSortOrder,
           is_active: isActive,
         })
         setSuccessMessage(`Category "${trimmedEn}" created successfully!`)
@@ -251,7 +252,9 @@ export const CategoryManagerView: React.FC = () => {
                   name="sortOrder"
                   type="number"
                   value={sortOrder}
-                  onChange={(e) => setSortOrder(parseInt(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  placeholder="0"
                   className="w-full h-10 px-3 rounded-xl border border-gray-300 bg-white text-xs font-black text-gray-900 outline-none focus:border-[#7B1E2B]"
                 />
               </div>

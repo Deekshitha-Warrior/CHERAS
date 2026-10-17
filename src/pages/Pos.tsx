@@ -167,7 +167,7 @@ export default function Pos(props: PosProps = {}) {
   const [splitForm, setSplitForm] = useState<SplitInputValue>(emptySplitInput())
   const [depositSplit, setDepositSplit] = useState<SplitInputValue>(emptySplitInput())
   const [saving, setSaving] = useState(false)
-  const [shipping, setShipping] = useState<string>('0')
+  const [shipping, setShipping] = useState<string>('')
   const [couponInput, setCouponInput] = useState('')
   const [couponLoading, setCouponLoading] = useState(false)
   const [couponError, setCouponError] = useState('')
@@ -832,7 +832,7 @@ export default function Pos(props: PosProps = {}) {
     setManualDiscountValue('')
     setManualDiscountType('flat')
     setError('')
-    setShipping('0')
+    setShipping('')
     setRemarks('')
     setReferenceNumber('')
     setBillingDate('')
@@ -2073,8 +2073,9 @@ export default function Pos(props: PosProps = {}) {
                     name="manualDiscountValue"
                     type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
                     value={manualDiscountValue}
+                    onFocus={(e) => e.target.select()}
                     onChange={e => setManualDiscountValue(e.target.value)}
-                    placeholder="0"
+                    placeholder=""
                     className="w-full h-9 px-3 bg-white border border-gray-200 rounded-xl text-[12px] font-black text-[#111111] text-right focus:outline-none focus:border-[#7B1E2B]"
                   />
                 </div>
@@ -2094,7 +2095,9 @@ export default function Pos(props: PosProps = {}) {
                     name="shippingFee"
                     type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
                     value={shipping}
+                    onFocus={(e) => e.target.select()}
                     onChange={e => setShipping(e.target.value)}
+                    placeholder=""
                     className="w-20 h-8 px-2 bg-white border border-gray-200 rounded-xl text-[12px] font-black text-[#111111] text-right focus:outline-none focus:border-[#7B1E2B]"
                   />
                 </div>
@@ -2149,6 +2152,7 @@ export default function Pos(props: PosProps = {}) {
                         name="gstInput"
                         type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
                         value={gstInput}
+                        onFocus={(e) => e.target.select()}
                         onChange={e => setGstInput(e.target.value)}
                         placeholder={gstType === 'percent' ? "e.g. 5" : "0"}
                         className="w-full h-8 px-2.5 bg-gray-50 border border-gray-200 rounded-lg text-[11px] font-black text-[#111111] text-right focus:outline-none focus:border-[#7B1E2B]"
@@ -2244,6 +2248,7 @@ export default function Pos(props: PosProps = {}) {
                     name="cashReceived"
                     type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
                     value={cashReceived}
+                    onFocus={(e) => e.target.select()}
                     onChange={e => setCashReceived(e.target.value)}
                     placeholder="0.00"
                     className="w-full h-9 px-3 bg-[#F9FAFB] border border-gray-200 rounded-xl text-[13px] font-black text-[#111111] focus:outline-none focus:border-[#7B1E2B] focus:bg-white"
@@ -2308,7 +2313,7 @@ export default function Pos(props: PosProps = {}) {
               <div className="mt-2 max-h-24 space-y-1 overflow-y-auto border-t border-gray-200 pt-2">{items.map(item => <div key={item.id} className="flex justify-between gap-3 text-xs"><span className="truncate">{item.qty}× {item.name}</span><span className="font-bold">{formatCurrency(item.lineTotal)}</span></div>)}</div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label htmlFor="pos-deposit-amount" className="block"><span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-[#6B7280]">Deposit received *</span><input id="pos-deposit-amount" name="depositAmount" required autoFocus type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} min="0.01" max={Math.max(0, total - 0.01)} step="0.01" value={depositForm.amount} onChange={e => setDepositForm({...depositForm, amount:e.target.value})} className="w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:border-gray-600"/></label>
+              <label htmlFor="pos-deposit-amount" className="block"><span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-[#6B7280]">Deposit received *</span><input id="pos-deposit-amount" name="depositAmount" required autoFocus type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} min="0.01" max={Math.max(0, total - 0.01)} step="0.01" value={depositForm.amount} onFocus={(e) => e.target.select()} onChange={e => setDepositForm({...depositForm, amount:e.target.value})} className="w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:border-gray-600"/></label>
               <div className="block"><span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-[#6B7280]">Remaining balance</span><div className="rounded-xl bg-red-50 px-3 py-2.5 text-sm font-black text-red-700">{formatCurrency(Math.max(0,total-Number(depositForm.amount||0)))}</div></div>
               <label htmlFor="pos-deposit-delivery-date" className="block"><span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-[#6B7280]">Expected delivery *</span><input id="pos-deposit-delivery-date" name="deliveryDate" required type="date" value={depositForm.expectedDeliveryDate} onChange={e => setDepositForm({...depositForm, expectedDeliveryDate:e.target.value})} className="w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:border-gray-600"/></label>
               <label htmlFor="pos-deposit-payment-method" className="block"><span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-[#6B7280]">Payment method *</span><select id="pos-deposit-payment-method" name="paymentMethod" value={depositForm.paymentMethod} onChange={e => setDepositForm({...depositForm,paymentMethod:e.target.value as AdvancePaymentMethod})} className="w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:border-gray-600"><option value="cash">Cash</option><option value="upi">QR</option><option value="card">Card</option><option value="split">Split (Cash + QR)</option></select></label>

@@ -12,29 +12,49 @@ import { toWhatsAppUrl } from '../lib/phone'
 import { formatPaymentLabel } from '../lib/payments'
 
 function buildLookupCandidates(id: string): string[] {
-  const raw = decodeURIComponent(id || '').trim()
+  let raw = decodeURIComponent(id || '').trim()
   if (!raw) return []
+  // Strip leading '#' if present (e.g. #INV26000010)
+  raw = raw.replace(/^#+/, '').trim()
 
   const candidates = new Set<string>()
 
-  // 1. Stripped prefix (e.g. "INV00000030" -> "00000030") - highest priority because DB stores 8 digits without prefix
-  const stripped = raw.replace(/^(INV|UL)[-_ ]*/i, '').trim()
-  if (stripped) candidates.add(stripped)
-
-  // 2. Numeric digits padded to 8 digits
-  const digits = raw.replace(/\D/g, '')
-  if (digits) {
-    candidates.add(digits.padStart(8, '0'))
-    candidates.add(digits)
-    const unpadded = digits.replace(/^0+/, '')
-    if (unpadded) candidates.add(unpadded)
-  }
-
-  // 3. Raw and uppercase
+  // 1. Raw and uppercase
   candidates.add(raw)
   candidates.add(raw.toUpperCase())
 
-  // 4. Formatted with INV prefix
+  // 2. Stripped prefix (e.g. "INV00000030" -> "00000030")
+  const stripped = raw.replace(/^(INV|UL)[-_ ]*/i, '').trim()
+  if (stripped) candidates.add(stripped)
+
+  // 3. Numeric digits extraction
+  const digits = raw.replace(/\D/g, '')
+  if (digits) {
+    candidates.add(digits)
+    candidates.add(digits.padStart(8, '0'))
+    const unpadded = digits.replace(/^0+/, '')
+    if (unpadded) {
+      candidates.add(unpadded)
+      candidates.add(unpadded.padStart(8, '0'))
+      candidates.add(unpadded.padStart(6, '0'))
+    }
+
+    // 4. Handle year-prefixed sequences like "INV26000010" or "26000010" -> "UL-2026-000010"
+    const matchYr = digits.match(/^(2[4-9])(\d{4,8})$/)
+    if (matchYr) {
+      const yr = '20' + matchYr[1]
+      const seq = matchYr[2]
+      const num = parseInt(seq, 10)
+      candidates.add(`UL-${yr}-${seq.padStart(6, '0')}`)
+      candidates.add(`UL-${yr}-${String(num).padStart(6, '0')}`)
+      candidates.add(`UL-${yr}-${num}`)
+      candidates.add(`${yr}-${seq.padStart(6, '0')}`)
+      candidates.add(seq.padStart(8, '0'))
+      candidates.add(String(num).padStart(8, '0'))
+    }
+  }
+
+  // 5. Formatted with INV prefix
   candidates.add(formatInvoiceNo(raw))
 
   return Array.from(candidates).filter(Boolean)
@@ -113,6 +133,22 @@ export default function DigitalInvoice() {
 
             if (tableData && tableData[0]) {
               row = tableData[0]
+            } else {
+              // Suffix fallback: if rawId has digits, match invoice_no ending with the sequence
+              const digits = rawId.replace(/\D/g, '')
+              const unpadded = digits.replace(/^0+/, '')
+              if (unpadded) {
+                const { data: suffixData } = await supabase
+                  .from('orders')
+                  .select('*')
+                  .ilike('invoice_no', `%${unpadded}`)
+                  .order('created_at', { ascending: false })
+                  .limit(1)
+
+                if (suffixData && suffixData[0]) {
+                  row = suffixData[0]
+                }
+              }
             }
           } catch {
             // continue

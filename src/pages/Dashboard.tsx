@@ -81,7 +81,7 @@ type DashboardOrder = {
   id: string; invoice_no: string; customer_name: string; phone: string; address: string
   created_at: string; total: number; status: string; order_mode: string; order_type: string; user_id: string | null; items: unknown
   coupon_code: string; discount_amount: number; manual_discount_amount: number; delivery_charge: number
-  total_gst: number; payment_mode: string; payment_method?: string; split_details?: unknown; invoice_pdf_url: string; remarks?: string; reference_number?: string
+  total_gst: number; gst_amount?: number; payment_mode: string; payment_method?: string; split_details?: unknown; invoice_pdf_url: string; remarks?: string; reference_number?: string
 }
 type DashboardOrderItem = { order_id: string; product_id?: string | null; variant_id?: string | null; product_name: string; category?: string; quantity: number; line_total: number; is_manual?: boolean | null }
 type DashboardCoupon = {
@@ -307,10 +307,11 @@ export default function Dashboard() {
     [cats]
   )
 
-  // Analytics global date filter
+  // Analytics global date & GST filter
   const [analyticsDatePreset, setAnalyticsDatePreset] = useState<'all' | 'today' | 'week' | 'month' | 'year' | 'custom'>('all')
   const [analyticsDateFrom, setAnalyticsDateFrom] = useState('')
   const [analyticsDateTo, setAnalyticsDateTo] = useState('')
+  const [analyticsGstFilter, setAnalyticsGstFilter] = useState<'all' | 'gst' | 'non_gst'>('all')
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([])
 
   // Order Management bill type & payment type filter
@@ -472,6 +473,13 @@ export default function Dashboard() {
     if (analyticsDateFrom) dated = dated.filter(o => toLocalDateKey(o.created_at) >= analyticsDateFrom)
     if (analyticsDateTo)   dated = dated.filter(o => toLocalDateKey(o.created_at) <= analyticsDateTo)
 
+    // Apply GST / Non-GST filter
+    if (analyticsGstFilter === 'gst') {
+      dated = dated.filter(o => Number(o.total_gst || 0) > 0)
+    } else if (analyticsGstFilter === 'non_gst') {
+      dated = dated.filter(o => Number(o.total_gst || 0) <= 0)
+    }
+
     // Classify
     const nonCancelled = dated.filter(o => normalizeStatus(o.status) !== 'cancelled')
     const completedOrders = nonCancelled.filter(o => isCompletedStatus(o.status))
@@ -484,10 +492,16 @@ export default function Dashboard() {
     const billableCompleted = completedOrders.filter(o => normalizeOrderType(o.order_type) !== 'online_request')
     // The trend charts are fixed calendar views. The period selector filters
     // KPIs/tables, but must not change the year/week bars underneath them.
-    const allBillableCompleted = orders
+    let allBillable = orders
       .filter(o => normalizeStatus(o.status) !== 'cancelled')
       .filter(o => isCompletedStatus(o.status))
       .filter(o => normalizeOrderType(o.order_type) !== 'online_request')
+    if (analyticsGstFilter === 'gst') {
+      allBillable = allBillable.filter(o => Number(o.total_gst || 0) > 0)
+    } else if (analyticsGstFilter === 'non_gst') {
+      allBillable = allBillable.filter(o => Number(o.total_gst || 0) <= 0)
+    }
+    const allBillableCompleted = allBillable
     // Channel is determined by order_mode. Older orders can use a different
     // order_type, so requiring exactly `pos_sale` hides valid online bills.
     const offlinePOS  = billableCompleted.filter(o => normalizeOrderMode(o.order_mode) === 'offline' && normalizeOrderType(o.order_type) !== 'manual_sale')
@@ -500,6 +514,17 @@ export default function Dashboard() {
     const posRevenue         = offlinePOS.reduce((s, o) => s + getOrderTotal(o), 0)
     const onlinePosRevenue   = onlinePOS.reduce((s, o) => s + getOrderTotal(o), 0)
     const manualRevenue      = manualSales.reduce((s, o) => s + getOrderTotal(o), 0)
+
+    // GST Specific Metrics
+    const totalGstCollected = billableCompleted.reduce((s, o) => s + Number(o.total_gst || 0), 0)
+    const totalCgstCollected = Math.round((totalGstCollected / 2) * 100) / 100
+    const totalSgstCollected = Math.round((totalGstCollected / 2) * 100) / 100
+    const taxableRevenue = billableCompleted.reduce((s, o) => {
+      const g = Number(o.total_gst || 0)
+      return s + (getOrderTotal(o) - g)
+    }, 0)
+    const gstBillsCount = billableCompleted.filter(o => Number(o.total_gst || 0) > 0).length
+    const nonGstBillsCount = billableCompleted.filter(o => Number(o.total_gst || 0) <= 0).length
 
     // Money collected per channel (split payments are counted by their cash / QR / card parts)
     const collected = billableCompleted.reduce((acc, o) => {
@@ -521,7 +546,13 @@ export default function Dashboard() {
 
     const todayKey  = toLocalDateKey(new Date())
     const monthKey  = todayKey.slice(0, 7)
-    const todaySales   = orders.filter(o => isCompletedStatus(o.status) && o.order_type !== 'whatsapp_request' && toLocalDateKey(o.created_at) === todayKey).reduce((s, o) => s + getOrderTotal(o), 0)
+    let todayOrdersFiltered = orders.filter(o => isCompletedStatus(o.status) && o.order_type !== 'whatsapp_request' && toLocalDateKey(o.created_at) === todayKey)
+    if (analyticsGstFilter === 'gst') {
+      todayOrdersFiltered = todayOrdersFiltered.filter(o => Number(o.total_gst || 0) > 0)
+    } else if (analyticsGstFilter === 'non_gst') {
+      todayOrdersFiltered = todayOrdersFiltered.filter(o => Number(o.total_gst || 0) <= 0)
+    }
+    const todaySales = todayOrdersFiltered.reduce((s, o) => s + getOrderTotal(o), 0)
 
     // Today-specific analytics (for TODAY'S SALES tab)
     const todayOrders = billableCompleted.filter(o => toLocalDateKey(o.created_at) === todayKey)
@@ -876,8 +907,15 @@ export default function Dashboard() {
       totalExpenses,
       netProfit,
       isProfitable,
+      totalGstCollected,
+      totalCgstCollected,
+      totalSgstCollected,
+      taxableRevenue,
+      gstBillsCount,
+      nonGstBillsCount,
+      gstFilter: analyticsGstFilter,
     }
-  }, [orders, orderItems, products, variantsMap, coupons, expenses, analyticsDateFrom, analyticsDateTo])
+  }, [orders, orderItems, products, variantsMap, coupons, expenses, analyticsDateFrom, analyticsDateTo, analyticsGstFilter])
 
   // Lifetime usage per coupon: the larger of the stored counter and orders that carry the code
   // (advance-order completion does not bump coupons.usage_count).
@@ -2565,118 +2603,176 @@ export default function Dashboard() {
         {/* ——— POS ANALYTICS ——— */}
         {tab === 'pos_analytics' && (
           <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h2 className="text-[24px] font-black text-[#111111] tracking-tight">POS Analytics</h2>
-                <p className="text-[13px] text-[#6B7280]">Real time store & channel intelligence</p>
+            {/* Header: Store Name, Dynamic Title & Subtitle, Period + Date Pickers, and Export Buttons */}
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-[#7B1E2B] mb-1">{BRAND_EN}</p>
+                  <h2 className="text-[26px] font-black text-[#111111] tracking-tight">
+                    {analyticsGstFilter === 'gst' ? 'GST Revenue' : analyticsGstFilter === 'non_gst' ? 'Non-GST Revenue' : 'Store Revenue'}
+                  </h2>
+                  <p className="text-[13px] text-[#6B7280]">
+                    {analyticsGstFilter === 'gst'
+                      ? 'GST invoices only — taxable sales dashboard'
+                      : analyticsGstFilter === 'non_gst'
+                      ? 'Non-GST bills only — regular sales dashboard'
+                      : 'All bills & invoices — consolidated sales dashboard'}
+                  </p>
+                </div>
+
+                {/* Right side controls: Period presets, Date Pickers, Export buttons */}
+                <div className="flex flex-col sm:items-end gap-2.5">
+                  <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-full bg-[#F3F4F6] border border-gray-200/80">
+                    <span className="text-[10px] font-black uppercase text-[#6B7280] ml-2 mr-1">Period:</span>
+                    {(['all', 'today', 'week', 'month', 'year'] as const).map(preset => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => applyAnalyticsPreset(preset)}
+                        className={`px-3.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                          analyticsDatePreset === preset
+                            ? 'bg-[#111827] text-white shadow-xs'
+                            : 'text-[#6B7280] hover:text-[#111111]'
+                        }`}
+                      >
+                        {preset === 'all' ? 'All Time' : preset === 'today' ? 'Today' : preset === 'week' ? 'This Week' : preset === 'month' ? 'This Month' : 'This Year'}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center border border-gray-200 rounded-xl px-2.5 py-1 bg-white text-xs shadow-2xs">
+                      <span className="text-[10px] uppercase font-black text-gray-500 mr-2">From:</span>
+                      <input
+                        type="date"
+                        value={analyticsDateFrom}
+                        onChange={e => { setAnalyticsDateFrom(e.target.value); setAnalyticsDatePreset('custom') }}
+                        className="text-[12px] font-bold text-gray-900 bg-transparent outline-none"
+                      />
+                    </div>
+                    <div className="flex items-center border border-gray-200 rounded-xl px-2.5 py-1 bg-white text-xs shadow-2xs">
+                      <span className="text-[10px] uppercase font-black text-gray-500 mr-2">To:</span>
+                      <input
+                        type="date"
+                        value={analyticsDateTo}
+                        onChange={e => { setAnalyticsDateTo(e.target.value); setAnalyticsDatePreset('custom') }}
+                        className="text-[12px] font-bold text-gray-900 bg-transparent outline-none"
+                      />
+                    </div>
+
+                    {/* Export Actions */}
+                    <div className="flex items-center gap-1.5 ml-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          exportAnalyticsToCSV({
+                            data: analytics,
+                            activeTab: posAnalyticsTab,
+                            datePreset: analyticsDatePreset,
+                            dateFrom: analyticsDateFrom,
+                            dateTo: analyticsDateTo,
+                          })
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-gray-900 font-bold text-xs hover:bg-gray-50 shadow-2xs transition-all cursor-pointer"
+                        title="Export current analytics view to CSV"
+                      >
+                        <Download size={13} className="text-[#C9A24B]" />
+                        <span>CSV</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={exportingPdf}
+                        onClick={async () => {
+                          try {
+                            setExportingPdf(true)
+                            await exportAnalyticsToPDF({
+                              data: analytics,
+                              activeTab: posAnalyticsTab,
+                              datePreset: analyticsDatePreset,
+                              dateFrom: analyticsDateFrom,
+                              dateTo: analyticsDateTo,
+                            })
+                          } catch (err) {
+                            console.error('PDF export error:', err)
+                          } finally {
+                            setExportingPdf(false)
+                          }
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C9A24B] text-[#222222] font-black text-xs hover:bg-[#B8913E] shadow-2xs transition-all cursor-pointer disabled:opacity-60"
+                        title="Export PDF report"
+                      >
+                        {exportingPdf ? <RefreshCw size={13} className="animate-spin" /> : <FileText size={13} />}
+                        <span>PDF</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Export Actions */}
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => {
-                    exportAnalyticsToCSV({
-                      data: analytics,
-                      activeTab: posAnalyticsTab,
-                      datePreset: analyticsDatePreset,
-                      dateFrom: analyticsDateFrom,
-                      dateTo: analyticsDateTo,
-                    })
-                  }}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#F3F4F6] text-[#111111] font-bold text-xs hover:bg-[#FBFAF6] shadow-xs transition-all cursor-pointer hover:scale-[1.02]"
-                  title="Export current analytics view to CSV"
-                >
-                  <Download size={14} className="text-[#B48811]" />
-                  <span>Export CSV</span>
-                </button>
-
-                <button
-                  type="button"
-                  disabled={exportingPdf}
-                  onClick={async () => {
-                    try {
-                      setExportingPdf(true)
-                      await exportAnalyticsToPDF({
-                        data: analytics,
-                        activeTab: posAnalyticsTab,
-                        datePreset: analyticsDatePreset,
-                        dateFrom: analyticsDateFrom,
-                        dateTo: analyticsDateTo,
-                      })
-                    } catch (err) {
-                      console.error('PDF export error:', err)
-                    } finally {
-                      setExportingPdf(false)
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] font-black text-xs hover:bg-[#B8913E] shadow-md transition-all cursor-pointer hover:scale-[1.02] disabled:opacity-60"
-                  title="Export formatted executive PDF with chart diagrams"
-                >
-                  {exportingPdf ? (
-                    <RefreshCw size={14} className="animate-spin text-[#B38018]" />
-                  ) : (
-                    <FileText size={14} className="text-[#B38018]" />
-                  )}
-                  <span>{exportingPdf ? 'Generating PDF...' : 'Export PDF (Charts)'}</span>
-                </button>
+              {/* Segmented GST Filter Switch (matches Image 2) */}
+              <div className="pt-1">
+                <div className="inline-flex items-center gap-1 p-1 rounded-full border border-gray-300 bg-white shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsGstFilter('all')}
+                    className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      analyticsGstFilter === 'all'
+                        ? 'bg-[#111827] text-white shadow-xs'
+                        : 'text-[#4B5563] hover:text-[#111827]'
+                    }`}
+                  >
+                    All Bills
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsGstFilter('gst')}
+                    className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      analyticsGstFilter === 'gst'
+                        ? 'bg-[#111827] text-white shadow-xs'
+                        : 'text-[#4B5563] hover:text-[#111827]'
+                    }`}
+                  >
+                    GST Invoices
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsGstFilter('non_gst')}
+                    className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      analyticsGstFilter === 'non_gst'
+                        ? 'bg-[#111827] text-white shadow-xs'
+                        : 'text-[#4B5563] hover:text-[#111827]'
+                    }`}
+                  >
+                    Non-GST Bills
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div className="flex flex-col gap-4 border-b border-[#E7E7E7] pb-4 md:flex-row md:items-center md:justify-between">
-              {/* Sub-tabs enclosed in icon box */}
-              <div className="inline-flex items-center gap-1.5 p-1.5 rounded-2xl bg-[#F3F4F6] border border-gray-200/80 overflow-x-auto hide-scrollbar max-w-full">
+              {/* Sub-tabs Navigation */}
+              <div className="border-b border-gray-200 pt-1 flex items-center gap-6 overflow-x-auto hide-scrollbar">
                 {([
-                  { id: 'revenue' as const,  label: 'Revenue',       icon: <TrendingUp size={15} className="shrink-0" /> },
-                  { id: 'today' as const,    label: "Today's Sales", icon: <Receipt size={15} className="shrink-0" /> },
-                  { id: 'products' as const, label: 'Products',      icon: <Package size={15} className="shrink-0" /> },
-                  { id: 'coupons' as const,  label: 'Coupons',       icon: <Ticket size={15} className="shrink-0" /> },
-                ]).map(({ id, label, icon }) => {
+                  { id: 'revenue' as const, label: 'Revenue' },
+                  { id: 'today' as const, label: "Today's Sales" },
+                  { id: 'products' as const, label: 'Products' },
+                  { id: 'coupons' as const, label: 'Coupons' },
+                ]).map(({ id, label }) => {
                   const isActive = posAnalyticsTab === id
                   return (
                     <button
                       key={id}
                       type="button"
                       onClick={() => setPosAnalyticsTab(id as PosAnalyticsTab)}
-                      className={`inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-[13px] font-black tracking-wide transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                      className={`pb-2.5 text-xs sm:text-[13px] font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer border-b-2 ${
                         isActive
-                          ? 'bg-white text-[#111111] shadow-sm'
-                          : 'text-[#6B7280] hover:text-[#111111] hover:bg-white/60'
+                          ? 'border-[#111827] text-[#111827]'
+                          : 'border-transparent text-gray-500 hover:text-gray-900'
                       }`}
                     >
-                      <span className={isActive ? 'text-[#111111]' : 'text-gray-400'}>
-                        {icon}
-                      </span>
-                      <span>{label}</span>
+                      {label}
                     </button>
                   )
                 })}
               </div>
-
-              {/* Date filter (hidden for Today's Sales) */}
-              {posAnalyticsTab !== 'today' && (
-                <div className="flex flex-col gap-3 md:items-end">
-                  <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-[#F8F8F8] p-2">
-                    <span className="text-[10px] font-bold uppercase text-[#6B7280] ml-1 mr-1">Period:</span>
-                    {(['all', 'today', 'week', 'month', 'year'] as const).map(preset => (
-                      <button key={preset} type="button" onClick={() => applyAnalyticsPreset(preset)}
-                        className={`px-4 py-1.5 rounded-full text-[11px] font-bold uppercase transition-all cursor-pointer ${analyticsDatePreset === preset ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm' : 'text-[#6B7280] hover:text-[#111111]'}`}>
-                        {preset === 'all' ? 'All Time' : preset === 'today' ? 'Today' : preset === 'week' ? 'This Week' : preset === 'month' ? 'This Month' : 'This Year'}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 w-full">
-                    <div className="flex items-center border border-[#E7E7E7] rounded-xl px-3 py-2 bg-white min-w-0">
-                      <span className="text-[10px] uppercase font-bold text-[#6B7280] mr-2">From:</span>
-                      <input type="date" value={analyticsDateFrom} onChange={e => { setAnalyticsDateFrom(e.target.value); setAnalyticsDatePreset('custom'); }} className="w-full min-w-0 text-[12px] font-semibold text-[#111111] bg-transparent outline-none" />
-                    </div>
-                    <div className="flex items-center border border-[#E7E7E7] rounded-xl px-3 py-2 bg-white min-w-0">
-                      <span className="text-[10px] uppercase font-bold text-[#6B7280] mr-2">To:</span>
-                      <input type="date" value={analyticsDateTo} onChange={e => { setAnalyticsDateTo(e.target.value); setAnalyticsDatePreset('custom'); }} className="w-full min-w-0 text-[12px] font-semibold text-[#111111] bg-transparent outline-none" />
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Revenue sub-tab */}
@@ -2686,11 +2782,77 @@ export default function Dashboard() {
                   {[
                     {
                       label: 'Total Revenue',
-                      helper: 'POS + manual sales combined',
+                      helper: analyticsGstFilter === 'gst' ? 'GST invoices total' : analyticsGstFilter === 'non_gst' ? 'Non-GST bills combined' : 'POS + manual combined',
                       value: formatCurrency(analytics.totalCompletedRevenue),
                       icon: <RMIcon size={16} />,
                       color: 'text-emerald-500',
                       bg: 'bg-emerald-50',
+                    },
+                    ...(analyticsGstFilter === 'gst' ? [
+                      {
+                        label: 'Total GST Collected',
+                        helper: `CGST: ${formatCurrency(analytics.totalCgstCollected)} | SGST: ${formatCurrency(analytics.totalSgstCollected)}`,
+                        value: formatCurrency(analytics.totalGstCollected),
+                        icon: <Receipt size={16} />,
+                        color: 'text-amber-600',
+                        bg: 'bg-amber-50',
+                      },
+                      {
+                        label: 'Taxable Sales (Pre-Tax)',
+                        helper: 'Order subtotal before tax',
+                        value: formatCurrency(analytics.taxableRevenue),
+                        icon: <TrendingUp size={16} />,
+                        color: 'text-blue-600',
+                        bg: 'bg-blue-50',
+                      },
+                    ] : []),
+                    {
+                      label: 'Completed Bills',
+                      helper: analyticsGstFilter === 'gst' ? 'GST bills' : 'POS + manual bills',
+                      value: String(analytics.completedOrders),
+                      icon: <Trophy size={16} />,
+                      color: 'text-emerald-500',
+                      bg: 'bg-emerald-50',
+                    },
+                    {
+                      label: 'Offline Bills',
+                      helper: 'Walk-in POS sales',
+                      value: formatCurrency(analytics.posRevenue),
+                      icon: <RMIcon size={16} />,
+                      color: 'text-gray-500',
+                      bg: 'bg-gray-50',
+                    },
+                    {
+                      label: 'Online Bills',
+                      helper: 'Online POS sales',
+                      value: formatCurrency(analytics.onlinePosRevenue),
+                      icon: <RMIcon size={16} />,
+                      color: 'text-gray-500',
+                      bg: 'bg-gray-50',
+                    },
+                    {
+                      label: 'Total Offline Bills',
+                      helper: 'Walk-in POS orders',
+                      value: String(analytics.offlineOrderCount),
+                      icon: <LayoutDashboard size={16} />,
+                      color: 'text-red-500',
+                      bg: 'bg-red-50',
+                    },
+                    {
+                      label: 'Total Online Bills',
+                      helper: 'Online channel orders',
+                      value: String(analytics.onlineBillCount),
+                      icon: <Box size={16} />,
+                      color: 'text-gray-500',
+                      bg: 'bg-gray-50',
+                    },
+                    {
+                      label: 'Total Items Sold',
+                      helper: 'From completed bills',
+                      value: String(Math.round(analytics.totalProductsSold)),
+                      icon: <Box size={16} />,
+                      color: 'text-gray-500',
+                      bg: 'bg-gray-50',
                     },
                     {
                       label: analytics.isProfitable ? 'Net Profit' : 'Net Loss',
@@ -2709,38 +2871,6 @@ export default function Dashboard() {
                       icon: <Receipt size={16} />,
                       color: 'text-amber-500',
                       bg: 'bg-amber-50',
-                    },
-                    {
-                      label: 'Completed Bills',
-                      helper: 'POS + manual bills',
-                      value: String(analytics.completedOrders),
-                      icon: <Trophy size={16} />,
-                      color: 'text-emerald-500',
-                      bg: 'bg-emerald-50',
-                    },
-                    {
-                      label: 'Offline Revenue',
-                      helper: 'Walk-in POS sales',
-                      value: formatCurrency(analytics.posRevenue),
-                      icon: <RMIcon size={16} />,
-                      color: 'text-gray-500',
-                      bg: 'bg-gray-50',
-                    },
-                    {
-                      label: 'Total Offline Bills',
-                      helper: 'Walk-in POS orders',
-                      value: String(analytics.offlineOrderCount),
-                      icon: <LayoutDashboard size={16} />,
-                      color: 'text-red-500',
-                      bg: 'bg-red-50',
-                    },
-                    {
-                      label: 'Total Online Bills',
-                      helper: 'Live completed online bills',
-                      value: String(analytics.onlineBillCount),
-                      icon: <Box size={16} />,
-                      color: 'text-gray-500',
-                      bg: 'bg-gray-50',
                     },
                     {
                       label: 'Total Items Sold',

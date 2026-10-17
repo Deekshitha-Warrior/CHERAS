@@ -66,6 +66,7 @@ type InvoiceSnap = {
   manualDiscountType: 'flat' | 'percent'
   manualDiscountValue: number
   gstAmount: number
+  gstRate?: number
   total: number
   customerName: string
   phone: string
@@ -1046,6 +1047,7 @@ export default function Pos(props: PosProps = {}) {
         manualDiscountType,
         manualDiscountValue: manualDiscountNumeric,
         gstAmount: totalGst,
+        gstRate: billGstEnabled && gstType === 'percent' ? (Number(gstInput) || 5) : undefined,
         total,
         customerName: customer.name.trim() || 'Walk-in Customer',
         phone: normalizedPhone,
@@ -1113,9 +1115,14 @@ export default function Pos(props: PosProps = {}) {
         subtotal: inv.subtotal,
         shipping: inv.shipping,
         discountAmount: inv.couponDiscount,
-        manualDiscountAmount: inv.manualDiscountAmount,
-        gstAmount: inv.gstAmount,
+        couponDiscount: inv.couponDiscount,
         couponCode: inv.couponCode,
+        manualDiscountAmount: inv.manualDiscountAmount,
+        manualDiscount: inv.manualDiscountAmount,
+        gstAmount: inv.gstAmount,
+        cgstAmount: inv.gstAmount > 0 ? Math.round((inv.gstAmount / 2) * 100) / 100 : 0,
+        sgstAmount: inv.gstAmount > 0 ? Math.round((inv.gstAmount / 2) * 100) / 100 : 0,
+        gstRate: inv.gstRate,
         paymentMode: inv.paymentMode,
         total: inv.total,
       })
@@ -1139,8 +1146,12 @@ export default function Pos(props: PosProps = {}) {
       subtotal: inv.subtotal,
       shipping: inv.shipping,
       couponDiscount: inv.couponDiscount,
+      couponCode: inv.couponCode,
       manualDiscount: inv.manualDiscountAmount,
       totalGst: inv.gstAmount,
+      cgstAmount: inv.gstAmount > 0 ? Math.round((inv.gstAmount / 2) * 100) / 100 : 0,
+      sgstAmount: inv.gstAmount > 0 ? Math.round((inv.gstAmount / 2) * 100) / 100 : 0,
+      gstRate: inv.gstRate,
       total: inv.total,
     })
   }
@@ -1296,12 +1307,17 @@ export default function Pos(props: PosProps = {}) {
             items={invoiceItems}
             subtotal={invoice.subtotal}
             shipping={invoice.shipping}
+            deliveryCharge={invoice.shipping}
             total={invoice.total}
             status="Completed"
             discountAmount={invoice.couponDiscount || 0}
             manualDiscountAmount={invoice.manualDiscountAmount || 0}
             gstAmount={invoice.gstAmount || 0}
+            cgstAmount={invoice.gstAmount > 0 ? Math.round((invoice.gstAmount / 2) * 100) / 100 : 0}
+            sgstAmount={invoice.gstAmount > 0 ? Math.round((invoice.gstAmount / 2) * 100) / 100 : 0}
+            gstRate={invoice.gstRate}
             couponCode={invoice.couponCode}
+            paymentMode={invoice.paymentMode}
           />
         </div>
       </div>
@@ -1811,58 +1827,12 @@ export default function Pos(props: PosProps = {}) {
                 </div>
               </div>
 
-              {/* GST Toggle */}
-              <div className="flex items-center justify-between py-1 border-b border-gray-200">
-                <span className="text-[11px] font-black text-[#374151]">Enable GST on Bill</span>
-                <button
-                  type="button"
-                  onClick={() => setBillGstEnabled(!billGstEnabled)}
-                  className={`w-9 h-5 rounded-full p-0.5 transition-colors ${billGstEnabled ? 'bg-[#7B1E2B]' : 'bg-gray-200'}`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${billGstEnabled ? 'translate-x-4' : 'translate-x-0'}`}></div>
-                </button>
-              </div>
-
-              {billGstEnabled && (
-                <div className="flex gap-2">
-                  <div className="relative shrink-0">
-                    <select
-                      id="pos-gst-type"
-                      name="gstType"
-                      value={gstType}
-                      onChange={e => setGstType(e.target.value as 'flat'|'percent')}
-                      className="appearance-none h-9 bg-white border border-gray-200 rounded-xl pl-2 pr-7 text-[12px] font-black text-[#111111] focus:outline-none focus:border-[#7B1E2B]"
-                    >
-                      <option value="percent">%</option>
-                      <option value="flat">₹</option>
-                    </select>
-                    <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#374151] pointer-events-none" />
-                  </div>
-                  <input
-                    id="pos-gst-input"
-                    name="gstInput"
-                    type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                    value={gstInput}
-                    onChange={e => setGstInput(e.target.value)}
-                    placeholder={gstType === 'percent' ? "e.g. 6" : "0"}
-                    className="w-full h-9 px-3 bg-white border border-gray-200 rounded-xl text-[12px] font-black text-[#111111] text-right focus:outline-none focus:border-[#7B1E2B]"
-                  />
-                </div>
-              )}
-
               {/* Summary calculations */}
-              <div className="bg-[#F9FAFB] rounded-xl border border-[#F3F4F6] p-3 space-y-1.5 shadow-xs">
+              <div className="bg-[#F9FAFB] rounded-2xl border border-[#F3F4F6] p-3.5 space-y-3 shadow-xs">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-black text-[#374151]">Subtotal ({items.length} items)</span>
-                  <span className="text-[12px] font-black text-[#111111]">{formatCurrency(subtotal)}</span>
+                  <span className="text-[13px] font-black text-[#111111]">{formatCurrency(subtotal)}</span>
                 </div>
-
-                {billGstEnabled && totalGst > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black text-[#374151]">GST Amount</span>
-                    <span className="text-[12px] font-black text-[#111111]">{formatCurrency(totalGst)}</span>
-                  </div>
-                )}
 
                 <div className="flex items-center justify-between">
                   <label htmlFor="pos-shipping-input" className="text-[11px] font-black text-[#374151]">Delivery</label>
@@ -1872,9 +1842,105 @@ export default function Pos(props: PosProps = {}) {
                     type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
                     value={shipping}
                     onChange={e => setShipping(e.target.value)}
-                    className="w-20 h-8 px-2 bg-white border border-gray-200 rounded-lg text-[12px] font-black text-[#111111] text-right focus:outline-none focus:border-[#7B1E2B]"
+                    className="w-20 h-8 px-2 bg-white border border-gray-200 rounded-xl text-[12px] font-black text-[#111111] text-right focus:outline-none focus:border-[#7B1E2B]"
                   />
                 </div>
+
+                {/* Non-GST Bill vs GST Invoice Pill Switch (matches Image 1) */}
+                <div className="pt-0.5">
+                  <div className="w-full p-1 rounded-full border border-gray-300 bg-white flex items-center shadow-2xs">
+                    <button
+                      type="button"
+                      onClick={() => setBillGstEnabled(false)}
+                      className={`flex-1 py-2 text-center text-[10.5px] font-black uppercase tracking-wider rounded-full transition-all cursor-pointer ${
+                        !billGstEnabled
+                          ? 'bg-[#111827] text-white shadow-xs'
+                          : 'text-[#4B5563] hover:text-[#111827]'
+                      }`}
+                    >
+                      Non-GST Bill
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBillGstEnabled(true)
+                        if (!gstInput || gstInput === '0') setGstInput('5')
+                      }}
+                      className={`flex-1 py-2 text-center text-[10.5px] font-black uppercase tracking-wider rounded-full transition-all cursor-pointer ${
+                        billGstEnabled
+                          ? 'bg-[#111827] text-white shadow-xs'
+                          : 'text-[#4B5563] hover:text-[#111827]'
+                      }`}
+                    >
+                      GST Invoice
+                    </button>
+                  </div>
+
+                  {billGstEnabled && (
+                    <div className="mt-2.5 flex items-center gap-2 bg-white p-2 rounded-xl border border-gray-200 shadow-2xs">
+                      <div className="relative shrink-0">
+                        <select
+                          id="pos-gst-type"
+                          name="gstType"
+                          value={gstType}
+                          onChange={e => setGstType(e.target.value as 'flat'|'percent')}
+                          className="appearance-none h-8 bg-gray-50 border border-gray-200 rounded-lg pl-2 pr-6 text-[11px] font-black text-[#111111] focus:outline-none focus:border-[#7B1E2B]"
+                        >
+                          <option value="percent">%</option>
+                          <option value="flat">₹</option>
+                        </select>
+                        <ChevronDown size={11} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[#374151] pointer-events-none" />
+                      </div>
+                      <input
+                        id="pos-gst-input"
+                        name="gstInput"
+                        type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                        value={gstInput}
+                        onChange={e => setGstInput(e.target.value)}
+                        placeholder={gstType === 'percent' ? "e.g. 5" : "0"}
+                        className="w-full h-8 px-2.5 bg-gray-50 border border-gray-200 rounded-lg text-[11px] font-black text-[#111111] text-right focus:outline-none focus:border-[#7B1E2B]"
+                      />
+                      <span className="text-[10px] font-bold text-gray-500 shrink-0">
+                        {gstType === 'percent' && Number(gstInput || 0) > 0
+                          ? `CGST ${(Number(gstInput)/2).toFixed(1)}% + SGST ${(Number(gstInput)/2).toFixed(1)}%`
+                          : 'Flat GST'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {billGstEnabled && totalGst > 0 && (
+                  <div className="space-y-1 pt-1.5 border-t border-gray-200/70 text-xs">
+                    <div className="flex items-center justify-between text-[#374151]">
+                      <span className="text-[11px] font-black">
+                        GST Amount {gstType === 'percent' ? `(${gstInput}%)` : ''}
+                      </span>
+                      <span className="text-[12px] font-black text-[#111111]">+{formatCurrency(totalGst)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10.5px] font-semibold text-gray-500 pl-2">
+                      <span>CGST ({gstType === 'percent' ? `${(Number(gstInput || 0) / 2).toFixed(1)}%` : '50%'})</span>
+                      <span>+{formatCurrency(Math.round((totalGst / 2) * 100) / 100)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[10.5px] font-semibold text-gray-500 pl-2">
+                      <span>SGST ({gstType === 'percent' ? `${(Number(gstInput || 0) / 2).toFixed(1)}%` : '50%'})</span>
+                      <span>+{formatCurrency(Math.round((totalGst / 2) * 100) / 100)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {appliedCoupon && couponDiscount > 0 && (
+                  <div className="flex items-center justify-between text-xs text-emerald-700">
+                    <span className="font-bold">Coupon Disc. ({appliedCoupon.code})</span>
+                    <span className="font-black">-{formatCurrency(couponDiscount)}</span>
+                  </div>
+                )}
+
+                {manualDiscountAmount > 0 && (
+                  <div className="flex items-center justify-between text-xs text-emerald-700">
+                    <span className="font-bold">Manual Discount</span>
+                    <span className="font-black">-{formatCurrency(manualDiscountAmount)}</span>
+                  </div>
+                )}
 
                 <div className="h-px bg-gray-200"></div>
 

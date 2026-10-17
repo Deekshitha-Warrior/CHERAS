@@ -1276,30 +1276,124 @@ export default function Pos(props: PosProps = {}) {
             </div>
           </div>
 
-          {/* Payment receipt */}
-          <div className="surface-panel p-5 rounded-xl border border-gray-100 bg-white shadow-sm mb-4">
-            <p className="text-xs font-black uppercase tracking-widest text-textMuted mb-3">{l('Financial Summary', 'நிதி சுருக்கம்')}</p>
-            <div className="space-y-2.5">
-              <div className="flex justify-between items-center pb-2.5 border-b border-gray-100">
-                <p className="text-sm font-bold text-textMuted">{l('Grand Total', 'மொத்த தொகை')}</p>
-                <p className="text-2xl font-black text-textMain tabular-nums">{formatCurrency(invoice.total)}</p>
-              </div>
-              <div className="flex justify-between items-center">
-                <p className="text-sm font-bold text-textMuted">{l('Amount Received', 'பெற்ற தொகை')}</p>
-                <p className="text-xl font-black text-textMain tabular-nums">{formatCurrency(invoice.amountReceived)}</p>
-              </div>
-              {invoice.balanceReturned > 0 ? (
-                <div className="flex justify-between items-center rounded-xl bg-gray-50 border border-gray-200 px-4 py-3">
-                  <p className="text-sm font-black text-gray-700">{l('Balance Returned', 'திரும்பிய பணம்')}</p>
-                  <p className="text-2xl font-black text-gray-700 tabular-nums">{formatCurrency(invoice.balanceReturned)}</p>
+          {/* Payment receipt / Financial Split-up */}
+          {(() => {
+            const rawGst = Number(invoice.gstAmount || 0)
+            const cgst = Math.round((rawGst / 2) * 100) / 100
+            const sgst = Math.round((rawGst / 2) * 100) / 100
+            const couponDisc = Number(invoice.couponDiscount || 0)
+            const manualDisc = Number(invoice.manualDiscountAmount || 0)
+            const totalDisc = couponDisc + manualDisc
+            const taxableBase = Math.max(0, (invoice.subtotal || 0) - totalDisc)
+            const resolvedRate = Number(invoice.gstRate || 0) || (rawGst > 0 && taxableBase > 0 ? Math.round((rawGst / taxableBase) * 1000) / 10 : 0)
+            const halfRateStr = resolvedRate > 0 ? (resolvedRate / 2).toFixed(1).replace(/\.0$/, '') : (rawGst > 0 ? '2.5' : '')
+            const rateLabel = halfRateStr ? ` (${halfRateStr}%)` : ''
+            const totalGstRateLabel = resolvedRate > 0 ? ` (${resolvedRate}%)` : ''
+            const deliveryCharge = Number(invoice.shipping || 0)
+
+            return (
+              <div className="surface-panel p-5 rounded-xl border border-gray-100 bg-white shadow-sm mb-4 space-y-3">
+                <div className="flex items-center justify-between pb-2.5 border-b border-gray-100">
+                  <p className="text-xs font-black uppercase tracking-widest text-[#7B1E2B]">{l('Financial Summary & Tax Split-up', 'நிதி & வரி விவரம்')}</p>
+                  <span className="text-[11px] font-bold text-gray-400 font-mono">#{formatInvoiceNo(invoice.invoiceNo)}</span>
                 </div>
-              ) : (
-                <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-center">
-                  <p className="text-sm font-black text-green-700">✅ {l('Exact Amount Received', 'சரியான தொகை')}</p>
+
+                <div className="space-y-2 text-xs">
+                  {/* Subtotal */}
+                  <div className="flex justify-between items-center text-gray-700">
+                    <span className="font-semibold text-gray-600">{l('Subtotal', 'பொருட்கள் தொகை')}</span>
+                    <span className="font-bold text-gray-900 tabular-nums">{formatCurrency(invoice.subtotal)}</span>
+                  </div>
+
+                  {/* Coupon Discount */}
+                  {couponDisc > 0 && (
+                    <div className="flex justify-between items-center text-emerald-700 font-medium">
+                      <span>{l('Coupon Discount', 'கூப்பன் தள்ளுபடி')}{invoice.couponCode ? ` (${invoice.couponCode})` : ''}</span>
+                      <span className="font-bold tabular-nums">−{formatCurrency(couponDisc)}</span>
+                    </div>
+                  )}
+
+                  {/* Manual Discount */}
+                  {manualDisc > 0 && (
+                    <div className="flex justify-between items-center text-emerald-700 font-medium">
+                      <span>{l('Manual Discount', 'கையால் தள்ளுபடி')}</span>
+                      <span className="font-bold tabular-nums">−{formatCurrency(manualDisc)}</span>
+                    </div>
+                  )}
+
+                  {/* Total Discount Pill if any discount exists */}
+                  {totalDisc > 0 && (
+                    <div className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-emerald-50 text-[11px] text-emerald-800 font-bold">
+                      <span>{l('Total Savings / Discount', 'மொத்த சேமிப்பு')}</span>
+                      <span className="tabular-nums">−{formatCurrency(totalDisc)}</span>
+                    </div>
+                  )}
+
+                  {/* Taxable Base if GST applies */}
+                  {rawGst > 0 && (
+                    <div className="flex justify-between items-center text-gray-500 text-[11px] pt-1 border-t border-dashed border-gray-200">
+                      <span>{l('Taxable Base Amount', 'வரிக்குரிய தொகை')}</span>
+                      <span className="font-semibold tabular-nums">{formatCurrency(taxableBase)}</span>
+                    </div>
+                  )}
+
+                  {/* GST Split-up Card */}
+                  {rawGst > 0 && (
+                    <div className="rounded-xl bg-amber-50/70 border border-amber-200/80 p-2.5 space-y-1.5 my-1">
+                      <div className="flex justify-between items-center font-bold text-amber-900 text-xs">
+                        <span>GST Total{totalGstRateLabel}</span>
+                        <span className="tabular-nums">+{formatCurrency(rawGst)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-[11px] text-amber-800 font-medium pl-2">
+                        <span>• CGST{rateLabel}</span>
+                        <span className="tabular-nums font-semibold">+{formatCurrency(cgst)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-[11px] text-amber-800 font-medium pl-2">
+                        <span>• SGST{rateLabel}</span>
+                        <span className="tabular-nums font-semibold">+{formatCurrency(sgst)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Delivery Charges (After GST) */}
+                  {deliveryCharge > 0 && (
+                    <div className="flex justify-between items-center text-gray-700 font-medium pt-1">
+                      <span className="text-gray-600">{l('Delivery Charges', 'டெலிவரி கட்டணம்')}</span>
+                      <span className="font-bold text-gray-900 tabular-nums">+{formatCurrency(deliveryCharge)}</span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+
+                {/* Grand Total Bar */}
+                <div className="flex justify-between items-center pt-3 border-t-2 border-[#7B1E2B]/20">
+                  <div>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">{l('Grand Total', 'மொத்த தொகை')}</p>
+                    <p className="text-[10px] text-gray-400 font-medium">Inclusive of all taxes & discounts</p>
+                  </div>
+                  <p className="text-2xl sm:text-3xl font-black text-[#7B1E2B] tabular-nums">{formatCurrency(invoice.total)}</p>
+                </div>
+
+                {/* Amount Received & Balance */}
+                <div className="pt-2 border-t border-gray-100 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-gray-600">{l('Amount Received', 'பெற்ற தொகை')}</span>
+                    <span className="text-base font-black text-gray-900 tabular-nums">{formatCurrency(invoice.amountReceived)}</span>
+                  </div>
+
+                  {invoice.balanceReturned > 0 ? (
+                    <div className="flex justify-between items-center rounded-xl bg-gray-50 border border-gray-200 px-3.5 py-2.5">
+                      <span className="text-xs font-black text-gray-700">{l('Balance Returned', 'திரும்பிய பணம்')}</span>
+                      <span className="text-lg font-black text-gray-700 tabular-nums">{formatCurrency(invoice.balanceReturned)}</span>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl bg-green-50 border border-green-200 px-3 py-2 text-center">
+                      <p className="text-xs font-black text-green-700">✅ {l('Exact Amount Received', 'சரியான தொகை')}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Actions */}
           <div className="grid grid-cols-3 gap-3">

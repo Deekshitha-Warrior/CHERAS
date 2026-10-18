@@ -5,6 +5,7 @@ import { barcodeService } from '../../services/barcodeService'
 import { BRAND_EN } from '../../lib/brand'
 import { normalizeBarcode } from '../../lib/barcode'
 import { useVariantStore } from '../../store/store'
+import { fetchVariantsByProduct } from '../../services/variantService'
 
 export interface ScannedItemPayload {
   product_id: number
@@ -22,7 +23,7 @@ export interface ScannedItemPayload {
 }
 
 export interface BarcodeScannerInputProps {
-  onItemScanned: (item: ScannedItemPayload) => void
+  onItemScanned: (item: ScannedItemPayload) => void | Promise<void>
   disabled?: boolean
 }
 
@@ -143,9 +144,14 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
       const prod = record.product
       let varnt = record.variant
 
-      // 1. If variant_id is on record but variant object was missing or unpopulated, check store
+      // 1. If variant_id is on record but variant object was missing or unpopulated, check store or DB
       if (record.variant_id && (!varnt || varnt.price == null)) {
-        const storeVariants = getVariants(String(record.product_id))
+        let storeVariants = getVariants(String(record.product_id))
+        if (!storeVariants || storeVariants.length === 0) {
+          try {
+            storeVariants = await fetchVariantsByProduct(String(record.product_id))
+          } catch { /* ignore */ }
+        }
         const matched = storeVariants.find((v) => String(v.id) === String(record.variant_id))
         if (matched) {
           varnt = {
@@ -158,9 +164,14 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
         }
       }
 
-      // 2. If no variant identified yet, check if any variant of this product in store has this barcode
+      // 2. If no variant identified yet, check if any variant of this product in store or DB has this barcode
       if (!varnt && !record.variant_id) {
-        const storeVariants = getVariants(String(record.product_id))
+        let storeVariants = getVariants(String(record.product_id))
+        if (!storeVariants || storeVariants.length === 0) {
+          try {
+            storeVariants = await fetchVariantsByProduct(String(record.product_id))
+          } catch { /* ignore */ }
+        }
         const matched = storeVariants.find(
           (v) => v.barcode && normalizeBarcode(v.barcode) === clean
         )
@@ -179,10 +190,25 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
       const isVariant = Boolean(record.variant_id || varnt)
 
       // 3. Resolve price: if it is a variant, MUST use its distinct variant price
-      const variantPrice =
+      let variantPrice =
         varnt?.price !== undefined && varnt?.price !== null && !isNaN(Number(varnt.price))
           ? Number(varnt.price)
           : undefined
+
+      // If variant was identified but price was still undefined, load variant from DB
+      if (isVariant && variantPrice === undefined && record.variant_id) {
+        try {
+          const directVariants = await fetchVariantsByProduct(String(record.product_id))
+          const found = directVariants.find((v) => String(v.id) === String(record.variant_id))
+          if (found && found.price != null && !isNaN(Number(found.price))) {
+            variantPrice = Number(found.price)
+            if (varnt) {
+              varnt.price = variantPrice
+              if (found.variantName) varnt.variant_name = found.variantName
+            }
+          }
+        } catch { /* ignore */ }
+      }
 
       const price = isVariant
         ? (variantPrice !== undefined ? variantPrice : Number(prod.price))

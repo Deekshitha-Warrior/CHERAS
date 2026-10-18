@@ -127,6 +127,43 @@ export const barcodeService = {
         } catch (e) {
           console.warn('[barcodeService.lookupBarcode] Direct variant lookup error:', e)
         }
+      } else if (!data.variant_id && p?.has_variants) {
+        // If entity was product but product has variants, check if this barcode belongs to a specific variant or single variant
+        try {
+          const { data: productVariants } = await supabase
+            .from('product_variants')
+            .select('id, variant_name, price, stock, sku, barcode')
+            .eq('product_id', data.product_id)
+            .eq('is_active', true)
+          if (productVariants && productVariants.length > 0) {
+            const byBarcode = productVariants.find(
+              (pv) => pv.barcode && pv.barcode.trim().toUpperCase() === cleanValue
+            )
+            if (byBarcode) {
+              v = {
+                id: byBarcode.id,
+                variant_name: byBarcode.variant_name,
+                price: byBarcode.price != null ? Number(byBarcode.price) : undefined,
+                stock: byBarcode.stock != null ? Number(byBarcode.stock) : undefined,
+                sku: byBarcode.sku,
+              }
+              data.variant_id = byBarcode.id
+              data.entity_type = 'variant'
+            } else if (productVariants.length === 1) {
+              v = {
+                id: productVariants[0].id,
+                variant_name: productVariants[0].variant_name,
+                price: productVariants[0].price != null ? Number(productVariants[0].price) : undefined,
+                stock: productVariants[0].stock != null ? Number(productVariants[0].stock) : undefined,
+                sku: productVariants[0].sku,
+              }
+              data.variant_id = productVariants[0].id
+              data.entity_type = 'variant'
+            }
+          }
+        } catch (e) {
+          console.warn('[barcodeService.lookupBarcode] Variant resolution error:', e)
+        }
       }
 
       return {

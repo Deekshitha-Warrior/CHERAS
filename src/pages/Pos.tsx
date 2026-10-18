@@ -417,12 +417,35 @@ export default function Pos(props: PosProps = {}) {
   }
 
   // Barcode scanner item handler (Consecutive scan increments cart quantity)
-  const handleScannedItem = (scanned: ScannedItemPayload) => {
+  const handleScannedItem = async (scanned: ScannedItemPayload) => {
     setError('')
 
-    // 1. If scanned item does not specify a variant_id, check if this product has variants:
-    if (!scanned.variant_id) {
-      const vars = getVariants(String(scanned.product_id))
+    // 1. If scanned item specifies a variant_id, ensure its price is strictly the variant price
+    if (scanned.variant_id) {
+      let vars = getVariants(String(scanned.product_id))
+      if (!vars || vars.length === 0) {
+        try {
+          vars = await fetchVariantsByProduct(String(scanned.product_id))
+        } catch { /* ignore */ }
+      }
+      const matched = vars.find((v) => String(v.id) === String(scanned.variant_id))
+      if (matched && matched.price != null && !isNaN(Number(matched.price))) {
+        scanned = {
+          ...scanned,
+          variant_name: matched.variantName || scanned.variant_name,
+          price: Number(matched.price),
+          offer_price: undefined,
+          stock: Number(matched.stock ?? scanned.stock),
+        }
+      }
+    } else {
+      // 2. If scanned item does not specify a variant_id, check if this product has variants:
+      let vars = getVariants(String(scanned.product_id))
+      if (!vars || vars.length === 0) {
+        try {
+          vars = await fetchVariantsByProduct(String(scanned.product_id))
+        } catch { /* ignore */ }
+      }
 
       // Check if any variant directly matches this barcode
       const directVar = vars.find(
@@ -487,7 +510,7 @@ export default function Pos(props: PosProps = {}) {
       }
     }
 
-    // 2. Ensure variant items NEVER inherit parent offerPrice!
+    // 3. Ensure variant items NEVER inherit parent offerPrice!
     const finalPrice = scanned.price
     const finalOfferPrice = scanned.variant_id ? null : (scanned.offer_price || null)
     const targetId = scanned.variant_id ? scanned.variant_id : scanned.product_id
@@ -562,9 +585,14 @@ export default function Pos(props: PosProps = {}) {
       const prod = record.product
       let varnt = record.variant
 
-      // 1. If variant_id is on record but variant object was missing or unpopulated, check store
+      // 1. If variant_id is on record but variant object was missing or unpopulated, check store / DB
       if (record.variant_id && (!varnt || varnt.price == null)) {
-        const storeVariants = getVariants(String(record.product_id))
+        let storeVariants = getVariants(String(record.product_id))
+        if (!storeVariants || storeVariants.length === 0) {
+          try {
+            storeVariants = await fetchVariantsByProduct(String(record.product_id))
+          } catch { /* ignore */ }
+        }
         const matched = storeVariants.find((v) => String(v.id) === String(record.variant_id))
         if (matched) {
           varnt = {
@@ -577,9 +605,14 @@ export default function Pos(props: PosProps = {}) {
         }
       }
 
-      // 2. If no variant identified yet, check if any variant of this product in store has this barcode
+      // 2. If no variant identified yet, check if any variant of this product in store or DB has this barcode
       if (!varnt && !record.variant_id) {
-        const storeVariants = getVariants(String(record.product_id))
+        let storeVariants = getVariants(String(record.product_id))
+        if (!storeVariants || storeVariants.length === 0) {
+          try {
+            storeVariants = await fetchVariantsByProduct(String(record.product_id))
+          } catch { /* ignore */ }
+        }
         const matched = storeVariants.find(
           (v) => v.barcode && normalizeBarcode(v.barcode) === clean
         )
@@ -598,10 +631,25 @@ export default function Pos(props: PosProps = {}) {
       const isVariant = Boolean(record.variant_id || varnt)
 
       // 3. Resolve price cleanly: if it is a variant, MUST use its distinct variant price
-      const variantPrice =
+      let variantPrice =
         varnt?.price !== undefined && varnt?.price !== null && !isNaN(Number(varnt.price))
           ? Number(varnt.price)
           : undefined
+
+      // If variant was identified but price was still undefined, load variant from DB
+      if (isVariant && variantPrice === undefined && record.variant_id) {
+        try {
+          const directVariants = await fetchVariantsByProduct(String(record.product_id))
+          const found = directVariants.find((v) => String(v.id) === String(record.variant_id))
+          if (found && found.price != null && !isNaN(Number(found.price))) {
+            variantPrice = Number(found.price)
+            if (varnt) {
+              varnt.price = variantPrice
+              if (found.variantName) varnt.variant_name = found.variantName
+            }
+          }
+        } catch { /* ignore */ }
+      }
 
       const price = isVariant
         ? (variantPrice !== undefined ? variantPrice : Number(prod.price))
@@ -629,7 +677,7 @@ export default function Pos(props: PosProps = {}) {
         image_url: prod.image_url,
         category: prod.category,
       }
-      handleScannedItem(payload)
+      await handleScannedItem(payload)
     } catch (err) {
       console.error('Failed to process incoming barcode:', err)
       setError('Failed to scan barcode')

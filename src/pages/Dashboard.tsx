@@ -314,10 +314,11 @@ export default function Dashboard() {
   const [analyticsGstFilter, setAnalyticsGstFilter] = useState<'all' | 'gst' | 'non_gst'>('all')
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([])
 
-  // Order Management bill type & payment type filter
+  // Order Management bill type & payment type & GST filter
   const [billTypeFilter, setBillTypeFilter] = useState<'all' | 'offline' | 'online' | 'manual'>('all')
   type PaymentTypeFilter = 'all' | 'cash' | 'qr' | 'card' | 'split'
   const [paymentTypeFilter, setPaymentTypeFilter] = useState<PaymentTypeFilter>('all')
+  const [historyGstFilter, setHistoryGstFilter] = useState<'all' | 'gst' | 'non_gst'>('all')
 
   const matchPaymentType = (o: DashboardOrder, filter: PaymentTypeFilter): boolean => {
     if (filter === 'all') return true
@@ -974,6 +975,14 @@ export default function Dashboard() {
 
       if (!matchPaymentType(o, paymentTypeFilter)) return false
 
+      if (historyGstFilter === 'gst') {
+        const hasGst = Number(o.total_gst || o.gst_amount || 0) > 0 || (Number(o.cgst_amount || 0) + Number(o.sgst_amount || 0)) > 0
+        if (!hasGst) return false
+      } else if (historyGstFilter === 'non_gst') {
+        const hasGst = Number(o.total_gst || o.gst_amount || 0) > 0 || (Number(o.cgst_amount || 0) + Number(o.sgst_amount || 0)) > 0
+        if (hasGst) return false
+      }
+
       if (historyQuickSearch.trim()) {
         const qLower = historyQuickSearch.trim().toLowerCase()
         const qDigits = qLower.replace(/\D/g, '')
@@ -1006,7 +1015,7 @@ export default function Dashboard() {
 
       return true
     })
-  }, [baseOrderList, billTypeFilter, paymentTypeFilter, historyQuickSearch, search.dateFrom, search.dateTo])
+  }, [baseOrderList, billTypeFilter, paymentTypeFilter, historyGstFilter, historyQuickSearch, search.dateFrom, search.dateTo])
 
   // Load dashboard data
   const loadData = useCallback(async () => {
@@ -1477,6 +1486,7 @@ export default function Dashboard() {
     setDatePreset('')
     setBillTypeFilter('all')
     setPaymentTypeFilter('all')
+    setHistoryGstFilter('all')
     setShowAdvancedFilters(false)
     const allNonWaOrders = orders.filter(o => normalizeOrderType(o.order_type) !== 'online_request')
     setSearchResults(allNonWaOrders)
@@ -1487,12 +1497,13 @@ export default function Dashboard() {
     let count = 0
     if (billTypeFilter !== 'all') count++
     if (paymentTypeFilter !== 'all') count++
+    if (historyGstFilter !== 'all') count++
     if (datePreset || search.dateFrom || search.dateTo) count++
     if (search.invoiceNo.trim()) count++
     if (search.customerName.trim()) count++
     if (search.phone.trim()) count++
     return count
-  }, [billTypeFilter, paymentTypeFilter, datePreset, search])
+  }, [billTypeFilter, paymentTypeFilter, historyGstFilter, datePreset, search])
 
   // Order search - POS bills only (online_request excluded)
   const runSearch = async (e?: FormEvent, overrideDates?: { dateFrom?: string; dateTo?: string }) => {
@@ -3554,6 +3565,45 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="rounded-2xl border border-[#F3F4F6]/60 bg-white p-3 sm:p-4 shadow-sm space-y-2.5">
+              {/* Segmented GST Filter Switch (All Bills, GST Invoices, Non-GST Bills) */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-0.5">
+                <div className="inline-flex items-center gap-1 p-1 rounded-full border border-gray-300 bg-white shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setHistoryGstFilter('all')}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      historyGstFilter === 'all'
+                        ? 'bg-[#111827] text-white shadow-xs'
+                        : 'text-[#4B5563] hover:text-[#111827]'
+                    }`}
+                  >
+                    All Bills
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryGstFilter('gst')}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      historyGstFilter === 'gst'
+                        ? 'bg-[#111827] text-white shadow-xs'
+                        : 'text-[#4B5563] hover:text-[#111827]'
+                    }`}
+                  >
+                    GST Invoices
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryGstFilter('non_gst')}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                      historyGstFilter === 'non_gst'
+                        ? 'bg-[#111827] text-white shadow-xs'
+                        : 'text-[#4B5563] hover:text-[#111827]'
+                    }`}
+                  >
+                    Non-GST Bills
+                  </button>
+                </div>
+              </div>
+
               {/* Primary compact search & quick filter bar */}
               <form onSubmit={runSearch} className="space-y-2.5">
                 <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2">
@@ -3610,6 +3660,25 @@ export default function Dashboard() {
                         <option value="manual">{l('Manual', 'கைமுறை')}</option>
                       </select>
                       <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                    </div>
+
+                    {/* GST Filter Dropdown */}
+                    <div className="relative min-w-0">
+                      <select
+                        value={historyGstFilter}
+                        onChange={e => setHistoryGstFilter(e.target.value as 'all' | 'gst' | 'non_gst')}
+                        className={`w-full lg:w-32 h-11 appearance-none pl-2.5 pr-6 rounded-xl text-xs font-bold focus:outline-none cursor-pointer transition-colors break-words ${
+                          historyGstFilter !== 'all'
+                            ? 'bg-amber-50/60 border-2 border-[#D4AF37] text-[#111111]'
+                            : 'bg-[#F9FAFB] border border-gray-200 text-gray-800 hover:bg-gray-100 focus:border-[#D4AF37]'
+                        }`}
+                        title="Filter by GST status"
+                      >
+                        <option value="all">{l('All (GST & Non)', 'அனைத்து பில்கள்')}</option>
+                        <option value="gst">{l('GST Invoices', 'GST பில்கள்')}</option>
+                        <option value="non_gst">{l('Non-GST Bills', 'GST இல்லா பில்கள்')}</option>
+                      </select>
+                      <ChevronDown size={12} className={`absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${historyGstFilter !== 'all' ? 'text-[#B38018]' : 'text-gray-500'}`} />
                     </div>
 
                     {/* Payment Type Dropdown */}
@@ -3793,6 +3862,12 @@ export default function Dashboard() {
                       <button type="button" onClick={() => setPaymentTypeFilter('all')} className="hover:text-red-600 cursor-pointer"><X size={11} /></button>
                     </span>
                   )}
+                  {historyGstFilter !== 'all' && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-[11px] font-semibold">
+                      GST: {historyGstFilter === 'gst' ? l('GST Invoices', 'GST பில்கள்') : l('Non-GST Bills', 'GST இல்லா பில்கள்')}
+                      <button type="button" onClick={() => setHistoryGstFilter('all')} className="hover:text-red-600 cursor-pointer"><X size={11} /></button>
+                    </span>
+                  )}
                   {datePreset && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-[11px] font-semibold">
                       Date: {datePreset === 'today' ? 'Today' : datePreset === 'week' ? 'This Week' : datePreset === 'month' ? 'This Month' : 'Custom'}
@@ -3840,7 +3915,14 @@ export default function Dashboard() {
                           <p className="text-[13px] font-black text-[#111111] break-words">{formatInvoiceNo(o.invoice_no)}</p>
                           <p className="text-[13px] text-[#374151]">{new Date(o.created_at).toLocaleDateString('en-IN')}</p>
                         </div>
-                        <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${billTypeClass}`}>{billTypeLabel}</span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${billTypeClass}`}>{billTypeLabel}</span>
+                          {rawGst > 0 ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">GST</span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-gray-100 text-gray-500 border border-gray-200">Non-GST</span>
+                          )}
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 sm:gap-3 text-[12px] sm:text-[13px]">
                         <div className="min-w-0">
@@ -3967,7 +4049,16 @@ export default function Dashboard() {
                           <td className="whitespace-nowrap px-2 py-3 text-[11px] font-bold text-[#111111]">{formatInvoiceNo(o.invoice_no)}</td>
                           <td className="max-w-[100px] break-words px-2 py-3 text-[11px] font-semibold text-[#111111]">{o.customer_name}</td>
                           <td className="whitespace-nowrap px-2 py-3 text-[11px] text-[#374151]">{formatPhoneDisplay(o.phone)}</td>
-                          <td className="px-2 py-3"><span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase ${billTypeClass}`}>{billTypeLabel}</span></td>
+                          <td className="px-2 py-3">
+                            <div className="flex items-center justify-center gap-1">
+                              <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase ${billTypeClass}`}>{billTypeLabel}</span>
+                              {Number(o.total_gst || o.gst_amount || 0) > 0 ? (
+                                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">GST</span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase bg-gray-100 text-gray-500 border border-gray-200">Non-GST</span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-2 py-3 text-[11px]">
                             {o.coupon_code ? <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">{o.coupon_code}</span> : <span className="text-[#9CA3AF]">—</span>}
                           </td>

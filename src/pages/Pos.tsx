@@ -2071,7 +2071,8 @@ export default function Pos(props: PosProps = {}) {
                   <input
                     id="pos-manual-discount-value"
                     name="manualDiscountValue"
-                    type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                    type="text"
+                    inputMode="decimal"
                     value={manualDiscountValue}
                     onFocus={(e) => e.target.select()}
                     onChange={e => setManualDiscountValue(e.target.value)}
@@ -2093,7 +2094,8 @@ export default function Pos(props: PosProps = {}) {
                   <input
                     id="pos-shipping-input"
                     name="shippingFee"
-                    type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                    type="text"
+                    inputMode="decimal"
                     value={shipping}
                     onFocus={(e) => e.target.select()}
                     onChange={e => setShipping(e.target.value)}
@@ -2150,7 +2152,8 @@ export default function Pos(props: PosProps = {}) {
                       <input
                         id="pos-gst-input"
                         name="gstInput"
-                        type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                        type="text"
+                        inputMode="decimal"
                         value={gstInput}
                         onFocus={(e) => e.target.select()}
                         onChange={e => setGstInput(e.target.value)}
@@ -2246,7 +2249,8 @@ export default function Pos(props: PosProps = {}) {
                   <input
                     id="pos-cash-received"
                     name="cashReceived"
-                    type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                    type="text"
+                    inputMode="decimal"
                     value={cashReceived}
                     onFocus={(e) => e.target.select()}
                     onChange={e => setCashReceived(e.target.value)}

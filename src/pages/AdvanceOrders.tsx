@@ -25,7 +25,7 @@ const RMIcon = ({ size = 20, className = '' }: { size?: number; className?: stri
   </svg>
 )
 
-type DateFilter = 'all' | 'today' | 'week' | 'month'
+type DateFilter = 'all' | 'today' | 'week' | 'month' | 'custom'
 type StatusFilter = 'all' | 'pending' | 'ready' | 'completed' | 'cancelled'
 
 const STATUS_LABELS: Record<AdvanceStatus, string> = {
@@ -58,6 +58,8 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
   const [selected, setSelected] = useState<AdvanceOrder | null>(null)
   const [timeline, setTimeline] = useState<AdvanceTimeline[]>([])
   const [payments, setPayments] = useState<AdvancePayment[]>([])
@@ -260,6 +262,25 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
 
   const dateFilteredOrders = useMemo(() => {
     if (dateFilter === 'all') return orders
+
+    if (dateFilter === 'custom') {
+      const start = customStartDate ? customStartDate : null
+      const end = customEndDate ? customEndDate : null
+      if (!start && !end) return orders
+      const matchesCustom = (dKey: string) => {
+        if (!dKey) return false
+        if (start && end) return dKey >= start && dKey <= end
+        if (start) return dKey >= start
+        if (end) return dKey <= end
+        return true
+      }
+      return orders.filter(order => {
+        const createdKey = dateKey(new Date(order.created_at))
+        const deliveryKey = order.expected_delivery_date ? order.expected_delivery_date.slice(0, 10) : ''
+        return matchesCustom(deliveryKey) || matchesCustom(createdKey)
+      })
+    }
+
     const now = new Date()
     const todayKeyStr = dateKey(now)
 
@@ -297,7 +318,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
       // Matches if either delivery date OR creation date falls in the selected filter window
       return matchesDate(deliveryKey, deliveryDate) || matchesDate(createdKey, createdDate)
     })
-  }, [orders, dateFilter])
+  }, [orders, dateFilter, customStartDate, customEndDate])
 
   const analytics = useMemo(() => {
     const activeOrders = dateFilteredOrders.filter(o => !['completed', 'cancelled'].includes(o.status))
@@ -544,7 +565,63 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
     {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
     {notice && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{notice}</div>}
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{cards.map(([label, value, Icon, color, subtext]) => <div key={label} className="rounded-2xl border border-[#F3F4F6] bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><div><p className="text-[11px] font-black uppercase tracking-wide text-gray-500">{label}</p><p className="mt-2 text-2xl font-black text-gray-900">{value}</p><p className="mt-1 text-xs font-semibold text-gray-400">{subtext}</p></div><div className={`rounded-xl p-3 ${color}`}><Icon size={21}/></div></div></div>)}</div>
-    <div className="rounded-2xl border border-[#F3F4F6] bg-white p-4 shadow-sm"><div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]"><label className="relative"><Search className="absolute left-3 top-3 text-[#9CA3AF]" size={17}/><input className={`${inputClass} pl-10`} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search Deposit ID, customer, phone, product or status"/></label><div className="flex flex-wrap gap-2">{(['all','pending','ready','completed','cancelled'] as StatusFilter[]).map(value => <button key={value} onClick={() => setStatusFilter(value)} className={`rounded-lg px-3 py-2 text-xs font-black capitalize transition-all cursor-pointer ${statusFilter === value ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-xs' : 'bg-slate-100 text-gray-600 hover:bg-slate-200'}`}>{value}</button>)}</div><select className={inputClass} value={dateFilter} onChange={e => setDateFilter(e.target.value as DateFilter)}><option value="all">All Dates</option><option value="today">Today</option><option value="week">This Week</option><option value="month">This Month</option></select></div></div>
+    <div className="rounded-2xl border border-[#F3F4F6] bg-white p-4 shadow-sm">
+      <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+        <label className="relative">
+          <Search className="absolute left-3 top-3 text-[#9CA3AF]" size={17}/>
+          <input className={`${inputClass} pl-10`} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search Deposit ID, customer, phone, product or status"/>
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {(['all','pending','ready','completed','cancelled'] as StatusFilter[]).map(value => (
+            <button key={value} onClick={() => setStatusFilter(value)} className={`rounded-lg px-3 py-2 text-xs font-black capitalize transition-all cursor-pointer ${statusFilter === value ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-xs' : 'bg-slate-100 text-gray-600 hover:bg-slate-200'}`}>
+              {value}
+            </button>
+          ))}
+        </div>
+        <select className={inputClass} value={dateFilter} onChange={e => setDateFilter(e.target.value as DateFilter)}>
+          <option value="all">All Dates</option>
+          <option value="today">Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+          <option value="custom">Custom</option>
+        </select>
+      </div>
+
+      {dateFilter === 'custom' && (
+        <div className="flex flex-wrap items-center gap-3 pt-3 mt-3 border-t border-gray-100 animate-in fade-in slide-in-from-top-1 duration-150">
+          <span className="text-xs font-bold text-gray-700">Custom Date Range:</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600">
+              <span>From:</span>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={e => setCustomStartDate(e.target.value)}
+                className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-800 outline-none focus:border-[#7B1E2B] focus:ring-1 focus:ring-[#7B1E2B]/20"
+              />
+            </label>
+            <label className="flex items-center gap-1.5 text-xs font-semibold text-gray-600">
+              <span>To:</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={e => setCustomEndDate(e.target.value)}
+                className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-800 outline-none focus:border-[#7B1E2B] focus:ring-1 focus:ring-[#7B1E2B]/20"
+              />
+            </label>
+            {(customStartDate || customEndDate) && (
+              <button
+                type="button"
+                onClick={() => { setCustomStartDate(''); setCustomEndDate('') }}
+                className="rounded-lg bg-gray-100 px-2.5 py-1 text-[11px] font-bold text-gray-600 hover:bg-gray-200 hover:text-red-600 transition-colors cursor-pointer"
+              >
+                Reset Dates
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
     <div className="overflow-hidden rounded-2xl border border-[#F3F4F6] bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">

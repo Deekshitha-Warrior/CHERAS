@@ -81,7 +81,7 @@ type DashboardOrder = {
   id: string; invoice_no: string; customer_name: string; phone: string; address: string
   created_at: string; total: number; subtotal?: number; status: string; order_mode: string; order_type: string; user_id: string | null; items: unknown
   coupon_code: string; discount_amount: number; manual_discount_amount: number; delivery_charge: number
-  total_gst: number; gst_amount?: number; cgst_amount?: number; sgst_amount?: number; gst_rate?: number; payment_mode: string; payment_method?: string; split_details?: unknown; invoice_pdf_url: string; remarks?: string; reference_number?: string
+  total_gst: number; gst_amount?: number; cgst_amount?: number; sgst_amount?: number; gst_rate?: number; gst_enabled?: boolean; payment_mode: string; payment_method?: string; split_details?: unknown; invoice_pdf_url: string; remarks?: string; reference_number?: string
 }
 type DashboardOrderItem = { order_id: string; product_id?: string | null; variant_id?: string | null; product_name: string; category?: string; quantity: number; line_total: number; is_manual?: boolean | null }
 type DashboardCoupon = {
@@ -137,6 +137,38 @@ const toLocalDateKey = (value: string | Date): string => {
   return `${year}-${month}-${day}`
 }
 
+/**
+ * Robust GST detector for any order (direct POS sale, advance order, manual, or online).
+ * Checks total_gst, gst_amount, cgst/sgst split, gst_rate, gst_enabled flag, and item-level GST.
+ */
+const isGstOrder = (o: {
+  gst_enabled?: unknown
+  total_gst?: unknown
+  gst_amount?: unknown
+  cgst_amount?: unknown
+  sgst_amount?: unknown
+  gst_rate?: unknown
+  items?: unknown
+}): boolean => {
+  if (o.gst_enabled === true || String(o.gst_enabled) === 'true') return true
+  const totalGst = Number(o.total_gst ?? o.gst_amount ?? 0)
+  if (totalGst > 0) return true
+  const splitGst = Number(o.cgst_amount || 0) + Number(o.sgst_amount || 0)
+  if (splitGst > 0) return true
+  if (Number(o.gst_rate || 0) > 0) return true
+
+  const parsedItems = parseOrderItems(o.items)
+  if (parsedItems.some(it => {
+    const itGst = Number(it.gst_amount ?? it.total_gst ?? it.cgst_amount ?? it.sgst_amount ?? 0)
+    const itRate = Number(it.gst_rate ?? it.tax_rate ?? 0)
+    return itGst > 0 || itRate > 0 || it.gst_enabled === true || String(it.gst_enabled) === 'true'
+  })) {
+    return true
+  }
+
+  return false
+}
+
 const emptyForm = {
   name: '', nameTa: '', category: '', categoryId: null as string | number | null,
   remedy: [] as string[], price: '' as string | number, offerPrice: '' as string | number,
@@ -150,7 +182,7 @@ const emptyForm = {
 }
 
 const exportCSV = (orders: DashboardOrder[]) => {
-  const header = ['Order Ref', 'Customer', 'Phone', 'Date', 'Total (INR)', 'Order Type', 'Status']
+  const header = ['Invoice / Order Ref', 'Customer', 'Phone', 'Date', 'Subtotal (INR)', 'GST Status', 'GST Amount (INR)', 'Delivery (INR)', 'Total (INR)', 'Order Type', 'Status']
   const rows = orders.map(o => {
     let dateStr = ''
     try {
@@ -158,11 +190,17 @@ const exportCSV = (orders: DashboardOrder[]) => {
     } catch {
       dateStr = String(o.created_at || '')
     }
+    const isGst = isGstOrder(o)
+    const rawGst = Number(o.total_gst ?? o.gst_amount ?? 0)
     return [
       o.order_type === 'online_request' ? o.id : o.invoice_no,
       o.customer_name || 'Walk-in Customer',
       formatPhoneForCSV(o.phone),
       dateStr,
+      (Number(o.subtotal || 0)).toFixed(2),
+      isGst ? 'GST' : 'Non-GST',
+      rawGst.toFixed(2),
+      (Number(o.delivery_charge || 0)).toFixed(2),
       getOrderTotal(o).toFixed(2),
       o.order_type,
       o.status,
@@ -315,7 +353,8 @@ export default function Dashboard() {
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([])
 
   // Order Management bill type & payment type & GST filter
-  const [billTypeFilter, setBillTypeFilter] = useState<'all' | 'offline' | 'online' | 'manual'>('all')
+  type BillTypeFilter = 'all' | 'offline' | 'online' | 'manual' | 'advance'
+  const [billTypeFilter, setBillTypeFilter] = useState<BillTypeFilter>('all')
   type PaymentTypeFilter = 'all' | 'cash' | 'qr' | 'card' | 'split'
   const [paymentTypeFilter, setPaymentTypeFilter] = useState<PaymentTypeFilter>('all')
   const [historyGstFilter, setHistoryGstFilter] = useState<'all' | 'gst' | 'non_gst'>('all')
@@ -401,31 +440,40 @@ export default function Dashboard() {
 
   const deletedOrderIds = React.useRef<Set<string>>(new Set())
 
-  const toDashboardOrder = (row: Record<string, unknown>): DashboardOrder => ({
-    id: String(row.id || ''), invoice_no: String(row.invoice_no || ''),
-    customer_name: String(row.customer_name || ''), phone: String(row.phone || ''),
-    address: String(row.address || ''),
-    created_at: String(row.created_at || ''), total: toNumber(row.total, 0),
-    subtotal: toNumber(row.subtotal, 0),
-    status: String(row.status || 'pending'),
-    order_mode: normalizeOrderMode(row.order_mode),
-    order_type: normalizeOrderType(row.order_type),
-    user_id: typeof row.user_id === 'string' ? row.user_id : null,
-    items: row.items,
-    coupon_code: String(row.coupon_code || ''),
-    discount_amount: toNumber(row.discount_amount, 0),
-    manual_discount_amount: toNumber(row.manual_discount_amount, 0),
-    delivery_charge: toNumber(row.delivery_charge ?? row.shipping, 0),
-    total_gst: toNumber(row.total_gst ?? row.gst_amount, 0),
-    cgst_amount: toNumber(row.cgst_amount, 0),
-    sgst_amount: toNumber(row.sgst_amount, 0),
-    gst_rate: toNumber(row.gst_rate, 0),
-    payment_mode: String(row.payment_mode || row.payment_method || ''),
-    split_details: row.split_details,
-    invoice_pdf_url: String(row.invoice_pdf_url || ''),
-    remarks: row.remarks ? String(row.remarks) : '',
-    reference_number: row.reference_number ? String(row.reference_number) : '',
-  })
+  const toDashboardOrder = (row: Record<string, unknown>): DashboardOrder => {
+    const rawTotalGst = toNumber(row.total_gst ?? row.gst_amount, 0)
+    const rawGstEnabled = row.gst_enabled !== undefined && row.gst_enabled !== null
+      ? (row.gst_enabled === true || String(row.gst_enabled) === 'true')
+      : (rawTotalGst > 0 ? true : undefined)
+
+    return {
+      id: String(row.id || ''), invoice_no: String(row.invoice_no || ''),
+      customer_name: String(row.customer_name || ''), phone: String(row.phone || ''),
+      address: String(row.address || ''),
+      created_at: String(row.created_at || ''), total: toNumber(row.total, 0),
+      subtotal: toNumber(row.subtotal, 0),
+      status: String(row.status || 'pending'),
+      order_mode: normalizeOrderMode(row.order_mode),
+      order_type: normalizeOrderType(row.order_type),
+      user_id: typeof row.user_id === 'string' ? row.user_id : null,
+      items: row.items,
+      coupon_code: String(row.coupon_code || ''),
+      discount_amount: toNumber(row.discount_amount, 0),
+      manual_discount_amount: toNumber(row.manual_discount_amount, 0),
+      delivery_charge: toNumber(row.delivery_charge ?? row.shipping, 0),
+      total_gst: rawTotalGst,
+      gst_amount: toNumber(row.gst_amount ?? rawTotalGst, 0),
+      cgst_amount: toNumber(row.cgst_amount, 0),
+      sgst_amount: toNumber(row.sgst_amount, 0),
+      gst_rate: toNumber(row.gst_rate, 0),
+      gst_enabled: rawGstEnabled,
+      payment_mode: String(row.payment_mode || row.payment_method || ''),
+      split_details: row.split_details,
+      invoice_pdf_url: String(row.invoice_pdf_url || ''),
+      remarks: row.remarks ? String(row.remarks) : '',
+      reference_number: row.reference_number ? String(row.reference_number) : '',
+    }
+  }
 
   const handleAdvanceOrderCompleted = useCallback((advance: AdvanceOrder) => {
     if (!advance.completed_order_id || !advance.invoice_number) return
@@ -445,7 +493,8 @@ export default function Dashboard() {
     const completedCouponDisc = advance.coupon_discount || (advance.coupon_code ? advance.discount_amount : 0) || 0
     const completedManualDisc = advance.manual_discount || 0
     const completedDelivery = advance.delivery_charge || 0
-    const completedGst = advance.total_gst || (Number(advance.cgst_amount || 0) + Number(advance.sgst_amount || 0)) || 0
+    const completedGst = Number(advance.total_gst || (Number(advance.cgst_amount || 0) + Number(advance.sgst_amount || 0)) || 0)
+    const completedGstEnabled = Boolean(advance.gst_enabled || completedGst > 0)
     const completedSubtotal = advance.subtotal ?? Math.max(0, advance.total_amount - completedDelivery - completedGst + completedCouponDisc + completedManualDisc)
 
     const completed: DashboardOrder = {
@@ -467,6 +516,11 @@ export default function Dashboard() {
       manual_discount_amount: completedManualDisc,
       delivery_charge: completedDelivery,
       total_gst: completedGst,
+      gst_amount: completedGst,
+      cgst_amount: Number(advance.cgst_amount || completedGst / 2),
+      sgst_amount: Number(advance.sgst_amount || completedGst / 2),
+      gst_rate: Number(advance.gst_rate || 0),
+      gst_enabled: completedGstEnabled,
       payment_mode: advance.final_payment_method || '',
       payment_method: advance.final_payment_method || '',
       split_details: advance.split_details,
@@ -954,7 +1008,7 @@ export default function Dashboard() {
       search.phone.trim() ||
       search.customerName.trim()
     )
-    if (hasSearchQuery && searchResults.length > 0) {
+    if (hasSearchQuery) {
       return searchResults
     }
     // When no specific text search query is active, use all preloaded orders (excluding WhatsApp requests)
@@ -962,26 +1016,24 @@ export default function Dashboard() {
     return nonWaOrders.length > 0 ? nonWaOrders : searchResults
   }, [historyQuickSearch, search.invoiceNo, search.phone, search.customerName, searchResults, orders])
 
-  // Bill-type, payment-type, quick-search, and date-range filtered results for Order Management table (client-side, instant)
+  // Bill-type, payment-type, GST-status, quick-search, advanced filters, and date-range filtered results for Order History table (instant client-side)
   const filteredSearchResults = useMemo(() => {
     return baseOrderList.filter(o => {
+      const isAdvance = normalizeOrderType(o.order_type) === 'advance_order'
       const isManual = normalizeOrderType(o.order_type) === 'manual_sale'
-      const isOnline = !isManual && normalizeOrderMode(o.order_mode) === 'online'
-      const isOffline = !isManual && normalizeOrderMode(o.order_mode) !== 'online'
+      const isOnline = !isManual && !isAdvance && normalizeOrderMode(o.order_mode) === 'online'
+      const isOffline = !isManual && !isAdvance && normalizeOrderMode(o.order_mode) !== 'online'
 
       if (billTypeFilter === 'manual' && !isManual) return false
       if (billTypeFilter === 'offline' && !isOffline) return false
       if (billTypeFilter === 'online' && !isOnline) return false
+      if (billTypeFilter === 'advance' && !isAdvance) return false
 
       if (!matchPaymentType(o, paymentTypeFilter)) return false
 
-      if (historyGstFilter === 'gst') {
-        const hasGst = Number(o.total_gst || o.gst_amount || 0) > 0 || (Number(o.cgst_amount || 0) + Number(o.sgst_amount || 0)) > 0
-        if (!hasGst) return false
-      } else if (historyGstFilter === 'non_gst') {
-        const hasGst = Number(o.total_gst || o.gst_amount || 0) > 0 || (Number(o.cgst_amount || 0) + Number(o.sgst_amount || 0)) > 0
-        if (hasGst) return false
-      }
+      const isGst = isGstOrder(o)
+      if (historyGstFilter === 'gst' && !isGst) return false
+      if (historyGstFilter === 'non_gst' && isGst) return false
 
       if (historyQuickSearch.trim()) {
         const qLower = historyQuickSearch.trim().toLowerCase()
@@ -1004,6 +1056,30 @@ export default function Dashboard() {
         }
       }
 
+      if (search.invoiceNo.trim()) {
+        const invQuery = search.invoiceNo.trim().toLowerCase()
+        const invDigits = invQuery.replace(/\D/g, '')
+        const rawInv = (o.invoice_no || '').toLowerCase()
+        const fmtInv = formatInvoiceNo(o.invoice_no).toLowerCase()
+        const rawInvDigits = (o.invoice_no || '').replace(/\D/g, '')
+        const match = rawInv.includes(invQuery) || fmtInv.includes(invQuery) || (invDigits && rawInvDigits.includes(invDigits))
+        if (!match) return false
+      }
+
+      if (search.customerName.trim()) {
+        const custQuery = search.customerName.trim().toLowerCase()
+        if (!(o.customer_name || '').toLowerCase().includes(custQuery)) return false
+      }
+
+      if (search.phone.trim()) {
+        const phoneQuery = search.phone.trim().toLowerCase()
+        const phoneDigits = phoneQuery.replace(/\D/g, '')
+        const rawPhone = (o.phone || '').toLowerCase()
+        const rawPhoneDigits = (o.phone || '').replace(/\D/g, '')
+        const match = rawPhone.includes(phoneQuery) || (phoneDigits && rawPhoneDigits.includes(phoneDigits))
+        if (!match) return false
+      }
+
       if (search.dateFrom) {
         const orderDate = toLocalDateKey(o.created_at)
         if (orderDate < search.dateFrom) return false
@@ -1015,7 +1091,7 @@ export default function Dashboard() {
 
       return true
     })
-  }, [baseOrderList, billTypeFilter, paymentTypeFilter, historyGstFilter, historyQuickSearch, search.dateFrom, search.dateTo])
+  }, [baseOrderList, billTypeFilter, paymentTypeFilter, historyGstFilter, historyQuickSearch, search.invoiceNo, search.customerName, search.phone, search.dateFrom, search.dateTo])
 
   // Load dashboard data
   const loadData = useCallback(async () => {
@@ -1026,7 +1102,7 @@ export default function Dashboard() {
       const [cRes, oRes, couponRes, expList] = await Promise.all([
         supabase.from('categories').select('id, name_en, name_ta, is_active, sort_order').order('sort_order'),
         supabase.from('orders')
-          .select('id, invoice_no, customer_name, phone, address, created_at, total, subtotal, status, order_mode, order_type, user_id, items, coupon_code, discount_amount, manual_discount_amount, delivery_charge, total_gst, gst_amount, payment_mode, payment_method, split_details, remarks, reference_number')
+          .select('id, invoice_no, customer_name, phone, address, created_at, total, subtotal, status, order_mode, order_type, user_id, items, coupon_code, discount_amount, manual_discount_amount, delivery_charge, total_gst, gst_amount, gst_enabled, payment_mode, payment_method, split_details, remarks, reference_number')
           .order('created_at', { ascending: false })
           .limit(1000),
         supabase.from('coupons')
@@ -1519,7 +1595,7 @@ export default function Dashboard() {
       const effectiveDateTo = overrideDates !== undefined ? (overrideDates.dateTo ?? '') : search.dateTo
 
       let q = supabase.from('orders')
-        .select('id, invoice_no, customer_name, phone, address, created_at, total, subtotal, status, order_mode, order_type, items, coupon_code, discount_amount, manual_discount_amount, delivery_charge, total_gst, gst_amount, payment_mode, payment_method, split_details, remarks, reference_number')
+        .select('id, invoice_no, customer_name, phone, address, created_at, total, subtotal, status, order_mode, order_type, items, coupon_code, discount_amount, manual_discount_amount, delivery_charge, total_gst, gst_amount, gst_enabled, payment_mode, payment_method, split_details, remarks, reference_number')
         .neq('order_type', 'online_request')
         .order('created_at', { ascending: false })
         .limit(hasQuery ? 1000 : 500)
@@ -3654,8 +3730,9 @@ export default function Dashboard() {
                         onChange={e => setBillTypeFilter(e.target.value as typeof billTypeFilter)}
                         className="w-full lg:w-32 h-11 appearance-none pl-2.5 pr-6 rounded-xl bg-[#F9FAFB] border border-gray-200 text-xs font-bold text-gray-800 focus:outline-none focus:border-[#D4AF37] cursor-pointer hover:bg-gray-100 transition-colors break-words"
                       >
-                        <option value="all">{l('All Bills', 'அனைத்து')}</option>
-                        <option value="offline">{l('Offline', 'ஆஃப்லைன்')}</option>
+                        <option value="all">{l('All Types', 'அனைத்து வகைகள்')}</option>
+                        <option value="offline">{l('POS Offline', 'ஆஃப்லைன் POS')}</option>
+                        <option value="advance">{l('Advance Orders', 'முன்பதிவு ஆர்டர்கள்')}</option>
                         <option value="online">{l('Online', 'ஆன்லைன்')}</option>
                         <option value="manual">{l('Manual', 'கைமுறை')}</option>
                       </select>
@@ -3847,7 +3924,7 @@ export default function Dashboard() {
                   {/* Active filter badges that can be clicked to dismiss */}
                   {billTypeFilter !== 'all' && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-800 text-[11px] font-semibold">
-                      Type: {billTypeFilter}
+                      Type: {billTypeFilter === 'advance' ? l('Advance Orders', 'முன்பதிவு') : billTypeFilter === 'offline' ? l('POS Offline', 'ஆஃப்லைன் POS') : billTypeFilter}
                       <button type="button" onClick={() => setBillTypeFilter('all')} className="hover:text-red-600 cursor-pointer"><X size={11} /></button>
                     </span>
                   )}
@@ -3880,6 +3957,24 @@ export default function Dashboard() {
                       <button type="button" onClick={() => { setHistoryQuickSearch(''); void loadData() }} className="hover:text-red-600 cursor-pointer"><X size={11} /></button>
                     </span>
                   )}
+                  {search.invoiceNo.trim() && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-[11px] font-semibold">
+                      Inv: {search.invoiceNo}
+                      <button type="button" onClick={() => { setSearch(s => ({ ...s, invoiceNo: '' })); void runSearch() }} className="hover:text-red-600 cursor-pointer"><X size={11} /></button>
+                    </span>
+                  )}
+                  {search.customerName.trim() && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-[11px] font-semibold">
+                      Cust: {search.customerName}
+                      <button type="button" onClick={() => { setSearch(s => ({ ...s, customerName: '' })); void runSearch() }} className="hover:text-red-600 cursor-pointer"><X size={11} /></button>
+                    </span>
+                  )}
+                  {search.phone.trim() && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-[11px] font-semibold">
+                      Phone: {search.phone}
+                      <button type="button" onClick={() => { setSearch(s => ({ ...s, phone: '' })); void runSearch() }} className="hover:text-red-600 cursor-pointer"><X size={11} /></button>
+                    </span>
+                  )}
                 </div>
 
                 {filteredSearchResults.length > 0 && (
@@ -3894,20 +3989,22 @@ export default function Dashboard() {
               </div>
               <div className="space-y-3 md:hidden">
                 {filteredSearchResults.slice(0, 200).map(o => {
-                  const billTypeLabel = normalizeOrderType(o.order_type) === 'manual_sale' ? 'MANUAL' : normalizeOrderMode(o.order_mode) === 'online' ? 'ONLINE' : 'OFFLINE'
-                  const billTypeClass = normalizeOrderType(o.order_type) === 'manual_sale' ? 'bg-gray-50 text-gray-700' : normalizeOrderMode(o.order_mode) === 'online' ? 'bg-gray-50 text-gray-700' : 'bg-orange-50 text-orange-700'
+                  const isAdv = normalizeOrderType(o.order_type) === 'advance_order'
+                  const billTypeLabel = isAdv ? 'ADVANCE' : normalizeOrderType(o.order_type) === 'manual_sale' ? 'MANUAL' : normalizeOrderMode(o.order_mode) === 'online' ? 'ONLINE' : 'OFFLINE'
+                  const billTypeClass = isAdv ? 'bg-purple-50 text-purple-700 border border-purple-200' : normalizeOrderType(o.order_type) === 'manual_sale' ? 'bg-gray-50 text-gray-700' : normalizeOrderMode(o.order_mode) === 'online' ? 'bg-gray-50 text-gray-700' : 'bg-orange-50 text-orange-700'
                   const parsedItems = parseOrderItems(o.items)
                   const itemSubtotal = parsedItems.reduce((acc, it) => acc + (toNumber(it.line_total ?? it.lineTotal, 0) || (toNumber(it.base_price ?? it.price, 0) * Math.max(1, toNumber(it.quantity, 1)))), 0)
                   const orderTotal = getOrderTotal(o)
-                  const rawGst = Number(o.total_gst || 0)
+                  const rawGst = Number(o.total_gst ?? o.gst_amount ?? 0)
                   const effectiveSubtotal = (o.subtotal && o.subtotal > 0) ? o.subtotal : (itemSubtotal > 0 ? itemSubtotal : Math.max(0, orderTotal - (o.delivery_charge || 0) - rawGst + (o.discount_amount || 0) + (o.manual_discount_amount || 0)))
-                  const cgstAmount = Math.round((rawGst / 2) * 100) / 100
-                  const sgstAmount = Math.round((rawGst / 2) * 100) / 100
+                  const cgstAmount = Number(o.cgst_amount || 0) || Math.round((rawGst / 2) * 100) / 100
+                  const sgstAmount = Number(o.sgst_amount || 0) || Math.round((rawGst / 2) * 100) / 100
                   const totalDiscount = Number(o.discount_amount || 0) + Number(o.manual_discount_amount || 0)
                   const taxableBase = Math.max(0, effectiveSubtotal - totalDiscount)
                   const resolvedRate = Number(o.gst_rate || 0) || (rawGst > 0 && taxableBase > 0 ? Math.round((rawGst / taxableBase) * 1000) / 10 : 0)
                   const halfRateStr = resolvedRate > 0 ? (resolvedRate / 2).toFixed(1).replace(/\.0$/, '') : (rawGst > 0 ? '2.5' : '')
                   const gstRateLabel = halfRateStr ? ` (${halfRateStr}%)` : ''
+                  const isOrderGstBill = isGstOrder(o)
                   return (
                     <div key={o.id} className="rounded-2xl border border-[#F3F4F6]/60 bg-[#FBFAF6] p-3 sm:p-4 space-y-3">
                       <div className="flex items-start justify-between gap-3">
@@ -3917,7 +4014,7 @@ export default function Dashboard() {
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${billTypeClass}`}>{billTypeLabel}</span>
-                          {rawGst > 0 ? (
+                          {isOrderGstBill ? (
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">GST</span>
                           ) : (
                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-gray-100 text-gray-500 border border-gray-200">Non-GST</span>
@@ -4041,8 +4138,10 @@ export default function Dashboard() {
                   </thead>
                   <tbody className="divide-y divide-[#F3F4F6]/30 bg-white">
                     {filteredSearchResults.slice(0, 200).map(o => {
-                      const billTypeLabel = normalizeOrderType(o.order_type) === 'manual_sale' ? 'MANUAL' : normalizeOrderMode(o.order_mode) === 'online' ? 'ONLINE' : 'OFFLINE'
-                      const billTypeClass = normalizeOrderType(o.order_type) === 'manual_sale' ? 'bg-gray-50 text-gray-700' : normalizeOrderMode(o.order_mode) === 'online' ? 'bg-gray-50 text-gray-700' : 'bg-orange-50 text-orange-700'
+                      const isAdv = normalizeOrderType(o.order_type) === 'advance_order'
+                      const billTypeLabel = isAdv ? 'ADVANCE' : normalizeOrderType(o.order_type) === 'manual_sale' ? 'MANUAL' : normalizeOrderMode(o.order_mode) === 'online' ? 'ONLINE' : 'OFFLINE'
+                      const billTypeClass = isAdv ? 'bg-purple-50 text-purple-700 border border-purple-200' : normalizeOrderType(o.order_type) === 'manual_sale' ? 'bg-gray-50 text-gray-700' : normalizeOrderMode(o.order_mode) === 'online' ? 'bg-gray-50 text-gray-700' : 'bg-orange-50 text-orange-700'
+                      const isOrderGstBill = isGstOrder(o)
                       return (
                         <React.Fragment key={o.id}>
                         <tr key={o.id} className="hover:bg-[#F9FAFB] text-center">
@@ -4052,7 +4151,7 @@ export default function Dashboard() {
                           <td className="px-2 py-3">
                             <div className="flex items-center justify-center gap-1">
                               <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase ${billTypeClass}`}>{billTypeLabel}</span>
-                              {Number(o.total_gst || o.gst_amount || 0) > 0 ? (
+                              {isOrderGstBill ? (
                                 <span className="px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200">GST</span>
                               ) : (
                                 <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase bg-gray-100 text-gray-500 border border-gray-200">Non-GST</span>

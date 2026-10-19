@@ -15,6 +15,7 @@ import { useProductStore, type Product } from '../../store/store'
 import { fetchVariantsByProduct } from '../../services/variantService'
 import { inventoryService, type CategoryRecord } from '../../services/inventoryService'
 import { normalizeBarcode } from '../../lib/barcode'
+import { useTheme } from '../../store/themeStore'
 
 export const STANDARD_LETTER_SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', 'Free Size'] as const
 export const STANDARD_NUMERIC_SIZES = ['28', '30', '32', '34', '36', '38', '40', '42', '44', '46', '48'] as const
@@ -38,6 +39,7 @@ export const AddEditProductView: React.FC<{
   onClearEdit?: () => void
 }> = ({ onStockUpdated, initialProductId, onClearEdit }) => {
   const { products, fetchProducts } = useProductStore()
+  const { themeColor, textColor, hoverColor, lightBg, subtleBorder } = useTheme()
   const [categories, setCategories] = useState<CategoryRecord[]>([])
   const [search, setSearch] = useState('')
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null)
@@ -685,9 +687,10 @@ export const AddEditProductView: React.FC<{
           onClick={() => setMobileView('list')}
           className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
             mobileView === 'list'
-              ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm'
+              ? 'shadow-sm'
               : 'text-gray-600 hover:text-black'
           }`}
+          style={mobileView === 'list' ? { backgroundColor: themeColor, color: textColor } : undefined}
         >
           <Boxes size={15} /> Catalog ({activeProducts.length})
         </button>
@@ -698,11 +701,12 @@ export const AddEditProductView: React.FC<{
           }}
           className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation active:scale-[0.98] ${
             mobileView === 'form' && !selectedProductId
-              ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm'
+              ? 'shadow-sm'
               : mobileView === 'form' && selectedProductId
               ? 'bg-amber-100 text-amber-900 border border-amber-300'
               : 'text-gray-600 hover:text-black'
           }`}
+          style={mobileView === 'form' && !selectedProductId ? { backgroundColor: themeColor, color: textColor } : undefined}
         >
           {selectedProductId ? <Edit2 size={14} /> : <Plus size={15} />}
           <span>{selectedProductId ? 'Editing Product' : 'Add Product'}</span>
@@ -711,7 +715,8 @@ export const AddEditProductView: React.FC<{
           <button
             type="button"
             onClick={handleSwitchToAddNewProduct}
-            className="py-2.5 px-3 rounded-xl text-xs font-black bg-[#C9A24B] text-[#222222] border border-[#B8913E] shadow-sm flex items-center justify-center gap-1 cursor-pointer touch-manipulation active:scale-95 shrink-0"
+            className="py-2.5 px-3 rounded-xl text-xs font-black shadow-sm flex items-center justify-center gap-1 cursor-pointer touch-manipulation active:scale-95 shrink-0"
+            style={{ backgroundColor: themeColor, color: textColor }}
             title="Switch to Add New Product"
           >
             <Plus size={14} /> New
@@ -771,7 +776,7 @@ export const AddEditProductView: React.FC<{
                           {p.name}
                         </span>
                         {isSelected && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider bg-[#7B1E2B] text-[#C9A24B] shrink-0">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shrink-0" style={{ backgroundColor: themeColor, color: textColor }}>
                             Editing
                           </span>
                         )}
@@ -798,13 +803,14 @@ export const AddEditProductView: React.FC<{
                           }}
                           className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
                             isSelected
-                              ? 'bg-[#7B1E2B] text-[#C9A24B] border-[#C9A24B] shadow-xs'
-                              : 'border-gray-200 bg-white text-gray-600 hover:bg-[#7B1E2B] hover:text-[#C9A24B] hover:border-[#7B1E2B]'
+                              ? 'shadow-xs'
+                              : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-100'
                           }`}
+                          style={isSelected ? { backgroundColor: themeColor, color: textColor, borderColor: themeColor } : undefined}
                           title={`Edit "${p.name}"`}
                           aria-label={`Edit ${p.name}`}
                         >
-                          <Edit2 size={13} className={isSelected ? 'text-[#B38018]' : ''} />
+                          <Edit2 size={13} />
                         </button>
 
                         <button
@@ -867,7 +873,8 @@ export const AddEditProductView: React.FC<{
                 <button
                   type="button"
                   onClick={handleSwitchToAddNewProduct}
-                  className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl border border-[#7B1E2B] bg-[#F9FAFB] text-[#111111] hover:bg-[#7B1E2B] hover:text-[#C9A24B] text-xs font-black flex items-center gap-1 transition cursor-pointer touch-manipulation active:scale-95 shadow-xs whitespace-nowrap shrink-0"
+                  className="px-2.5 py-1.5 sm:px-3 sm:py-1.5 rounded-xl border bg-[#F9FAFB] text-xs font-black flex items-center gap-1 transition cursor-pointer touch-manipulation active:scale-95 shadow-xs whitespace-nowrap shrink-0"
+                  style={{ borderColor: themeColor, color: themeColor }}
                   title="Close edit mode and switch to add new product"
                 >
                   <Plus size={14} className="shrink-0 text-[#111111]" />
@@ -1114,9 +1121,10 @@ export const AddEditProductView: React.FC<{
                           onClick={() => setSizePartition('alpha')}
                           className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                             sizePartition === 'alpha'
-                              ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-xs'
+                              ? 'shadow-xs'
                               : 'text-gray-600 hover:text-black'
                           }`}
+                          style={sizePartition === 'alpha' ? { backgroundColor: themeColor, color: textColor } : undefined}
                         >
                           Alpha Sizes (S, M, L, XL...)
                         </button>
@@ -1125,9 +1133,10 @@ export const AddEditProductView: React.FC<{
                           onClick={() => setSizePartition('numeric')}
                           className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                             sizePartition === 'numeric'
-                              ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-xs'
+                              ? 'shadow-xs'
                               : 'text-gray-600 hover:text-black'
                           }`}
+                          style={sizePartition === 'numeric' ? { backgroundColor: themeColor, color: textColor } : undefined}
                         >
                           Numeric Sizes (28, 30, 32...)
                         </button>
@@ -1136,9 +1145,10 @@ export const AddEditProductView: React.FC<{
                           onClick={() => setSizePartition('custom')}
                           className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
                             sizePartition === 'custom'
-                              ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-xs'
+                              ? 'shadow-xs'
                               : 'text-gray-600 hover:text-black'
                           }`}
+                          style={sizePartition === 'custom' ? { backgroundColor: themeColor, color: textColor } : undefined}
                         >
                           Special & Custom
                         </button>
@@ -1367,7 +1377,8 @@ export const AddEditProductView: React.FC<{
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 sm:px-6 sm:py-2.5 rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] text-xs font-black uppercase tracking-wider hover:bg-[#B8913E] transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2 sm:px-6 sm:py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              style={{ backgroundColor: themeColor, color: textColor }}
             >
               {loading ? (
                 <>

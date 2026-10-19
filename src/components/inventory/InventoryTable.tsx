@@ -26,11 +26,13 @@ import { useAlarmStore } from '../../store/alarmStore'
 import { CategoryManagerView } from './CategoryManagerView'
 import { InventoryAnalyticsView } from './InventoryAnalyticsView'
 import { AddEditProductView } from './AddEditProductView'
+import { useTheme } from '../../store/themeStore'
 
 type InventoryTab = 'stock' | 'products' | 'categories' | 'analytics'
 
 export const InventoryTable: React.FC = () => {
   const role = useAdminAuthStore((state) => state.role)
+  const { themeColor, textColor, hoverColor } = useTheme()
   const [activeTab, setActiveTab] = useState<InventoryTab>('stock')
   const { products: storeProducts, fetchProducts } = useProductStore()
   const [items, setItems] = useState<InventoryStockItem[]>([])
@@ -189,9 +191,10 @@ export const InventoryTable: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('stock')}
+            style={activeTab === 'stock' ? { backgroundColor: themeColor, color: textColor } : undefined}
             className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'stock'
-                ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm'
+                ? 'shadow-sm'
                 : 'text-gray-600 hover:text-[#111111] hover:bg-[#F9FAFB]'
             }`}
           >
@@ -204,9 +207,10 @@ export const InventoryTable: React.FC = () => {
               setEditProductId(null)
               setActiveTab('products')
             }}
+            style={activeTab === 'products' ? { backgroundColor: themeColor, color: textColor } : undefined}
             className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'products'
-                ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm'
+                ? 'shadow-sm'
                 : 'text-gray-600 hover:text-[#111111] hover:bg-[#F9FAFB]'
             }`}
           >
@@ -216,9 +220,10 @@ export const InventoryTable: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('categories')}
+            style={activeTab === 'categories' ? { backgroundColor: themeColor, color: textColor } : undefined}
             className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'categories'
-                ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm'
+                ? 'shadow-sm'
                 : 'text-gray-600 hover:text-[#111111] hover:bg-[#F9FAFB]'
             }`}
           >
@@ -228,9 +233,10 @@ export const InventoryTable: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('analytics')}
+            style={activeTab === 'analytics' ? { backgroundColor: themeColor, color: textColor } : undefined}
             className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
               activeTab === 'analytics'
-                ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm'
+                ? 'shadow-sm'
                 : 'text-gray-600 hover:text-[#111111] hover:bg-[#F9FAFB]'
             }`}
           >
@@ -246,7 +252,8 @@ export const InventoryTable: React.FC = () => {
               setSelectedForReceive(null)
               setShowReceiveModal(true)
             }}
-            className="px-4 py-2.5 rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] text-xs font-black hover:bg-[#B8913E] transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap"
+            style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+            className="px-4 py-2.5 rounded-xl border text-xs font-black transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0 whitespace-nowrap hover:opacity-90"
             title="Generate & print barcodes for items"
           >
             <Printer size={15} /> Add Barcode
@@ -321,9 +328,10 @@ export const InventoryTable: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFilterStatus('all')}
+                style={filterStatus === 'all' ? { backgroundColor: themeColor, color: textColor } : undefined}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   filterStatus === 'all'
-                    ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-xs'
+                    ? 'shadow-xs'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -495,9 +503,10 @@ export const InventoryTable: React.FC = () => {
                                 type="button"
                                 disabled={!item.barcode}
                                 onClick={() => item.barcode && setPrintModalItem(item)}
+                                style={item.barcode ? { backgroundColor: themeColor, color: textColor, borderColor: hoverColor } : undefined}
                                 className={`p-1.5 rounded-lg border transition-colors shrink-0 ${
                                   item.barcode
-                                    ? 'bg-[#7B1E2B] text-[#C9A24B] border-[#C9A24B]/50 hover:bg-[#631722] cursor-pointer'
+                                    ? 'hover:opacity-90 cursor-pointer shadow-xs'
                                     : 'invisible pointer-events-none border-transparent'
                                 }`}
                                 title={item.barcode ? 'Print Barcode Labels' : undefined}

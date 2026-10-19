@@ -6,6 +6,7 @@ import {
   type LabelSizeConfig,
   renderBarcodeSvg,
 } from '../../lib/barcode'
+import { useTheme } from '../../store/themeStore'
 
 interface BarcodeSheetPreviewModalProps {
   isOpen: boolean
@@ -22,6 +23,7 @@ export const BarcodeSheetPreviewModal: React.FC<BarcodeSheetPreviewModalProps> =
   sizeConfig,
   onPrint,
 }) => {
+  const { themeColor, textColor } = useTheme()
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Expand all selected queue items into individual labels based on `noOfLabels`
@@ -93,10 +95,13 @@ export const BarcodeSheetPreviewModal: React.FC<BarcodeSheetPreviewModalProps> =
       <div className="absolute inset-0" onClick={onClose} />
       <div className="relative z-10 bg-white rounded-none sm:rounded-3xl max-w-4xl w-full h-[100dvh] max-h-[100dvh] sm:h-auto sm:max-h-[92vh] border-0 sm:border border-gray-200 shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-[#C9A24B]/30 bg-[#7B1E2B] text-white shrink-0">
+        <div
+          style={{ backgroundColor: themeColor, color: textColor }}
+          className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-white/20 shrink-0"
+        >
           <div>
-            <h3 className="text-sm sm:text-base font-black tracking-wide text-white">Print Preview</h3>
-            <p className="text-[11px] sm:text-xs text-[#C9A24B] font-semibold">
+            <h3 className="text-sm sm:text-base font-black tracking-wide" style={{ color: textColor }}>Print Preview</h3>
+            <p className="text-[11px] sm:text-xs font-semibold" style={{ color: textColor, opacity: 0.85 }}>
               {individualLabels.length} Labels (1 Barcode Per Page • {sizeConfig.name} • {sizeConfig.widthMm} × {sizeConfig.heightMm} mm)
             </p>
           </div>
@@ -215,7 +220,8 @@ export const BarcodeSheetPreviewModal: React.FC<BarcodeSheetPreviewModalProps> =
                 onClose()
                 onPrint()
               }}
-              className="px-4 py-2 sm:px-6 sm:py-2.5 rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] text-xs font-black uppercase tracking-wider hover:bg-[#B8913E] transition-all shadow-md flex items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0"
+              style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+              className="px-4 py-2 sm:px-6 sm:py-2.5 rounded-xl border text-xs font-black uppercase tracking-wider hover:opacity-90 transition-all shadow-md flex items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0"
             >
               <Printer size={15} /> Print Labels
             </button>

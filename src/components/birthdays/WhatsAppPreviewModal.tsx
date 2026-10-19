@@ -17,6 +17,7 @@ import {
   generateWhatsAppBirthdayUrl,
 } from '../../services/birthdayService'
 import { formatPhoneDisplay, isValidPhone } from '../../lib/phone'
+import { useTheme } from '../../store/themeStore'
 
 interface WhatsAppPreviewModalProps {
   customer: CustomerBirthdayRecord
@@ -31,6 +32,7 @@ export const WhatsAppPreviewModal: React.FC<WhatsAppPreviewModalProps> = ({
   onClose,
   l,
 }) => {
+  const { themeColor, textColor, lightBg, subtleBorder } = useTheme()
   const activeOffers = offers.filter((o) => o.isActive)
   const defaultOffer = activeOffers[0] || offers[0]
 
@@ -98,7 +100,7 @@ export const WhatsAppPreviewModal: React.FC<WhatsAppPreviewModalProps> = ({
           {/* Customer Profile Card */}
           <div className="bg-gray-50 rounded-2xl p-3.5 border border-gray-200/80 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#7B1E2B] text-[#C9A24B] flex items-center justify-center font-black text-sm shadow-xs">
+              <div style={{ backgroundColor: themeColor, color: textColor }} className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm shadow-xs">
                 <Cake size={18} />
               </div>
               <div>
@@ -116,8 +118,11 @@ export const WhatsAppPreviewModal: React.FC<WhatsAppPreviewModalProps> = ({
             </div>
 
             {customer.birthday && (
-              <span className="text-xs font-bold text-[#7B1E2B] bg-[#C9A24B]/15 border border-[#C9A24B]/30 px-2.5 py-1 rounded-xl flex items-center gap-1">
-                <Sparkles size={12} className="text-[#C9A24B]" />
+              <span
+                style={{ backgroundColor: lightBg, color: themeColor, borderColor: subtleBorder }}
+                className="text-xs font-bold border px-2.5 py-1 rounded-xl flex items-center gap-1"
+              >
+                <Sparkles size={12} style={{ color: themeColor }} />
                 <span>{customer.birthday}</span>
               </span>
             )}
@@ -126,7 +131,7 @@ export const WhatsAppPreviewModal: React.FC<WhatsAppPreviewModalProps> = ({
           {/* Offer Selection Dropdown */}
           <div>
             <label className="block text-[11px] font-black uppercase tracking-wider text-gray-600 mb-1 flex items-center gap-1">
-              <Gift size={13} className="text-[#7B1E2B]" />
+              <Gift size={13} style={{ color: themeColor }} />
               <span>{l('Select Birthday Offer to Include', 'சேர்க்க வேண்டிய பிறந்தநாள் சலுகை')}</span>
             </label>
             <select
@@ -135,7 +140,7 @@ export const WhatsAppPreviewModal: React.FC<WhatsAppPreviewModalProps> = ({
                 setSelectedOfferId(e.target.value)
                 setCustomMessage(null)
               }}
-              className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-[#222222] focus:outline-none focus:border-[#7B1E2B] focus:ring-2 focus:ring-[#7B1E2B]/10 cursor-pointer"
+              className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-[#222222] focus:outline-none cursor-pointer"
             >
               {offers.map((offer) => (
                 <option key={offer.id} value={offer.id}>
@@ -154,7 +159,8 @@ export const WhatsAppPreviewModal: React.FC<WhatsAppPreviewModalProps> = ({
               <button
                 type="button"
                 onClick={handleCopy}
-                className="inline-flex items-center gap-1 text-xs font-bold text-[#7B1E2B] hover:text-[#5c1620] cursor-pointer"
+                style={{ color: themeColor }}
+                className="inline-flex items-center gap-1 text-xs font-bold hover:opacity-80 cursor-pointer"
               >
                 {copied ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
                 <span>{copied ? l('Copied!', 'நகலெடுக்கப்பட்டது!') : l('Copy Text', 'நகல் எடு')}</span>
@@ -165,7 +171,7 @@ export const WhatsAppPreviewModal: React.FC<WhatsAppPreviewModalProps> = ({
               rows={7}
               value={activeMessage}
               onChange={(e) => setCustomMessage(e.target.value)}
-              className="w-full p-3.5 bg-white border border-gray-200 rounded-xl text-xs font-sans text-[#222222] leading-relaxed focus:outline-none focus:border-[#7B1E2B] focus:ring-2 focus:ring-[#7B1E2B]/10 transition-all"
+              className="w-full p-3.5 bg-white border border-gray-200 rounded-xl text-xs font-sans text-[#222222] leading-relaxed focus:outline-none transition-all"
             />
           </div>
 
@@ -189,7 +195,7 @@ export const WhatsAppPreviewModal: React.FC<WhatsAppPreviewModalProps> = ({
 
           {/* Security & Explicit Action Disclaimer */}
           <div className="rounded-xl border border-gray-200 bg-gray-50/80 p-3 text-[11px] text-gray-600 flex items-start gap-2">
-            <ShieldCheck size={16} className="text-[#7B1E2B] shrink-0 mt-0.5" />
+            <ShieldCheck size={16} style={{ color: themeColor }} className="shrink-0 mt-0.5" />
             <span>
               {l(
                 "Clicking 'Open in WhatsApp' launches a direct 1-on-1 chat on your device using the official WhatsApp URL pattern. Messages are never sent in bulk or automatically dispatched without your explicit action.",

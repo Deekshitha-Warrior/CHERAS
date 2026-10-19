@@ -24,8 +24,10 @@ import {
 } from '../../services/expenseService'
 import { RecordExpenseModal } from './RecordExpenseModal'
 import { ExpenseCategoriesView } from './ExpenseCategoriesView'
+import { useTheme } from '../../store/themeStore'
 
 export const ExpensesView: React.FC = () => {
+  const { themeColor, textColor, hoverColor } = useTheme()
   const [activeTab, setActiveTab] = useState<'expenses' | 'categories'>('expenses')
   const [isRecordModalOpen, setIsRecordModalOpen] = useState(false)
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null)
@@ -218,7 +220,7 @@ export const ExpensesView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-[#111111] flex items-center gap-2">
-            <Receipt size={22} className="text-[#B38018]" />
+            <Receipt size={22} style={{ color: themeColor }} />
             Expense Tracker
           </h2>
           <p className="text-xs text-gray-500 font-bold mt-0.5">
@@ -231,9 +233,10 @@ export const ExpensesView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('expenses')}
+            style={activeTab === 'expenses' ? { backgroundColor: themeColor, color: textColor } : undefined}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'expenses'
-                ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm'
+                ? 'shadow-sm'
                 : 'text-gray-600 hover:text-[#111111]'
             }`}
           >
@@ -242,9 +245,10 @@ export const ExpensesView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('categories')}
+            style={activeTab === 'categories' ? { backgroundColor: themeColor, color: textColor } : undefined}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'categories'
-                ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm'
+                ? 'shadow-sm'
                 : 'text-gray-600 hover:text-[#111111]'
             }`}
           >
@@ -358,9 +362,10 @@ export const ExpensesView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAdvancedFilters((v) => !v)}
+                  style={showAdvancedFilters || activeFiltersCount > 0 ? { backgroundColor: themeColor, color: textColor, borderColor: themeColor } : undefined}
                   className={`w-full sm:w-auto h-10 px-2.5 sm:px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer min-w-0 shrink-0 ${
                     showAdvancedFilters || activeFiltersCount > 0
-                      ? 'bg-[#7B1E2B] text-white border-[#7B1E2B]'
+                      ? 'shadow-xs'
                       : 'bg-[#F9FAFB] text-gray-700 border-gray-200 hover:bg-gray-100'
                   }`}
                   title="Toggle detailed filters"
@@ -368,7 +373,7 @@ export const ExpensesView: React.FC = () => {
                   <SlidersHorizontal size={12} className="shrink-0" />
                   <span className="truncate">Filters</span>
                   {activeFiltersCount > 0 && (
-                    <span className="w-4 h-4 rounded-full bg-[#C9A24B] text-[#222222] text-[9px] font-black flex items-center justify-center shrink-0">
+                    <span className="w-4 h-4 rounded-full bg-white/25 text-white text-[9px] font-black flex items-center justify-center shrink-0">
                       {activeFiltersCount}
                     </span>
                   )}
@@ -403,7 +408,8 @@ export const ExpensesView: React.FC = () => {
                     setEditingExpense(null)
                     setIsRecordModalOpen(true)
                   }}
-                  className="h-10 px-3 sm:px-4 rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] text-xs font-bold hover:bg-[#B8913E] transition-all shadow-md flex items-center gap-1.5 cursor-pointer shrink-0"
+                  style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+                  className="h-10 px-3 sm:px-4 rounded-xl border text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer shrink-0 hover:opacity-90"
                 >
                   <Plus size={14} />
                   <span className="whitespace-nowrap">Record Expense</span>

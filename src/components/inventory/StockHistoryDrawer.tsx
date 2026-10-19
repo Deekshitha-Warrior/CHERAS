@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { X, History, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react'
 import { inventoryService, type InventoryMovement, type InventoryStockItem } from '../../services/inventoryService'
 import { BRAND_EN } from '../../lib/brand'
+import { useTheme } from '../../store/themeStore'
 
 export interface StockHistoryDrawerProps {
   isOpen: boolean
@@ -15,6 +16,7 @@ export const StockHistoryDrawer: React.FC<StockHistoryDrawerProps> = ({
   onClose,
   item,
 }) => {
+  const { themeColor, textColor } = useTheme()
   const [movements, setMovements] = useState<InventoryMovement[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -93,23 +95,24 @@ export const StockHistoryDrawer: React.FC<StockHistoryDrawerProps> = ({
       <div className="absolute inset-0" onClick={onClose} />
       <div className="relative z-10 bg-white w-full max-w-md h-screen h-[100dvh] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 border-l border-[#F3F4F6]">
         {/* Header */}
-        <div className="bg-[#7B1E2B] p-5 border-b border-[#C9A24B]/30 flex items-center justify-between text-white shrink-0">
+        <div className="p-5 border-b border-white/20 flex items-center justify-between shrink-0" style={{ backgroundColor: themeColor, color: textColor }}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#631722] border border-[#C9A24B]/50 flex items-center justify-center text-[#C9A24B] shrink-0">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: textColor }}>
               <History size={18} />
             </div>
             <div>
-              <h2 className="text-base font-black tracking-wide text-white">
+              <h2 className="text-base font-black tracking-wide" style={{ color: textColor }}>
                 Stock Audit Ledger
               </h2>
-              <p className="text-xs text-[#C9A24B] font-semibold">
+              <p className="text-xs font-semibold" style={{ color: textColor, opacity: 0.85 }}>
                 {BRAND_EN} Immutable History
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+            style={{ color: textColor }}
           >
             <X size={16} />
           </button>

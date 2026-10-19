@@ -10,9 +10,13 @@ import {
   Users,
   Clock,
   AlertCircle,
+  Download,
 } from 'lucide-react'
 import { BRAND_EN, BRAND_ICON } from '../../lib/brand'
 import { useLangStore } from '../../store/langStore'
+import { useTheme } from '../../store/themeStore'
+import { downloadCsv } from '../../lib/exportCsv'
+import { formatPhoneDisplay } from '../../lib/phone'
 import { BirthdayCalendar } from './BirthdayCalendar'
 import { CustomerBirthdayList } from './CustomerBirthdayList'
 import { BirthdayOffersManager } from './BirthdayOffersManager'
@@ -28,6 +32,7 @@ import {
 
 export const BirthdayManagementView: React.FC = () => {
   const { lang } = useLangStore()
+  const { themeColor, textColor, lightBg, subtleBorder } = useTheme()
   const l = useCallback((en: string, ta?: string) => (lang === 'ta' && ta ? ta : en), [lang])
 
   const [loading, setLoading] = useState(true)
@@ -114,6 +119,50 @@ export const BirthdayManagementView: React.FC = () => {
     }
   }, [customers, currentMonthDate, today])
 
+  const handleExportCSV = async () => {
+    if (customers.length === 0) {
+      alert(l('No customer records to export', 'ஏற்றுமதி செய்ய வாடிக்கையாளர் பதிவுகள் இல்லை'))
+      return
+    }
+
+    const escapeCsv = (str: unknown) => {
+      if (str === null || str === undefined) return '""'
+      const s = String(str).replace(/"/g, '""')
+      return `"${s}"`
+    }
+
+    const headers = [
+      'Customer Name',
+      'Phone',
+      'Birthday',
+      'Next Birthday',
+      'Days Until Birthday',
+      'Turning Age',
+      'Total Orders',
+      'Source',
+      'Notes',
+    ]
+
+    const rows = customers.map((c) => {
+      const bInfo = c.birthday ? getNextBirthday(c.birthday, today) : null
+      return [
+        escapeCsv(c.name || 'Unnamed'),
+        escapeCsv(formatPhoneDisplay(c.phone)),
+        escapeCsv(c.birthday || 'Not Set'),
+        escapeCsv(bInfo ? bInfo.formattedDate : 'N/A'),
+        escapeCsv(bInfo ? bInfo.daysUntil : 'N/A'),
+        escapeCsv(bInfo && bInfo.turningAge !== null ? bInfo.turningAge : 'N/A'),
+        escapeCsv(c.orderCount ?? 0),
+        escapeCsv(c.source || 'profile'),
+        escapeCsv(c.notes || ''),
+      ].join(',')
+    })
+
+    const csvContent = [headers.join(','), ...rows].join('\n')
+    const dateStr = new Date().toISOString().slice(0, 10)
+    await downloadCsv(`customer_birthdays_${dateStr}.csv`, csvContent)
+  }
+
   return (
     <div className="space-y-5 pb-10">
       {/* Top Banner Header */}
@@ -134,7 +183,10 @@ export const BirthdayManagementView: React.FC = () => {
               <h2 className="text-xl sm:text-2xl font-black text-[#222222] tracking-tight">
                 {l('Customer Birthday Management', 'வாடிக்கையாளர் பிறந்தநாள் மேலாண்மை')}
               </h2>
-              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#C9A24B]/20 text-[#7B1E2B] border border-[#C9A24B]/40">
+              <span
+                style={{ backgroundColor: lightBg, color: themeColor, borderColor: subtleBorder }}
+                className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border"
+              >
                 {BRAND_EN}
               </span>
             </div>
@@ -153,11 +205,15 @@ export const BirthdayManagementView: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsOffersManagerOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-[#C9A24B]/60 hover:bg-[#FFF9EA] text-[#7B1E2B] text-xs font-black shadow-xs transition-all cursor-pointer hover:scale-[1.02]"
+            style={{ borderColor: subtleBorder, color: themeColor }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border hover:bg-gray-50 text-xs font-black shadow-xs transition-all cursor-pointer hover:scale-[1.02]"
           >
-            <Gift size={14} className="text-[#C9A24B]" />
+            <Gift size={14} style={{ color: themeColor }} />
             <span>{l('Birthday Offers', 'பிறந்தநாள் சலுகைகள்')}</span>
-            <span className="bg-[#7B1E2B] text-white text-[10px] px-1.5 py-0.2 rounded-full font-black">
+            <span
+              style={{ backgroundColor: themeColor, color: textColor }}
+              className="text-[10px] px-1.5 py-0.2 rounded-full font-black"
+            >
               {offers.filter((o) => o.isActive).length}
             </span>
           </button>
@@ -166,10 +222,23 @@ export const BirthdayManagementView: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsQuickAddModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#7B1E2B] hover:bg-[#681924] text-white text-xs font-black shadow-xs transition-all cursor-pointer hover:scale-[1.02]"
+            style={{ backgroundColor: themeColor, color: textColor }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black shadow-xs transition-all cursor-pointer hover:scale-[1.02] hover:opacity-95"
           >
             <Plus size={14} />
             <span>{l('Add Birthday', 'பிறந்தநாள் சேர்')}</span>
+          </button>
+
+          {/* Export CSV */}
+          <button
+            type="button"
+            onClick={() => void handleExportCSV()}
+            disabled={loading || customers.length === 0}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-black shadow-xs transition-all cursor-pointer hover:scale-[1.02] disabled:opacity-50"
+            title={l('Export Birthday List as CSV', 'CSV கோப்பாக ஏற்றுமதி செய்')}
+          >
+            <Download size={14} style={{ color: themeColor }} />
+            <span>{l('Export CSV', 'CSV ஏற்றுமதி')}</span>
           </button>
 
           {/* Refresh */}
@@ -177,10 +246,10 @@ export const BirthdayManagementView: React.FC = () => {
             type="button"
             onClick={() => void loadData()}
             disabled={loading}
-            className="p-2 rounded-xl bg-white border border-gray-200 text-gray-600 hover:text-[#7B1E2B] hover:bg-gray-50 transition-colors cursor-pointer shadow-xs"
+            className="p-2 rounded-xl bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer shadow-xs"
             title={l('Refresh data', 'புதுப்பி')}
           >
-            <RefreshCw size={15} className={loading ? 'animate-spin text-[#7B1E2B]' : ''} />
+            <RefreshCw size={15} style={loading ? { color: themeColor } : undefined} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
@@ -200,31 +269,41 @@ export const BirthdayManagementView: React.FC = () => {
             setSelectedDate(null)
             setActiveQuickFilter('today')
           }}
+          style={activeQuickFilter === 'today' && selectedDate === null ? { backgroundColor: themeColor, borderColor: themeColor, color: textColor } : undefined}
           className={`rounded-2xl border p-4 sm:p-5 transition-all cursor-pointer shadow-xs hover:shadow-md flex flex-col justify-between ${
             activeQuickFilter === 'today' && selectedDate === null
-              ? 'bg-gradient-to-br from-[#7B1E2B] to-[#5a141e] text-white border-[#7B1E2B]'
+              ? 'shadow-md'
               : 'bg-white border-gray-200/90 text-[#222222]'
           }`}
         >
           <div className="flex items-start justify-between">
-            <span className={`text-[11px] font-black uppercase tracking-wider ${
-              activeQuickFilter === 'today' && selectedDate === null ? 'text-[#C9A24B]' : 'text-gray-500'
-            }`}>
+            <span
+              style={activeQuickFilter === 'today' && selectedDate === null ? { color: textColor, opacity: 0.9 } : undefined}
+              className={`text-[11px] font-black uppercase tracking-wider ${
+                activeQuickFilter === 'today' && selectedDate === null ? '' : 'text-gray-500'
+              }`}
+            >
               {l("Today's Birthdays", 'இன்றைய பிறந்தநாள்கள்')}
             </span>
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-              activeQuickFilter === 'today' && selectedDate === null
-                ? 'bg-white/10 text-[#C9A24B]'
-                : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-            }`}>
+            <div
+              style={activeQuickFilter === 'today' && selectedDate === null ? { backgroundColor: 'rgba(255,255,255,0.2)', color: textColor } : undefined}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                activeQuickFilter === 'today' && selectedDate === null
+                  ? ''
+                  : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+              }`}
+            >
               <Cake size={16} />
             </div>
           </div>
           <div className="mt-2">
             <div className="text-2xl sm:text-3xl font-black">{stats.today}</div>
-            <p className={`text-[11px] font-medium mt-0.5 ${
-              activeQuickFilter === 'today' && selectedDate === null ? 'text-white/80' : 'text-gray-500'
-            }`}>
+            <p
+              style={activeQuickFilter === 'today' && selectedDate === null ? { color: textColor, opacity: 0.8 } : undefined}
+              className={`text-[11px] font-medium mt-0.5 ${
+                activeQuickFilter === 'today' && selectedDate === null ? '' : 'text-gray-500'
+              }`}
+            >
               {stats.today > 0 ? l('Ready for WhatsApp greetings 🎉', 'வாழ்த்துகள் அனுப்ப தயார் 🎉') : l('No birthdays today', 'இன்று பிறந்தநாள் இல்லை')}
             </p>
           </div>
@@ -236,31 +315,41 @@ export const BirthdayManagementView: React.FC = () => {
             setSelectedDate(null)
             setActiveQuickFilter('week')
           }}
+          style={activeQuickFilter === 'week' && selectedDate === null ? { backgroundColor: themeColor, borderColor: themeColor, color: textColor } : undefined}
           className={`rounded-2xl border p-4 sm:p-5 transition-all cursor-pointer shadow-xs hover:shadow-md flex flex-col justify-between ${
             activeQuickFilter === 'week' && selectedDate === null
-              ? 'bg-gradient-to-br from-[#7B1E2B] to-[#5a141e] text-white border-[#7B1E2B]'
+              ? 'shadow-md'
               : 'bg-white border-gray-200/90 text-[#222222]'
           }`}
         >
           <div className="flex items-start justify-between">
-            <span className={`text-[11px] font-black uppercase tracking-wider ${
-              activeQuickFilter === 'week' && selectedDate === null ? 'text-[#C9A24B]' : 'text-gray-500'
-            }`}>
+            <span
+              style={activeQuickFilter === 'week' && selectedDate === null ? { color: textColor, opacity: 0.9 } : undefined}
+              className={`text-[11px] font-black uppercase tracking-wider ${
+                activeQuickFilter === 'week' && selectedDate === null ? '' : 'text-gray-500'
+              }`}
+            >
               {l('This Week (Next 7 Days)', 'இந்த வாரம் (7 நாட்கள்)')}
             </span>
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-              activeQuickFilter === 'week' && selectedDate === null
-                ? 'bg-white/10 text-[#C9A24B]'
-                : 'bg-amber-50 text-amber-600 border border-amber-100'
-            }`}>
+            <div
+              style={activeQuickFilter === 'week' && selectedDate === null ? { backgroundColor: 'rgba(255,255,255,0.2)', color: textColor } : undefined}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                activeQuickFilter === 'week' && selectedDate === null
+                  ? ''
+                  : 'bg-amber-50 text-amber-600 border border-amber-100'
+              }`}
+            >
               <Clock size={16} />
             </div>
           </div>
           <div className="mt-2">
             <div className="text-2xl sm:text-3xl font-black">{stats.week}</div>
-            <p className={`text-[11px] font-medium mt-0.5 ${
-              activeQuickFilter === 'week' && selectedDate === null ? 'text-white/80' : 'text-gray-500'
-            }`}>
+            <p
+              style={activeQuickFilter === 'week' && selectedDate === null ? { color: textColor, opacity: 0.8 } : undefined}
+              className={`text-[11px] font-medium mt-0.5 ${
+                activeQuickFilter === 'week' && selectedDate === null ? '' : 'text-gray-500'
+              }`}
+            >
               {l('Upcoming in 7 days', 'அடுத்த 7 நாட்களில்')}
             </p>
           </div>
@@ -272,31 +361,41 @@ export const BirthdayManagementView: React.FC = () => {
             setSelectedDate(null)
             setActiveQuickFilter('month')
           }}
+          style={activeQuickFilter === 'month' && selectedDate === null ? { backgroundColor: themeColor, borderColor: themeColor, color: textColor } : undefined}
           className={`rounded-2xl border p-4 sm:p-5 transition-all cursor-pointer shadow-xs hover:shadow-md flex flex-col justify-between ${
             activeQuickFilter === 'month' && selectedDate === null
-              ? 'bg-gradient-to-br from-[#7B1E2B] to-[#5a141e] text-white border-[#7B1E2B]'
+              ? 'shadow-md'
               : 'bg-white border-gray-200/90 text-[#222222]'
           }`}
         >
           <div className="flex items-start justify-between">
-            <span className={`text-[11px] font-black uppercase tracking-wider ${
-              activeQuickFilter === 'month' && selectedDate === null ? 'text-[#C9A24B]' : 'text-gray-500'
-            }`}>
+            <span
+              style={activeQuickFilter === 'month' && selectedDate === null ? { color: textColor, opacity: 0.9 } : undefined}
+              className={`text-[11px] font-black uppercase tracking-wider ${
+                activeQuickFilter === 'month' && selectedDate === null ? '' : 'text-gray-500'
+              }`}
+            >
               {l('This Month', 'இந்த மாதம்')}
             </span>
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-              activeQuickFilter === 'month' && selectedDate === null
-                ? 'bg-white/10 text-[#C9A24B]'
-                : 'bg-[#C9A24B]/15 text-[#7B1E2B] border border-[#C9A24B]/30'
-            }`}>
+            <div
+              style={activeQuickFilter === 'month' && selectedDate === null ? { backgroundColor: 'rgba(255,255,255,0.2)', color: textColor } : undefined}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                activeQuickFilter === 'month' && selectedDate === null
+                  ? ''
+                  : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+              }`}
+            >
               <Calendar size={16} />
             </div>
           </div>
           <div className="mt-2">
             <div className="text-2xl sm:text-3xl font-black">{stats.month}</div>
-            <p className={`text-[11px] font-medium mt-0.5 ${
-              activeQuickFilter === 'month' && selectedDate === null ? 'text-white/80' : 'text-gray-500'
-            }`}>
+            <p
+              style={activeQuickFilter === 'month' && selectedDate === null ? { color: textColor, opacity: 0.8 } : undefined}
+              className={`text-[11px] font-medium mt-0.5 ${
+                activeQuickFilter === 'month' && selectedDate === null ? '' : 'text-gray-500'
+              }`}
+            >
               {l('Total in viewed month', 'தேர்ந்தெடுத்த மாதத்தில்')}
             </p>
           </div>
@@ -308,36 +407,49 @@ export const BirthdayManagementView: React.FC = () => {
             setSelectedDate(null)
             setActiveQuickFilter('all')
           }}
+          style={activeQuickFilter === 'all' && selectedDate === null ? { backgroundColor: themeColor, borderColor: themeColor, color: textColor } : undefined}
           className={`rounded-2xl border p-4 sm:p-5 transition-all cursor-pointer shadow-xs hover:shadow-md flex flex-col justify-between ${
             activeQuickFilter === 'all' && selectedDate === null
-              ? 'bg-gradient-to-br from-[#7B1E2B] to-[#5a141e] text-white border-[#7B1E2B]'
+              ? 'shadow-md'
               : 'bg-white border-gray-200/90 text-[#222222]'
           }`}
         >
           <div className="flex items-start justify-between">
-            <span className={`text-[11px] font-black uppercase tracking-wider ${
-              activeQuickFilter === 'all' && selectedDate === null ? 'text-[#C9A24B]' : 'text-gray-500'
-            }`}>
+            <span
+              style={activeQuickFilter === 'all' && selectedDate === null ? { color: textColor, opacity: 0.9 } : undefined}
+              className={`text-[11px] font-black uppercase tracking-wider ${
+                activeQuickFilter === 'all' && selectedDate === null ? '' : 'text-gray-500'
+              }`}
+            >
               {l('Total Customer Birthdays', 'மொத்த பிறந்தநாள்கள்')}
             </span>
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-              activeQuickFilter === 'all' && selectedDate === null
-                ? 'bg-white/10 text-[#C9A24B]'
-                : 'bg-blue-50 text-blue-600 border border-blue-100'
-            }`}>
+            <div
+              style={activeQuickFilter === 'all' && selectedDate === null ? { backgroundColor: 'rgba(255,255,255,0.2)', color: textColor } : undefined}
+              className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                activeQuickFilter === 'all' && selectedDate === null
+                  ? ''
+                  : 'bg-blue-50 text-blue-600 border border-blue-100'
+              }`}
+            >
               <Users size={16} />
             </div>
           </div>
           <div className="mt-2">
             <div className="text-2xl sm:text-3xl font-black">
               {stats.totalRecorded}{' '}
-              <span className={`text-xs font-normal ${activeQuickFilter === 'all' && selectedDate === null ? 'text-white/70' : 'text-gray-400'}`}>
+              <span
+                style={activeQuickFilter === 'all' && selectedDate === null ? { color: textColor, opacity: 0.7 } : undefined}
+                className={`text-xs font-normal ${activeQuickFilter === 'all' && selectedDate === null ? '' : 'text-gray-400'}`}
+              >
                 / {stats.totalCustomers}
               </span>
             </div>
-            <p className={`text-[11px] font-medium mt-0.5 ${
-              activeQuickFilter === 'all' && selectedDate === null ? 'text-white/80' : 'text-gray-500'
-            }`}>
+            <p
+              style={activeQuickFilter === 'all' && selectedDate === null ? { color: textColor, opacity: 0.8 } : undefined}
+              className={`text-[11px] font-medium mt-0.5 ${
+                activeQuickFilter === 'all' && selectedDate === null ? '' : 'text-gray-500'
+              }`}
+            >
               {l('Customers with birthday saved', 'பதிவு செய்யப்பட்டவர்கள்')}
             </p>
           </div>

@@ -25,6 +25,7 @@ import { BRAND_EN } from '../../lib/brand'
 import { barcodeService } from '../../services/barcodeService'
 import { fetchVariantsByProduct, type ProductVariant } from '../../services/variantService'
 import { useProductStore } from '../../store/store'
+import { useTheme } from '../../store/themeStore'
 import { BarcodeSettingsDrawer } from './BarcodeSettingsDrawer'
 import { BarcodeSheetPreviewModal } from './BarcodeSheetPreviewModal'
 
@@ -56,6 +57,7 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
   preselectedVariantId,
   onSuccess,
 }) => {
+  const { themeColor, textColor } = useTheme()
   const fetchProducts = useProductStore((state) => state.fetchProducts)
 
   // Settings
@@ -630,12 +632,15 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
         <div className="absolute inset-0" onClick={onClose} />
         <div className="relative z-10 bg-white w-full max-w-6xl h-[100dvh] max-h-[100dvh] sm:h-auto sm:max-h-[94vh] rounded-none sm:rounded-3xl border-0 sm:border border-gray-200 shadow-2xl overflow-hidden flex flex-col">
           {/* TOP BAR matching Screenshot 195106 */}
-          <div className="flex items-center justify-between px-4 py-3.5 sm:px-6 sm:py-4 border-b border-[#C9A24B]/30 bg-[#7B1E2B] text-white shrink-0">
+          <div
+            style={{ backgroundColor: themeColor, color: textColor }}
+            className="flex items-center justify-between px-4 py-3.5 sm:px-6 sm:py-4 border-b border-white/20 shrink-0"
+          >
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-black tracking-wide text-white flex items-center gap-1.5">
+              <h2 className="text-base font-black tracking-wide flex items-center gap-1.5" style={{ color: textColor }}>
                 Barcode Generator
               </h2>
-              <Info size={14} className="text-[#C9A24B] opacity-80" />
+              <Info size={14} className="opacity-80" style={{ color: textColor }} />
             </div>
 
             {/* Right side: Printer / Size info & Settings gear */}
@@ -1325,7 +1330,8 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowSheetPreviewModal(true)}
-                  className="px-2.5 py-1.5 sm:px-5 sm:py-2.5 rounded-xl border-2 border-[#7B1E2B] bg-white text-[#7B1E2B] text-[11px] sm:text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-all cursor-pointer shrink-0"
+                  style={{ borderColor: themeColor, color: themeColor }}
+                  className="px-2.5 py-1.5 sm:px-5 sm:py-2.5 rounded-xl border-2 bg-white text-[11px] sm:text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-all cursor-pointer shrink-0"
                 >
                   Preview
                 </button>
@@ -1335,11 +1341,12 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
                 type="button"
                 onClick={handleGenerateAndCommitStock}
                 disabled={generating || queue.filter((it) => it.selected).length === 0}
-                className="px-2.5 py-1.5 sm:px-6 sm:py-2.5 rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] text-[11px] sm:text-xs font-black uppercase tracking-wider hover:bg-[#B8913E] transition-all shadow-md flex items-center gap-1 sm:gap-2 cursor-pointer disabled:opacity-50 text-center justify-center shrink-0"
+                style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+                className="px-2.5 py-1.5 sm:px-6 sm:py-2.5 rounded-xl border text-[11px] sm:text-xs font-black uppercase tracking-wider hover:opacity-90 transition-all shadow-md flex items-center gap-1 sm:gap-2 cursor-pointer disabled:opacity-50 text-center justify-center shrink-0"
               >
                 {generating ? (
                   <>
-                    <span className="w-3.5 h-3.5 border-2 border-[#D4AF37]/30 border-t-[#D4AF37] rounded-full animate-spin inline-block" />
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
                     <span className="hidden sm:inline">Generating...</span>
                     <span className="sm:hidden">Gen...</span>
                   </>

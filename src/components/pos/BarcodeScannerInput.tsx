@@ -6,6 +6,7 @@ import { BRAND_EN } from '../../lib/brand'
 import { normalizeBarcode } from '../../lib/barcode'
 import { useVariantStore } from '../../store/store'
 import { fetchVariantsByProduct } from '../../services/variantService'
+import { useTheme } from '../../store/themeStore'
 
 export interface ScannedItemPayload {
   product_id: number
@@ -31,6 +32,7 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
   onItemScanned,
   disabled = false,
 }) => {
+  const { themeColor, textColor, subtleBorder } = useTheme()
   const [manualCode, setManualCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -444,7 +446,8 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
               <button
                 type="submit"
                 disabled={loading}
-                className="px-3 py-1.5 rounded-xl bg-[#7B1E2B] text-white hover:bg-[#631722] text-xs font-black cursor-pointer shadow-xs"
+                className="px-3 py-1.5 rounded-xl text-xs font-black cursor-pointer shadow-xs transition-colors"
+                style={{ backgroundColor: themeColor, color: textColor }}
               >
                 {loading ? '...' : 'Add'}
               </button>
@@ -453,7 +456,8 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
               type="button"
               onClick={() => setIsCameraOpen(true)}
               title="Scan with Camera"
-              className="p-2 rounded-xl bg-white border border-[#C9A24B]/60 text-[#111111] hover:text-[#7B1E2B] hover:border-[#7B1E2B] transition-all cursor-pointer shadow-xs"
+              className="p-2 rounded-xl bg-white border text-[#111111] hover:bg-gray-50 transition-all cursor-pointer shadow-xs"
+              style={{ borderColor: subtleBorder }}
             >
               <Camera size={16} />
             </button>
@@ -485,15 +489,16 @@ export const BarcodeScannerInput: React.FC<BarcodeScannerInputProps> = ({
           }}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
         >
-          <div className="bg-[#7B1E2B] rounded-3xl max-w-md w-full border border-[#C9A24B] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 text-white">
-            <div className="px-5 py-4 border-b border-[#C9A24B]/30 flex items-center justify-between">
+          <div className="rounded-3xl max-w-md w-full border border-white/20 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200" style={{ backgroundColor: themeColor, color: textColor }}>
+            <div className="px-5 py-4 border-b border-white/20 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Camera size={18} className="text-[#C9A24B]" />
-                <span className="font-black text-sm text-white">Camera Barcode Scanner</span>
+                <Camera size={18} style={{ color: textColor }} />
+                <span className="font-black text-sm" style={{ color: textColor }}>Camera Barcode Scanner</span>
               </div>
               <button
                 onClick={handleCloseCamera}
-                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer"
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center cursor-pointer"
+                style={{ color: textColor }}
               >
                 <X size={16} />
               </button>

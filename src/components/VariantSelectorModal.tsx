@@ -5,6 +5,7 @@ import { useCartStore, useVariantStore, type Product } from '../store/store'
 import { formatCurrency, variantLineTotal, formatProductNameWithVariant } from '../lib/retail'
 import { getProductImage, onImgError } from '../lib/productImages'
 import { useLangStore } from '../store/langStore'
+import { useTheme } from '../store/themeStore'
 import type { ProductVariant } from '../services/variantService'
 
 function variantToProduct(base: Product, v: ProductVariant): Product {
@@ -33,6 +34,7 @@ export default function VariantSelectormodal({
   open: boolean
   onClose: () => void
 }) {
+  const { themeColor, textColor, lightBg, subtleBorder } = useTheme()
   const { addItem } = useCartStore()
   const { getVariants, getDefaultVariant, fetchVariants } = useVariantStore()
   const { lang } = useLangStore()
@@ -192,22 +194,24 @@ export default function VariantSelectormodal({
                       className={[
                         'flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left transition-all',
                         isSelected
-                          ? 'bg-[#7B1E2B]/8 ring-2 ring-[#7B1E2B]'
+                          ? ''
                           : outOfStock
                           ? 'cursor-not-allowed opacity-45 ring-1 ring-gray-200'
-                          : 'ring-1 ring-gray-200 hover:ring-[#D4AF37] active:bg-gray-50',
+                          : 'ring-1 ring-gray-200 hover:ring-gray-300 active:bg-gray-50',
                       ].join(' ')}
+                      style={isSelected ? { backgroundColor: lightBg, boxShadow: `0 0 0 2px ${themeColor}` } : undefined}
                     >
                       {/* Radio circle */}
                       <span
                         className={[
                           'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2',
                           isSelected
-                            ? 'border-[#7B1E2B] bg-[#7B1E2B]'
+                            ? ''
                             : 'border-gray-300 bg-white',
                         ].join(' ')}
+                        style={isSelected ? { borderColor: themeColor, backgroundColor: themeColor } : undefined}
                       >
-                        {isSelected && <Check size={10} className="text-white" strokeWidth={3.5} />}
+                        {isSelected && <Check size={10} style={{ color: textColor }} strokeWidth={3.5} />}
                       </span>
 
                       {/* Labels */}
@@ -281,13 +285,14 @@ export default function VariantSelectormodal({
                   disabled={!selected || !haGSTock || added}
                   whileTap={!added && haGSTock ? { scale: 0.97 } : undefined}
                   className={[
-                    'flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-[13px] font-black transition-all',
+                    'flex h-11 flex-1 items-center justify-center gap-2 rounded-xl text-[13px] font-black transition-all shadow-sm',
                     added
                       ? 'bg-emerald-500 text-white'
                       : !haGSTock
                       ? 'cursor-not-allowed bg-gray-200 text-gray-400'
-                      : 'bg-[#C9A24B] border border-[#B8913E] text-[#222222] hover:bg-[#B8913E]',
+                      : '',
                   ].join(' ')}
+                  style={!added && haGSTock ? { backgroundColor: themeColor, color: textColor } : undefined}
                 >
                   {added ? (
                     <>

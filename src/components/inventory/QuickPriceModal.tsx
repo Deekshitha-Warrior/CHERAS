@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { X, Tag, IndianRupee, AlertCircle, Barcode, Check } from 'lucide-react'
 import { updateItemPrice } from '../../services/productService'
 import type { InventoryStockItem } from '../../services/inventoryService'
+import { useTheme } from '../../store/themeStore'
 
 interface Props {
   isOpen: boolean
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export const QuickPriceModal: React.FC<Props> = ({ isOpen, item, onClose, onSuccess }) => {
+  const { themeColor, textColor } = useTheme()
   const [sellingPrice, setSellingPrice] = useState<string>(item ? String(item.price ?? '') : '')
   const [costPrice, setCostPrice] = useState<string>(
     item && item.purchase_price !== undefined ? String(item.purchase_price) : ''
@@ -203,16 +205,17 @@ export const QuickPriceModal: React.FC<Props> = ({ isOpen, item, onClose, onSucc
             <button
               type="submit"
               disabled={loading}
-              className="h-10 px-5 flex-1 sm:flex-none text-xs font-bold rounded-xl bg-[#C9A24B] text-[#222222] border border-[#B8913E] hover:bg-[#B8913E] transition-all shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+              className="h-10 px-5 flex-1 sm:flex-none text-xs font-bold rounded-xl transition-all shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
+              style={{ backgroundColor: themeColor, color: textColor }}
             >
               {loading ? (
                 <>
-                  <span className="w-3.5 h-3.5 border-2 border-[#222222]/30 border-t-[#222222] rounded-full animate-spin inline-block" />
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
                   <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <Check className="w-3.5 h-3.5 text-[#222222]" />
+                  <Check className="w-3.5 h-3.5" />
                   <span>Update Price</span>
                 </>
               )}

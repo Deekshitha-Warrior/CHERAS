@@ -1,6 +1,7 @@
 import React from 'react'
 import { AlertCircle, ShoppingCart, X, ScanBarcode } from 'lucide-react'
 import { useNavigationStore } from '../../store/navigationStore'
+import { useTheme } from '../../store/themeStore'
 
 export interface BarcodeRedirectDialogProps {
   onNavigateToBilling?: (barcode: string) => void
@@ -9,6 +10,7 @@ export interface BarcodeRedirectDialogProps {
 export const BarcodeRedirectDialog: React.FC<BarcodeRedirectDialogProps> = ({
   onNavigateToBilling,
 }) => {
+  const { themeColor, textColor } = useTheme()
   const { pendingBarcode, setPendingBarcode, setCurrentTab, setExternalScannedCode } =
     useNavigationStore()
 
@@ -37,23 +39,24 @@ export const BarcodeRedirectDialog: React.FC<BarcodeRedirectDialogProps> = ({
     >
       <div className="bg-white rounded-3xl w-full max-w-sm border border-[#F3F4F6] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="bg-[#7B1E2B] p-4 border-b border-[#C9A24B]/30 flex items-center justify-between text-white">
+        <div className="p-4 border-b border-white/20 flex items-center justify-between" style={{ backgroundColor: themeColor, color: textColor }}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#631722] border border-[#C9A24B] flex items-center justify-center text-[#C9A24B] shrink-0 shadow-sm">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-sm" style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: textColor }}>
               <ScanBarcode size={20} />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-black text-white tracking-wide">
+              <h3 className="text-sm font-black tracking-wide" style={{ color: textColor }}>
                 Barcode Scanned
               </h3>
-              <p className="text-[11px] font-mono font-bold text-[#C9A24B] break-words mt-0.5">
+              <p className="text-[11px] font-mono font-bold break-words mt-0.5" style={{ color: textColor, opacity: 0.9 }}>
                 {pendingBarcode}
               </p>
             </div>
           </div>
           <button
             onClick={handleCancel}
-            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+            style={{ color: textColor }}
           >
             <X size={16} />
           </button>
@@ -86,7 +89,8 @@ export const BarcodeRedirectDialog: React.FC<BarcodeRedirectDialogProps> = ({
           <button
             type="button"
             onClick={handleConfirm}
-            className="px-5 py-2 text-xs font-black rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] hover:bg-[#B8913E] transition-all shadow-md flex items-center gap-1.5 cursor-pointer hover:scale-[1.02]"
+            className="px-5 py-2 text-xs font-black rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer hover:scale-[1.02]"
+            style={{ backgroundColor: themeColor, color: textColor }}
           >
             <ShoppingCart size={14} />
             <span>Go to Billing</span>

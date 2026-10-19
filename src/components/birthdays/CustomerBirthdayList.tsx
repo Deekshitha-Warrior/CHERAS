@@ -13,6 +13,7 @@ import {
 import type { CustomerBirthdayRecord } from '../../services/birthdayService'
 import { getNextBirthday } from '../../services/birthdayService'
 import { formatPhoneDisplay, isValidPhone } from '../../lib/phone'
+import { useTheme } from '../../store/themeStore'
 
 interface CustomerBirthdayListProps {
   customers: CustomerBirthdayRecord[]
@@ -33,6 +34,7 @@ export const CustomerBirthdayList: React.FC<CustomerBirthdayListProps> = ({
   onEditBirthday,
   l,
 }) => {
+  const { themeColor, textColor, lightBg } = useTheme()
   const [searchTerm, setSearchTerm] = useState('')
   const [viewTab, setViewTab] = useState<'birthdays' | 'unset'>('birthdays')
 
@@ -114,7 +116,7 @@ export const CustomerBirthdayList: React.FC<CustomerBirthdayListProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <Cake size={18} className="text-[#7B1E2B]" />
+              <Cake size={18} style={{ color: themeColor }} />
               <h3 className="text-base sm:text-lg font-black text-[#222222] tracking-tight">
                 {viewTab === 'birthdays'
                   ? selectedDate
@@ -141,9 +143,10 @@ export const CustomerBirthdayList: React.FC<CustomerBirthdayListProps> = ({
             <button
               type="button"
               onClick={() => setViewTab('birthdays')}
+              style={viewTab === 'birthdays' ? { color: themeColor } : undefined}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 viewTab === 'birthdays'
-                  ? 'bg-white text-[#7B1E2B] shadow-xs'
+                  ? 'bg-white shadow-xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -152,9 +155,10 @@ export const CustomerBirthdayList: React.FC<CustomerBirthdayListProps> = ({
             <button
               type="button"
               onClick={() => setViewTab('unset')}
+              style={viewTab === 'unset' ? { color: themeColor } : undefined}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 viewTab === 'unset'
-                  ? 'bg-white text-[#7B1E2B] shadow-xs'
+                  ? 'bg-white shadow-xs'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -219,12 +223,15 @@ export const CustomerBirthdayList: React.FC<CustomerBirthdayListProps> = ({
                 {/* Left: Customer Identity & Details */}
                 <div className="flex items-start gap-3 min-w-0 flex-1">
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-sm shadow-xs ${
+                    style={
                       bInfo?.isToday
-                        ? 'bg-[#7B1E2B] text-[#C9A24B]'
+                        ? { backgroundColor: themeColor, color: textColor }
                         : bInfo?.isThisWeek
-                        ? 'bg-[#C9A24B]/20 text-[#7B1E2B]'
-                        : 'bg-gray-100 text-gray-700'
+                        ? { backgroundColor: lightBg, color: themeColor }
+                        : undefined
+                    }
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-black text-sm shadow-xs ${
+                      bInfo?.isToday || bInfo?.isThisWeek ? '' : 'bg-gray-100 text-gray-700'
                     }`}
                   >
                     {bInfo?.isToday ? (
@@ -283,8 +290,8 @@ export const CustomerBirthdayList: React.FC<CustomerBirthdayListProps> = ({
                       </div>
 
                       {customer.birthday ? (
-                        <div className="flex items-center gap-1 text-[#7B1E2B] font-bold">
-                          <Calendar size={12} className="text-[#C9A24B]" />
+                        <div className="flex items-center gap-1 font-bold" style={{ color: themeColor }}>
+                          <Calendar size={12} style={{ color: themeColor }} />
                           <span>{bInfo?.formattedDate || customer.birthday}</span>
                         </div>
                       ) : (

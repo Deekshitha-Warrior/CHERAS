@@ -4,6 +4,7 @@ import { X, Printer, Copy, Check } from 'lucide-react'
 import { BarcodeLabel } from './BarcodeLabel'
 import { BRAND_EN } from '../../lib/brand'
 import { getAllLabelSizes, generateBarcodeSvgString, getStoredBarcodeSettings, saveStoredBarcodeSettings } from '../../lib/barcode'
+import { useTheme } from '../../store/themeStore'
 
 export interface BarcodePrintModalProps {
   isOpen: boolean
@@ -47,6 +48,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
   mrp,
   defaultQuantity = 1,
 }) => {
+  const { themeColor, textColor } = useTheme()
   const presets = getAvailablePresets()
   const [quantity, setQuantity] = useState<string>(String(defaultQuantity || 1))
   const [selectedPreset, setSelectedPreset] = useState<LabelSizePreset>(presets[0] || { name: 'Thermal Standard', widthMm: 50, heightMm: 25, labelsPerRow: 1, horizontalGapMm: 0, verticalGapMm: 0 })
@@ -380,16 +382,22 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
       <div className="absolute inset-0" onClick={onClose} />
       <div className="relative z-10 bg-white rounded-none sm:rounded-3xl max-w-2xl sm:max-w-3xl w-full h-screen h-[100dvh] sm:h-auto sm:max-h-[92vh] border-0 sm:border border-[#F3F4F6] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="bg-[#7B1E2B] px-4 py-3 sm:px-6 sm:py-4 border-b border-[#C9A24B]/30 flex items-center justify-between text-white shrink-0">
+        <div
+          style={{ backgroundColor: themeColor, color: textColor }}
+          className="px-4 py-3 sm:px-6 sm:py-4 border-b border-white/20 flex items-center justify-between shrink-0"
+        >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#631722] border border-[#C9A24B] flex items-center justify-center text-[#C9A24B]">
+            <div
+              style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderColor: 'rgba(255,255,255,0.3)', color: textColor }}
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl border flex items-center justify-center"
+            >
               <Printer size={16} />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-black tracking-wide text-white">
+              <h2 className="text-sm sm:text-base font-black tracking-wide" style={{ color: textColor }}>
                 Print Barcode Labels ({BRAND_EN})
               </h2>
-              <p className="text-[11px] text-[#C9A24B] font-semibold">
+              <p className="text-[11px] font-semibold" style={{ color: textColor, opacity: 0.85 }}>
                 Generate physical retail stickers for this SKU
               </p>
             </div>
@@ -445,9 +453,10 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handlePrinterTypeChange('label')}
+                    style={printerType === 'label' ? { backgroundColor: themeColor, color: textColor } : undefined}
                     className={`py-2 px-2.5 rounded-lg text-xs font-black transition-all text-center cursor-pointer ${
                       printerType === 'label'
-                        ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm'
+                        ? 'shadow-sm'
                         : 'text-gray-600 hover:text-black hover:bg-gray-100'
                     }`}
                   >
@@ -456,9 +465,10 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handlePrinterTypeChange('regular')}
+                    style={printerType === 'regular' ? { backgroundColor: themeColor, color: textColor } : undefined}
                     className={`py-2 px-2.5 rounded-lg text-xs font-black transition-all text-center cursor-pointer ${
                       printerType === 'regular'
-                        ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm'
+                        ? 'shadow-sm'
                         : 'text-gray-600 hover:text-black hover:bg-gray-100'
                     }`}
                   >
@@ -547,9 +557,10 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
                       key={num}
                       type="button"
                       onClick={() => setQuantity(String(num))}
+                      style={quantity === String(num) ? { backgroundColor: themeColor, color: textColor, borderColor: themeColor } : undefined}
                       className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
                         quantity === String(num)
-                          ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm'
+                          ? 'shadow-sm'
                           : 'bg-white hover:bg-gray-100 border border-gray-300 text-gray-700 shadow-sm'
                       }`}
                     >
@@ -641,7 +652,8 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
           <button
             type="button"
             onClick={handlePrint}
-            className="flex items-center gap-1.5 sm:gap-2 px-4 py-2 sm:px-6 sm:py-2.5 rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] font-black hover:bg-[#B8913E] transition-all shadow-md cursor-pointer hover:scale-[1.02] text-xs sm:text-sm shrink-0"
+            style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+            className="flex items-center gap-1.5 sm:gap-2 px-4 py-2 sm:px-6 sm:py-2.5 rounded-xl border font-black hover:opacity-90 transition-all shadow-md cursor-pointer hover:scale-[1.02] text-xs sm:text-sm shrink-0"
           >
             <Printer size={16} />
             Print {quantity || '1'} {quantity === '1' ? 'Sticker' : 'Stickers'}

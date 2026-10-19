@@ -19,6 +19,7 @@ import {
   compileBirthdayMessage,
 } from '../../services/birthdayService'
 import { isSupabaseConfigured, supabase } from '../../lib/supabase'
+import { useTheme } from '../../store/themeStore'
 
 interface BirthdayOffersManagerProps {
   offers: BirthdayOffer[]
@@ -33,6 +34,7 @@ export const BirthdayOffersManager: React.FC<BirthdayOffersManagerProps> = ({
   onClose,
   l,
 }) => {
+  const { themeColor, textColor } = useTheme()
   const [selectedOfferId, setSelectedOfferId] = useState<string>(offers[0]?.id || '')
   const [isEditing, setIsEditing] = useState(false)
   const [isCreatingNew, setIsCreatingNew] = useState(false)
@@ -201,9 +203,9 @@ Show this message at billing counter to claim. Have a great day! 🎉`)
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
       <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-white via-white to-amber-50/40">
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-white via-white to-gray-50/40">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#7B1E2B] text-[#C9A24B] flex items-center justify-center shadow-xs">
+            <div style={{ backgroundColor: themeColor, color: textColor }} className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs">
               <Gift size={18} />
             </div>
             <div>
@@ -239,7 +241,8 @@ Show this message at billing counter to claim. Have a great day! 🎉`)
                 <button
                   type="button"
                   onClick={handleStartCreate}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#7B1E2B] text-white text-xs font-bold hover:bg-[#681924] transition-all cursor-pointer shadow-xs"
+                  style={{ backgroundColor: themeColor, color: textColor }}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs hover:opacity-90"
                 >
                   <Plus size={13} />
                   <span>{l('New Offer', 'புதிய சலுகை')}</span>
@@ -255,16 +258,17 @@ Show this message at billing counter to claim. Have a great day! 🎉`)
                   return (
                     <div
                       key={offer.id}
+                      style={isSelected ? { backgroundColor: themeColor, color: textColor, borderColor: themeColor } : undefined}
                       className={`group flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-[#7B1E2B] text-white border-[#7B1E2B] shadow-xs'
+                          ? 'shadow-xs'
                           : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                       }`}
                       onClick={() => {
                         handleSelectOffer(offer)
                       }}
                     >
-                      <Tag size={12} className={isSelected ? 'text-[#C9A24B]' : 'text-gray-400'} />
+                      <Tag size={12} className={isSelected ? 'text-white' : 'text-gray-400'} />
                       <span className="truncate max-w-[150px]">{offer.title}</span>
 
                       {!isEditing && (
@@ -291,8 +295,8 @@ Show this message at billing counter to claim. Have a great day! 🎉`)
             {/* Edit / View Form */}
             <form onSubmit={handleSave} className="space-y-3.5 bg-gray-50/70 p-4 rounded-2xl border border-gray-200/80">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-[#7B1E2B] uppercase tracking-wider flex items-center gap-1">
-                  <Sparkles size={13} className="text-[#C9A24B]" />
+                <span style={{ color: themeColor }} className="text-xs font-black uppercase tracking-wider flex items-center gap-1">
+                  <Sparkles size={13} style={{ color: themeColor }} />
                   {isCreatingNew
                     ? l('Create New Birthday Offer', 'புதிய பிறந்தநாள் சலுகை உருவாக்குக')
                     : isEditing
@@ -304,7 +308,8 @@ Show this message at billing counter to claim. Have a great day! 🎉`)
                   <button
                     type="button"
                     onClick={() => setIsEditing(true)}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-[#7B1E2B] hover:text-[#5c1620] hover:underline cursor-pointer"
+                    style={{ color: themeColor }}
+                    className="inline-flex items-center gap-1 text-xs font-bold hover:underline cursor-pointer"
                   >
                     <Edit2 size={12} />
                     <span>{l('Edit this offer', 'திருத்துக')}</span>
@@ -438,7 +443,8 @@ Show this message at billing counter to claim. Have a great day! 🎉`)
                   <button
                     type="submit"
                     disabled={saving}
-                    className="px-4 py-1.5 rounded-xl bg-[#7B1E2B] hover:bg-[#631823] text-white text-xs font-black shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                    style={{ backgroundColor: themeColor, color: textColor }}
+                    className="px-4 py-1.5 rounded-xl text-xs font-black shadow-xs transition-colors cursor-pointer disabled:opacity-50 hover:opacity-90"
                   >
                     {saving ? l('Saving...', 'சேமிக்கிறது...') : l('Save Offer', 'சலுகையை சேமி')}
                   </button>

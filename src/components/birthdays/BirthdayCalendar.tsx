@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import type { CustomerBirthdayRecord } from '../../services/birthdayService'
 import { getNextBirthday } from '../../services/birthdayService'
+import { useTheme } from '../../store/themeStore'
 
 interface BirthdayCalendarProps {
   currentMonthDate: Date
@@ -31,6 +32,7 @@ export const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
   customers,
   l,
 }) => {
+  const { themeColor, textColor, lightBg, subtleBorder } = useTheme()
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -170,7 +172,10 @@ export const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
       {/* Calendar Header with Month Navigation & Today Button */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-[#7B1E2B]/10 text-[#7B1E2B] flex items-center justify-center shrink-0">
+          <div
+            style={{ backgroundColor: lightBg, color: themeColor }}
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+          >
             <CalendarIcon size={17} />
           </div>
           <h3 className="text-base sm:text-lg font-black text-[#222222] tracking-tight">
@@ -182,10 +187,11 @@ export const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
           <button
             type="button"
             onClick={handleTodayClick}
-            className="px-2.5 py-1.5 rounded-lg text-xs font-black bg-[#C9A24B]/15 text-[#7B1E2B] hover:bg-[#C9A24B]/25 border border-[#C9A24B]/30 transition-all cursor-pointer flex items-center gap-1 shadow-xs"
+            style={{ backgroundColor: lightBg, color: themeColor, borderColor: subtleBorder }}
+            className="px-2.5 py-1.5 rounded-lg text-xs font-black border transition-all cursor-pointer flex items-center gap-1 shadow-xs hover:opacity-90"
             title="Jump to today"
           >
-            <Sparkles size={12} className="text-[#C9A24B]" />
+            <Sparkles size={12} style={{ color: themeColor }} />
             <span>{l('Today', 'இன்று')}</span>
           </button>
 
@@ -193,7 +199,7 @@ export const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
             <button
               type="button"
               onClick={handlePrevMonth}
-              className="p-1 rounded-md text-gray-700 hover:bg-white hover:text-[#7B1E2B] transition-colors cursor-pointer"
+              className="p-1 rounded-md text-gray-700 hover:bg-white transition-colors cursor-pointer"
               aria-label="Previous month"
               title="Previous month"
             >
@@ -202,7 +208,7 @@ export const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
             <button
               type="button"
               onClick={handleNextMonth}
-              className="p-1 rounded-md text-gray-700 hover:bg-white hover:text-[#7B1E2B] transition-colors cursor-pointer"
+              className="p-1 rounded-md text-gray-700 hover:bg-white transition-colors cursor-pointer"
               aria-label="Next month"
               title="Next month"
             >
@@ -229,23 +235,27 @@ export const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
                 onDateSelect(null)
                 onQuickFilterChange(key)
               }}
+              style={isActive ? { backgroundColor: themeColor, color: textColor, borderColor: themeColor } : undefined}
               className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                 isActive
-                  ? 'bg-[#7B1E2B] text-white border-[#7B1E2B] shadow-sm'
+                  ? 'shadow-sm'
                   : 'bg-gray-50/80 hover:bg-gray-100 text-[#222222] border-gray-200/70'
               }`}
             >
               <div className="flex items-center gap-1.5 truncate">
-                <Icon size={13} className={isActive ? 'text-[#C9A24B]' : 'text-gray-500'} />
+                <Icon size={13} style={isActive ? { color: textColor } : undefined} className={isActive ? '' : 'text-gray-500'} />
                 <span className="truncate">{label}</span>
               </div>
               <span
-                className={`text-[10px] font-black px-1.5 py-0.5 rounded-full shrink-0 ml-1 ${
+                style={
                   isActive
-                    ? 'bg-white/20 text-white'
+                    ? { backgroundColor: 'rgba(255,255,255,0.25)', color: textColor }
                     : count > 0
-                    ? 'bg-[#C9A24B]/20 text-[#7B1E2B]'
-                    : 'bg-gray-200/60 text-gray-600'
+                    ? { backgroundColor: lightBg, color: themeColor }
+                    : undefined
+                }
+                className={`text-[10px] font-black px-1.5 py-0.5 rounded-full shrink-0 ml-1 ${
+                  isActive || count > 0 ? '' : 'bg-gray-200/60 text-gray-600'
                 }`}
               >
                 {count}
@@ -258,7 +268,7 @@ export const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
       {/* Days of Week Header */}
       <div className="grid grid-cols-7 gap-1 text-center font-black text-[11px] text-gray-500 uppercase tracking-wider py-1 border-b border-gray-100">
         {weekDayNames.map((name, idx) => (
-          <div key={idx} className={idx === 0 || idx === 6 ? 'text-[#7B1E2B]' : ''}>
+          <div key={idx} style={idx === 0 || idx === 6 ? { color: themeColor } : undefined}>
             {name}
           </div>
         ))}
@@ -291,22 +301,32 @@ export const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
                   onDateSelect(cell.date)
                 }
               }}
+              style={
+                isSelected
+                  ? { backgroundColor: themeColor, color: textColor, borderColor: themeColor }
+                  : isToday
+                  ? { backgroundColor: lightBg, borderColor: themeColor }
+                  : hasBirthdays
+                  ? { borderColor: subtleBorder }
+                  : undefined
+              }
               className={`relative min-h-[46px] sm:min-h-[52px] p-1 rounded-xl flex flex-col items-center justify-start transition-all cursor-pointer border ${
                 !cell.isCurrentMonth
                   ? 'opacity-25 bg-gray-50 border-transparent cursor-not-allowed'
                   : isSelected
-                  ? 'bg-[#7B1E2B] text-white border-[#C9A24B] shadow-md ring-2 ring-[#C9A24B]/50 scale-[1.03] z-10'
+                  ? 'shadow-md scale-[1.03] z-10'
                   : isToday
-                  ? 'bg-[#C9A24B]/15 text-[#7B1E2B] font-black border-[#C9A24B] shadow-xs'
+                  ? 'font-black shadow-xs'
                   : hasBirthdays
-                  ? 'bg-[#FFF9EA] hover:bg-[#FFF3D6] text-[#222222] border-[#C9A24B]/40'
+                  ? 'bg-gray-50/70 hover:bg-gray-100 text-[#222222]'
                   : 'bg-white hover:bg-gray-50 text-[#222222] border-gray-200/60'
               }`}
             >
               <div className="flex items-center justify-between w-full px-1">
                 <span
+                  style={isSelected ? { color: textColor } : isToday ? { color: themeColor } : undefined}
                   className={`text-xs sm:text-[13px] font-black ${
-                    isSelected ? 'text-white' : isToday ? 'text-[#7B1E2B]' : 'text-[#222222]'
+                    isSelected ? '' : isToday ? '' : 'text-[#222222]'
                   }`}
                 >
                   {cell.dayNumber}
@@ -314,7 +334,8 @@ export const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
 
                 {isToday && (
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-[#C9A24B]' : 'bg-[#7B1E2B]'}`}
+                    style={{ backgroundColor: isSelected ? textColor : themeColor }}
+                    className="w-1.5 h-1.5 rounded-full"
                     title="Today"
                   />
                 )}
@@ -324,14 +345,15 @@ export const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
               {hasBirthdays && (
                 <div className="mt-1 flex items-center justify-center w-full px-0.5">
                   <span
-                    className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-tight ${
+                    style={
                       isSelected
-                        ? 'bg-[#C9A24B] text-[#7B1E2B]'
-                        : 'bg-[#7B1E2B] text-white'
-                    }`}
+                        ? { backgroundColor: 'rgba(255,255,255,0.25)', color: textColor }
+                        : { backgroundColor: themeColor, color: textColor }
+                    }
+                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-tight"
                     title={`${dayBirthdays.length} birthday(s) on this date`}
                   >
-                    <Cake size={10} className={isSelected ? 'text-[#7B1E2B]' : 'text-[#C9A24B]'} />
+                    <Cake size={10} />
                     <span>{dayBirthdays.length}</span>
                   </span>
                 </div>
@@ -344,8 +366,8 @@ export const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
       {/* Selected Date Summary & Clear Action */}
       {selectedDate && (
         <div className="flex items-center justify-between pt-2 border-t border-gray-100 text-xs">
-          <div className="flex items-center gap-1.5 text-[#7B1E2B] font-bold">
-            <Cake size={14} className="text-[#C9A24B]" />
+          <div className="flex items-center gap-1.5 font-bold" style={{ color: themeColor }}>
+            <Cake size={14} style={{ color: themeColor }} />
             <span>
               {l('Selected Date:', 'தேர்ந்தெடுத்த தேதி:')}{' '}
               {selectedDate.getDate()} {monthNames[selectedDate.getMonth()]}{' '}
@@ -355,7 +377,7 @@ export const BirthdayCalendar: React.FC<BirthdayCalendarProps> = ({
           <button
             type="button"
             onClick={() => onDateSelect(null)}
-            className="text-xs font-bold text-gray-500 hover:text-[#7B1E2B] underline cursor-pointer"
+            className="text-xs font-bold text-gray-500 hover:opacity-80 underline cursor-pointer"
           >
             {l('Clear Date', 'நீக்கு')}
           </button>

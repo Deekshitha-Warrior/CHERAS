@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Search, Check, Tag, Layers, RefreshCw, AlertCircle } from 'lucide-react'
 import { inventoryService, type CategoryRecord } from '../../services/inventoryService'
+import { useTheme } from '../../store/themeStore'
 
 export const CategoryManagerView: React.FC = () => {
+  const { themeColor, textColor } = useTheme()
   const [categories, setCategories] = useState<CategoryRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -281,7 +283,8 @@ export const CategoryManagerView: React.FC = () => {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full py-2.5 rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] text-xs font-black uppercase tracking-wider hover:bg-[#B8913E] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+                className="w-full py-2.5 rounded-xl border text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 hover:opacity-90"
               >
                 {saving ? (
                   <>

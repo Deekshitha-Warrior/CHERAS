@@ -14,6 +14,7 @@ import {
 } from '../lib/retail'
 import { onImgError, resolveProductImage } from '../lib/productImages'
 import { BRAND_EN } from '../lib/brand'
+import { useTheme } from '../store/themeStore'
 
 
 const buildUsageNote = (product: Product) => {
@@ -73,6 +74,7 @@ export default function ProductDetailModal({
   onSelectProduct?: (product: Product) => void
   relatedProducts: Product[]
 }) {
+  const { themeColor, textColor, lightBg, subtleBorder } = useTheme()
   const { addItem, removeItem, updateQuantity } = useCartStore()
   const { toggle, isFav } = useFavStore()
   const { getVariants, getDefaultVariant, fetchVariants } = useVariantStore()
@@ -284,7 +286,7 @@ export default function ProductDetailModal({
                         <Star size={12} className="fill-amber-400 text-amber-400" />
                         {(product.rating || 4.7).toFixed(1)}
                       </span>
-                      {discount > 0 && <span className="rounded-full bg-[#7B1E2B] px-3 py-1.5 text-[11px] font-black text-white">{discount}% OFF</span>}
+                      {discount > 0 && <span className="rounded-full px-3 py-1.5 text-[11px] font-black" style={{ backgroundColor: themeColor, color: textColor }}>{discount}% OFF</span>}
                     </div>
                     <p className="mt-1.5 text-[11px] font-bold text-[#9CA3AF]">
                       {selectedVariant ? selectedVariant.variantName : mobileSummary}
@@ -346,9 +348,10 @@ export default function ProductDetailModal({
                                   }}
                                   className={[
                                     'shrink-0 rounded-full border px-4 py-2 text-[12px] font-black transition-all whitespace-nowrap',
-                                    isSel ? 'border-[#7B1E2B] bg-[#7B1E2B] text-white'
+                                    isSel ? ''
                                           : 'border-[#ead7b7]/80 bg-[#f7f4ed] text-[#111111]',
                                   ].join(' ')}
+                                  style={isSel ? { backgroundColor: themeColor, borderColor: themeColor, color: textColor } : undefined}
                                 >
                                   {g}
                                 </button>
@@ -376,11 +379,12 @@ export default function ProductDetailModal({
                                     className={[
                                       'shrink-0 rounded-full border px-3.5 py-2 text-[12px] font-black transition-all whitespace-nowrap',
                                       isSel
-                                        ? 'border-[#7B1E2B] bg-[#7B1E2B] text-white'
+                                        ? ''
                                         : oos
                                         ? 'cursor-not-allowed opacity-40 border-gray-200 text-[#999]'
                                         : 'border-[#ead7b7]/80 bg-[#f7f4ed] text-[#111111]',
                                     ].join(' ')}
+                                    style={isSel ? { backgroundColor: themeColor, borderColor: themeColor, color: textColor } : undefined}
                                   >
                                     {v.variantName}
                                     {!isSel && <span className="ml-1 text-[11px] font-bold opacity-70">{formatCurrency(v.price)}</span>}
@@ -517,7 +521,8 @@ export default function ProductDetailModal({
                         onClick={handleAdd}
                         type="button"
                         disabled={!selectedVariant}
-                        className="flex h-[46px] shrink-0 items-center justify-center rounded-2xl bg-[#C9A24B] border border-[#B8913E] px-4 text-[13px] font-black text-[#222222] hover:bg-[#B8913E] shadow-[0_14px_28px_rgba(201,162,75,0.2)] disabled:opacity-50"
+                        className="flex h-[46px] shrink-0 items-center justify-center rounded-2xl px-4 text-[13px] font-black shadow-md disabled:opacity-50 transition-colors"
+                        style={{ backgroundColor: themeColor, color: textColor }}
                       >
                         <ShoppingCart size={15} />
                         <span className="ml-2">Add to Cart</span>
@@ -538,7 +543,8 @@ export default function ProductDetailModal({
                       whileTap={{ scale: 0.98 }}
                       onClick={handleMobileAdd}
                       type="button"
-                      className="ml-auto flex h-[46px] flex-1 items-center justify-center rounded-2xl bg-[#C9A24B] border border-[#B8913E] px-4 text-[13px] font-black text-[#222222] hover:bg-[#B8913E] shadow-[0_14px_28px_rgba(201,162,75,0.2)]"
+                      className="ml-auto flex h-[46px] flex-1 items-center justify-center rounded-2xl px-4 text-[13px] font-black shadow-md transition-colors"
+                      style={{ backgroundColor: themeColor, color: textColor }}
                     >
                       <ShoppingCart size={15} />
                       <span className="ml-2">Add to Cart</span>
@@ -581,7 +587,8 @@ export default function ProductDetailModal({
                             whileTap={{ scale: 0.98 }}
                             onClick={handleAdd}
                             type="button"
-                            className="flex h-[46px] items-center justify-center rounded-2xl bg-[#C9A24B] border border-[#B8913E] px-4 text-[13px] font-black text-[#222222] hover:bg-[#B8913E] shadow-[0_14px_28px_rgba(201,162,75,0.2)]"
+                            className="flex h-[46px] items-center justify-center rounded-2xl px-4 text-[13px] font-black shadow-md transition-colors"
+                            style={{ backgroundColor: themeColor, color: textColor }}
                           >
                             <ShoppingCart size={15} />
                             <span className="ml-2">Add to Cart</span>
@@ -659,7 +666,7 @@ export default function ProductDetailModal({
                     <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-[#6B7280] shadow-sm ring-1 ring-[#ead7b7]/45">
                       Trusted by 1000+ devotees
                     </span>
-                    {discount > 0 && <span className="rounded-full bg-[#7B1E2B] px-3 py-1.5 text-[11px] font-black text-white">{discount}% OFF</span>}
+                    {discount > 0 && <span className="rounded-full px-3 py-1.5 text-[11px] font-black" style={{ backgroundColor: themeColor, color: textColor }}>{discount}% OFF</span>}
                   </div>
                 </section>
 
@@ -726,9 +733,9 @@ export default function ProductDetailModal({
                                     }}
                                     className={[
                                       'rounded-full border px-4 py-2 text-[12px] font-black transition-all whitespace-nowrap',
-                                      isSel ? 'border-[#7B1E2B] bg-[#7B1E2B] text-white'
-                                            : 'border-[#ead7b7]/80 bg-[#f7f4ed] text-[#111111] hover:border-[#D4AF37]',
+                                      isSel ? '' : 'border-[#ead7b7]/80 bg-[#f7f4ed] text-[#111111] hover:border-[#D4AF37]',
                                     ].join(' ')}
+                                    style={isSel ? { backgroundColor: themeColor, borderColor: themeColor, color: textColor } : undefined}
                                   >
                                     {g}
                                   </button>
@@ -756,11 +763,12 @@ export default function ProductDetailModal({
                                       className={[
                                         'rounded-full border px-4 py-2 text-[12px] font-black transition-all whitespace-nowrap',
                                         isSel
-                                          ? 'border-[#7B1E2B] bg-[#7B1E2B] text-white'
+                                          ? ''
                                           : oos
                                           ? 'cursor-not-allowed opacity-40 border-gray-200 text-[#999]'
                                           : 'border-[#ead7b7]/80 bg-[#f7f4ed] text-[#111111] hover:border-[#D4AF37]',
                                       ].join(' ')}
+                                      style={isSel ? { backgroundColor: themeColor, borderColor: themeColor, color: textColor } : undefined}
                                     >
                                       {v.variantName}
                                       {!isSel && <span className="ml-1 text-[11px] font-semibold opacity-60">{formatCurrency(v.price)}</span>}
@@ -827,9 +835,10 @@ export default function ProductDetailModal({
                             onClick={() => setSelectedPackOption(option)}
                             className={`shrink-0 rounded-full border px-3 py-2 text-[11px] font-black transition-colors ${
                               selectedPackOption?.label === option.label
-                                ? 'border-[#7B1E2B] bg-[#7B1E2B] text-white'
+                                ? ''
                                 : 'border-[#ead7b7]/70 bg-[#f7f4ed] text-[#6B7280]'
                             }`}
+                            style={selectedPackOption?.label === option.label ? { backgroundColor: themeColor, borderColor: themeColor, color: textColor } : undefined}
                           >
                             {option.label}
                           </button>
@@ -924,7 +933,8 @@ export default function ProductDetailModal({
                   onClick={handleAdd}
                   type="button"
                   disabled={product.hasVariants && !selectedVariant}
-                  className="flex-1 rounded-2xl bg-[#C9A24B] border border-[#B8913E] py-3.5 text-sm font-black text-[#222222] hover:bg-[#B8913E] shadow-[0_16px_30px_rgba(201,162,75,0.28)] transition-transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 rounded-2xl border py-3.5 text-sm font-black shadow-lg transition-transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: themeColor, borderColor: themeColor, color: textColor }}
                 >
                   <span className="inline-flex items-center justify-center gap-2">
                     <ShoppingCart size={16} />
@@ -940,7 +950,8 @@ export default function ProductDetailModal({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="absolute right-4 top-4 rounded-full bg-[#7B1E2B] px-4 py-2 text-[11px] font-black text-[#C9A24B] border border-[#C9A24B]/40 shadow-lg"
+                  className="absolute right-4 top-4 rounded-full px-4 py-2 text-[11px] font-black border shadow-lg"
+                  style={{ backgroundColor: themeColor, borderColor: subtleBorder, color: textColor }}
                 >
                   Added to cart
                 </motion.div>

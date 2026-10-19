@@ -45,6 +45,7 @@ import {
   getNextBirthday,
   type NextBirthdayInfo,
 } from '../services/birthdayService'
+import { useTheme } from '../store/themeStore'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type PosItem = Product & {
@@ -145,6 +146,7 @@ export default function Pos(props: PosProps = {}) {
   const l = (en: string, ta: string) => lang === 'ta' ? ta : en
   const navigate = useNavigate()
   const { logout, role } = useAdminAuthStore()
+  const { themeColor, textColor, hoverColor, lightBg, subtleBorder } = useTheme()
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [billingAdjOpen, setBillingAdjOpen] = useState(false)
 
@@ -1288,7 +1290,8 @@ export default function Pos(props: PosProps = {}) {
               <p className="text-xs text-[#6B7280] mt-0.5">Transaction recorded and inventory updated</p>
             </div>
             <button onClick={clearAll}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#7B1E2B] hover:bg-[#631722] text-[#C9A24B] border border-[#C9A24B]/40 font-bold text-sm shadow-sm cursor-pointer">
+              style={{ backgroundColor: themeColor, color: textColor }}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm shadow-sm cursor-pointer hover:opacity-90">
               <Plus size={15} /> New Sale
             </button>
           </div>
@@ -1298,7 +1301,10 @@ export default function Pos(props: PosProps = {}) {
             <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Bill Number:</span>
-                <span className="px-2.5 py-0.5 rounded-lg bg-[#7B1E2B] text-[#C9A24B] font-black text-xs font-mono border border-[#C9A24B]/30">
+                <span
+                  style={{ backgroundColor: themeColor, color: textColor }}
+                  className="px-2.5 py-0.5 rounded-lg font-black text-xs font-mono"
+                >
                   #{formatInvoiceNo(invoice.invoiceNo)}
                 </span>
               </div>
@@ -1342,7 +1348,7 @@ export default function Pos(props: PosProps = {}) {
             return (
               <div className="surface-panel p-5 rounded-xl border border-gray-100 bg-white shadow-sm mb-4 space-y-3">
                 <div className="flex items-center justify-between pb-2.5 border-b border-gray-100">
-                  <p className="text-xs font-black uppercase tracking-widest text-[#7B1E2B]">{l('Financial Summary & Tax Split-up', 'நிதி & வரி விவரம்')}</p>
+                  <p style={{ color: themeColor }} className="text-xs font-black uppercase tracking-widest">{l('Financial Summary & Tax Split-up', 'நிதி & வரி விவரம்')}</p>
                   <span className="text-[11px] font-bold text-gray-400 font-mono">#{formatInvoiceNo(invoice.invoiceNo)}</span>
                 </div>
 
@@ -1413,12 +1419,12 @@ export default function Pos(props: PosProps = {}) {
                 </div>
 
                 {/* Grand Total Bar */}
-                <div className="flex justify-between items-center pt-3 border-t-2 border-[#7B1E2B]/20">
+                <div className="flex justify-between items-center pt-3 border-t-2" style={{ borderColor: subtleBorder }}>
                   <div>
                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">{l('Grand Total', 'மொத்த தொகை')}</p>
                     <p className="text-[10px] text-gray-400 font-medium">Inclusive of all taxes & discounts</p>
                   </div>
-                  <p className="text-2xl sm:text-3xl font-black text-[#7B1E2B] tabular-nums">{formatCurrency(invoice.total)}</p>
+                  <p style={{ color: themeColor }} className="text-2xl sm:text-3xl font-black tabular-nums">{formatCurrency(invoice.total)}</p>
                 </div>
 
                 {/* Amount Received & Balance */}
@@ -1474,7 +1480,8 @@ export default function Pos(props: PosProps = {}) {
                 e.stopPropagation()
                 clearAll()
               }}
-              className="flex flex-col md:flex-row items-center justify-center gap-2 py-3 px-2 rounded-xl bg-[#7B1E2B] hover:bg-[#631722] text-white font-bold text-[12px] md:text-sm transition-colors text-center leading-tight cursor-pointer"
+              style={{ backgroundColor: themeColor, color: textColor }}
+              className="flex flex-col md:flex-row items-center justify-center gap-2 py-3 px-2 rounded-xl font-bold text-[12px] md:text-sm transition-colors text-center leading-tight cursor-pointer hover:opacity-90"
             >
               <RefreshCw size={16} className="shrink-0" /> New Sale
             </button>
@@ -1529,7 +1536,7 @@ export default function Pos(props: PosProps = {}) {
       <div className="px-3 pt-3 pb-2.5 sm:px-4 sm:pt-4 md:px-6 md:pt-6 md:pb-4 shrink-0 flex flex-col gap-3 min-[480px]:flex-row min-[480px]:items-start min-[480px]:justify-between">
         <div className="min-w-0">
           <h2 className="text-[18px] sm:text-[22px] md:text-[24px] font-black text-[#111111] flex items-center gap-2 leading-tight">
-            <div className="w-1.5 h-5 sm:h-6 bg-[#D4AF37] rounded-full shrink-0"></div>
+            <div className="w-1.5 h-5 sm:h-6 rounded-full shrink-0" style={{ backgroundColor: themeColor }}></div>
             POS Billing Panel
           </h2>
           <p className="text-[11px] sm:text-[12px] text-gray-500 font-medium ml-3.5 mt-0.5 pr-2">Quick Invoice generator & database synced checkout</p>
@@ -1540,13 +1547,15 @@ export default function Pos(props: PosProps = {}) {
           <div className="grid grid-cols-2 bg-white rounded-xl border border-gray-200 p-1 shadow-sm flex-1 min-[480px]:flex-none">
             <button
               onClick={() => setOrdermode('offline')}
-              className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-4 py-1.5 rounded-lg text-[11px] font-black tracking-wider uppercase transition-colors ${ordermode === 'offline' ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm font-black' : 'text-[#374151] hover:bg-[#F9FAFB]'}`}
+              style={ordermode === 'offline' ? { backgroundColor: themeColor, color: textColor } : undefined}
+              className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-4 py-1.5 rounded-lg text-[11px] font-black tracking-wider uppercase transition-colors ${ordermode === 'offline' ? 'shadow-sm font-black' : 'text-[#374151] hover:bg-[#F9FAFB]'}`}
             >
               Offline
             </button>
             <button
               onClick={() => setOrdermode('online')}
-              className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-4 py-1.5 rounded-lg text-[11px] font-black tracking-wider uppercase transition-colors ${ordermode === 'online' ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm font-black' : 'text-[#374151] hover:bg-[#F9FAFB]'}`}
+              style={ordermode === 'online' ? { backgroundColor: themeColor, color: textColor } : undefined}
+              className={`min-h-[38px] sm:min-h-[42px] px-3 sm:px-4 py-1.5 rounded-lg text-[11px] font-black tracking-wider uppercase transition-colors ${ordermode === 'online' ? 'shadow-sm font-black' : 'text-[#374151] hover:bg-[#F9FAFB]'}`}
             >
               Online
             </button>
@@ -1555,7 +1564,8 @@ export default function Pos(props: PosProps = {}) {
             <>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="flex items-center justify-center min-h-[38px] sm:min-h-[42px] px-3 sm:px-4 rounded-xl bg-[#7B1E2B] text-[#C9A24B] hover:bg-[#631722] border border-[#C9A24B]/40 transition-colors text-[11px] font-black tracking-wider uppercase shadow-sm cursor-pointer"
+                style={{ backgroundColor: themeColor, color: textColor, borderColor: hoverColor }}
+                className="flex items-center justify-center min-h-[38px] sm:min-h-[42px] px-3 sm:px-4 rounded-xl border transition-colors text-[11px] font-black tracking-wider uppercase shadow-sm cursor-pointer hover:opacity-90"
               >
                 Dashboard
               </button>
@@ -1666,9 +1676,9 @@ export default function Pos(props: PosProps = {}) {
                   <div className="flex items-center gap-2.5">
                     <span className="text-2xl animate-bounce">🎂</span>
                     <div>
-                      <p className="text-xs font-black text-[#7B1E2B] flex items-center gap-1.5 uppercase tracking-wide">
+                      <p style={{ color: themeColor }} className="text-xs font-black flex items-center gap-1.5 uppercase tracking-wide">
                         <span>Customer's Birthday is Today!</span>
-                        <span className="bg-[#7B1E2B] text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">Offer Eligible</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ backgroundColor: themeColor, color: textColor }}>Offer Eligible</span>
                       </p>
                       <p className="text-[11px] text-gray-600 font-medium">
                         Born on {birthdayInfo.formattedShortDate} • Celebrate with special discount treat!
@@ -1681,7 +1691,8 @@ export default function Pos(props: PosProps = {}) {
                       setCouponInput('BDAY15')
                       void applyCoupon('BDAY15')
                     }}
-                    className="shrink-0 px-3 py-1.5 bg-[#7B1E2B] text-[#C9A24B] hover:bg-[#631722] rounded-xl text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
+                    style={{ backgroundColor: themeColor, color: textColor }}
+                    className="shrink-0 px-3 py-1.5 rounded-xl text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5 transition-all hover:opacity-90"
                   >
                     <Gift size={13} />
                     <span>Apply BDAY15</span>
@@ -1768,9 +1779,10 @@ export default function Pos(props: PosProps = {}) {
                 <button
                   type="button"
                   onClick={() => setCatalogOpen(true)}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 sm:px-3.5 text-[11px] font-bold rounded-lg bg-[#7B1E2B] text-white hover:bg-[#631722] border border-[#C9A24B]/50 shadow-xs transition-all shrink-0 cursor-pointer"
+                  style={{ backgroundColor: themeColor, color: textColor }}
+                  className="inline-flex items-center gap-1.5 h-8 px-3 sm:px-3.5 text-[11px] font-bold rounded-lg shadow-xs transition-all shrink-0 cursor-pointer hover:opacity-90"
                 >
-                  <Search className="w-3.5 h-3.5 text-[#B38018]" />
+                  <Search className="w-3.5 h-3.5" />
                   <span className="tracking-wide">Search Catalog</span>
                 </button>
 
@@ -1778,7 +1790,8 @@ export default function Pos(props: PosProps = {}) {
                 <button
                   type="button"
                   onClick={() => setAddUnregisteredOpen(true)}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 sm:px-3.5 text-[11px] font-bold rounded-lg bg-[#7B1E2B] text-[#C9A24B] hover:bg-[#631722] border border-[#C9A24B]/60 shadow-xs transition-all shrink-0 cursor-pointer"
+                  style={{ backgroundColor: lightBg, color: themeColor, borderColor: subtleBorder }}
+                  className="inline-flex items-center gap-1.5 h-8 px-3 sm:px-3.5 text-[11px] font-bold rounded-lg border shadow-xs transition-all shrink-0 cursor-pointer hover:opacity-90"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span className="tracking-wide">Add Item</span>
@@ -1962,13 +1975,13 @@ export default function Pos(props: PosProps = {}) {
           <div className="flex min-h-0 lg:h-full lg:max-h-full flex-col lg:overflow-hidden rounded-2xl border border-[#F3F4F6]/70 bg-white shadow-soft">
 
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[#7B1E2B] text-white shrink-0">
-              <h3 className="text-[15px] font-black text-white flex items-center gap-2">
-                <Receipt size={17} className="text-[#B38018]" />
+            <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ backgroundColor: themeColor, color: textColor }}>
+              <h3 className="text-[15px] font-black flex items-center gap-2" style={{ color: textColor }}>
+                <Receipt size={17} className="opacity-90" />
                 Current Order
               </h3>
-              <span className="px-2.5 py-0.5 rounded-full border border-[#D4AF37]/50 text-[9.5px] font-black tracking-wider uppercase flex items-center gap-1.5 bg-white/10 text-white shadow-xs">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]"></div>
+              <span className="px-2.5 py-0.5 rounded-full border border-white/40 text-[9.5px] font-black tracking-wider uppercase flex items-center gap-1.5 bg-white/20 text-white shadow-xs">
+                <div className="w-1.5 h-1.5 rounded-full bg-white"></div>
                 {ordermode} (POS)
               </span>
             </div>
@@ -2017,7 +2030,10 @@ export default function Pos(props: PosProps = {}) {
                       <span>Birthday (DOB)</span>
                     </label>
                     {birthdayInfo?.isToday && (
-                      <span className="text-[9px] font-black text-[#7B1E2B] uppercase bg-amber-100 px-1.5 py-0.2 rounded-full">
+                      <span
+                        style={{ backgroundColor: lightBg, color: themeColor, borderColor: subtleBorder }}
+                        className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-full border"
+                      >
                         🎂 Today!
                       </span>
                     )}
@@ -2087,7 +2103,8 @@ export default function Pos(props: PosProps = {}) {
                     <button
                       onClick={() => void applyCoupon()}
                       disabled={couponLoading || !couponInput.trim()}
-                      className="h-9 px-4 bg-[#C9A24B] text-[#222222] border border-[#B8913E] hover:bg-[#B8913E] rounded-xl text-[11px] font-black transition-colors disabled:opacity-50 shrink-0 cursor-pointer shadow-xs"
+                      style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+                      className="h-9 px-4 rounded-xl text-[11px] font-black border transition-colors disabled:opacity-50 shrink-0 cursor-pointer shadow-xs hover:opacity-90"
                     >
                       Apply
                     </button>
@@ -2268,10 +2285,11 @@ export default function Pos(props: PosProps = {}) {
                       key={mode}
                       type="button"
                       onClick={() => setPaymentType(mode)}
+                      style={paymentType === mode ? { backgroundColor: themeColor, color: textColor, borderColor: themeColor } : undefined}
                       className={`py-2 rounded-xl text-[11px] font-black uppercase tracking-wide border-2 transition-all cursor-pointer ${
                         paymentType === mode
-                          ? 'bg-[#7B1E2B] text-[#C9A24B] border-[#7B1E2B] shadow-sm'
-                          : 'bg-white text-[#374151] border-gray-200 hover:border-[#7B1E2B]/40'
+                          ? 'shadow-sm'
+                          : 'bg-white text-[#374151] border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       {mode === 'qr' ? 'QR' : mode === 'card' ? 'Card' : mode === 'split' ? 'Split' : 'Cash'}
@@ -2290,7 +2308,7 @@ export default function Pos(props: PosProps = {}) {
               {/* Amount Received (shown for single payment modes) */}
               {ordermode !== 'online' && paymentType !== 'split' && (
               <div>
-                <div className="border border-[#F3F4F6] rounded-xl p-2.5 bg-white focus-within:border-[#7B1E2B]">
+                <div className="border border-[#F3F4F6] rounded-xl p-2.5 bg-white focus-within:border-gray-400">
                   <label htmlFor="pos-cash-received" className="block text-[10px] font-black text-[#374151] tracking-wider uppercase mb-0.5">
                     {paymentType === 'qr' ? 'QR' : paymentType === 'card' ? 'Card' : 'Cash'} — Amount Received (₹)
                   </label>
@@ -2303,7 +2321,7 @@ export default function Pos(props: PosProps = {}) {
                     onFocus={(e) => e.target.select()}
                     onChange={e => setCashReceived(e.target.value)}
                     placeholder="0.00"
-                    className="w-full h-9 px-3 bg-[#F9FAFB] border border-gray-200 rounded-xl text-[13px] font-black text-[#111111] focus:outline-none focus:border-[#7B1E2B] focus:bg-white"
+                    className="w-full h-9 px-3 bg-[#F9FAFB] border border-gray-200 rounded-xl text-[13px] font-black text-[#111111] focus:outline-none focus:bg-white"
                   />
                   {cashReceivedNum > 0 && (
                     <div className="mt-2 flex justify-between items-center bg-[#F9FAFB] px-3 py-1.5 rounded-lg border border-[#F3F4F6]">
@@ -2329,7 +2347,8 @@ export default function Pos(props: PosProps = {}) {
                   type="button"
                   onClick={openDepositOrder}
                   disabled={saving || items.length === 0}
-                  className="min-h-[44px] rounded-xl border-2 border-[#7B1E2B] bg-white px-3 py-3 text-[12px] font-black uppercase tracking-wide text-[#7B1E2B] transition-all hover:bg-[#FDF8F8] hover:border-[#631722] disabled:opacity-40 cursor-pointer shadow-xs"
+                  style={{ borderColor: themeColor, color: themeColor }}
+                  className="min-h-[44px] rounded-xl border-2 bg-white px-3 py-3 text-[12px] font-black uppercase tracking-wide transition-all hover:bg-slate-50 disabled:opacity-40 cursor-pointer shadow-xs"
                 >
                   Save as Deposit Order
                 </button>
@@ -2337,7 +2356,8 @@ export default function Pos(props: PosProps = {}) {
                   type="button"
                   onClick={generateBill}
                   disabled={saving}
-                  className="min-h-[44px] rounded-xl bg-[#C9A24B] hover:bg-[#B8913E] border border-[#B8913E] px-3 py-3 text-[13px] font-black uppercase tracking-wider text-[#222222] transition-all shadow-md active:scale-[0.98] disabled:opacity-50 cursor-pointer font-headline"
+                  style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+                  className="min-h-[44px] rounded-xl border px-3 py-3 text-[13px] font-black uppercase tracking-wider transition-all shadow-md active:scale-[0.98] disabled:opacity-50 cursor-pointer font-headline hover:opacity-90"
                 >
                   {saving ? 'Processing...' : 'Complete Sale'}
                 </button>
@@ -2388,7 +2408,7 @@ export default function Pos(props: PosProps = {}) {
             <h3 className="mt-1 text-2xl font-black text-[#111111]">{depositCreated.deposit_id}</h3>
             <p className="mt-2 text-sm text-[#6B7280]">Deposit {formatCurrency(depositCreated.deposit_amount)} · Balance {formatCurrency(depositCreated.remaining_balance)}</p>
             <div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); printAdvanceReceipt(depositCreated) }} className="rounded-xl border border-gray-200 py-3 text-sm font-black text-gray-700 cursor-pointer"><Printer size={16} className="mr-1 inline"/>Print Receipt</button><button type="button" onClick={() => { const msg = buildAdvanceDepositWhatsAppMessage({ customerName: depositCreated.customer_name, depositId: depositCreated.deposit_id, productName: depositCreated.product_name, totalAmount: depositCreated.total_amount, depositAmount: depositCreated.deposit_amount, remainingBalance: depositCreated.remaining_balance, expectedDeliveryDate: depositCreated.expected_delivery_date }); window.open(toWhatsAppUrl(depositCreated.phone, msg), '_blank', 'noopener,noreferrer') }} className="rounded-xl bg-[#25D366] py-3 text-sm font-black text-white cursor-pointer"><MessageCircle size={16} className="mr-1 inline -mt-0.5"/>WhatsApp</button></div>
-            <button onClick={() => { setDepositCreated(null); searchRef.current?.focus() }} className="mt-3 w-full rounded-xl bg-[#7B1E2B] hover:bg-[#631722] py-3 text-sm font-black text-white">Start New Order</button>
+            <button onClick={() => { setDepositCreated(null); searchRef.current?.focus() }} style={{ backgroundColor: themeColor, color: textColor }} className="mt-3 w-full rounded-xl py-3 text-sm font-black hover:opacity-90 cursor-pointer">Start New Order</button>
           </div>
         </div>
       )}
@@ -2416,12 +2436,12 @@ export default function Pos(props: PosProps = {}) {
       {variantPickerProduct && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl max-w-md w-full border border-[#F3F4F6] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
-            <div className="p-4 border-b border-[#7B1E2B]/20 flex items-center justify-between bg-[#7B1E2B] text-white">
+            <div className="p-4 border-b border-white/20 flex items-center justify-between text-white" style={{ backgroundColor: themeColor, color: textColor }}>
               <div>
-                <h3 className="text-sm font-black uppercase tracking-wider text-white">
+                <h3 className="text-sm font-black uppercase tracking-wider" style={{ color: textColor }}>
                   Select Variant / Size
                 </h3>
-                <p className="text-xs text-[#C9A24B] font-bold">
+                <p className="text-xs font-bold opacity-90" style={{ color: textColor }}>
                   {variantPickerProduct.name}
                 </p>
               </div>
@@ -2447,9 +2467,10 @@ export default function Pos(props: PosProps = {}) {
                     <div
                       key={v.id}
                       onClick={() => setSelectedVariant(v)}
+                      style={selectedVariant?.id === v.id ? { borderColor: themeColor, backgroundColor: `${themeColor}12` } : undefined}
                       className={`p-3 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
                         selectedVariant?.id === v.id
-                          ? 'border-[#7B1E2B] bg-[#FDF8F8] shadow-xs'
+                          ? 'shadow-xs'
                           : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}
                     >
@@ -2493,7 +2514,8 @@ export default function Pos(props: PosProps = {}) {
               <button
                 type="button"
                 onClick={addVariantToItems}
-                className="w-full py-3 rounded-2xl bg-[#C9A24B] hover:bg-[#B8913E] border border-[#B8913E] text-[#222222] text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+                className="w-full py-3 rounded-2xl border text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer hover:opacity-90"
               >
                 Add to Order (₹{((selectedVariant?.price || variantPickerProduct.price || 0) * variantPickerQty).toFixed(2)})
               </button>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Info } from 'lucide-react'
 import { type LabelSizeConfig, saveStoredCustomSize, getAllLabelSizes } from '../../lib/barcode'
+import { useTheme } from '../../store/themeStore'
 
 interface CreateCustomSizeModalProps {
   isOpen: boolean
@@ -14,6 +15,7 @@ export const CreateCustomSizeModal: React.FC<CreateCustomSizeModalProps> = ({
   onClose,
   onCreated,
 }) => {
+  const { themeColor, textColor } = useTheme()
   const [name, setName] = useState('')
   const [labelsPerRow, setLabelsPerRow] = useState<number>(1)
   const [widthMm, setWidthMm] = useState<string>('50')
@@ -102,8 +104,11 @@ export const CreateCustomSizeModal: React.FC<CreateCustomSizeModalProps> = ({
       <div className="absolute inset-0" onClick={onClose} />
       <div className="relative z-10 bg-white rounded-none sm:rounded-2xl max-w-2xl w-full h-[100dvh] max-h-[100dvh] sm:h-auto sm:max-h-[90vh] border-0 sm:border border-[#F3F4F6] shadow-2xl overflow-hidden flex flex-col">
         {/* Header - fixed top */}
-        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-3.5 border-b border-[#C9A24B]/30 bg-[#7B1E2B] text-white shrink-0">
-          <h3 className="text-base font-black tracking-wide text-white">Create Custom Size</h3>
+        <div
+          style={{ backgroundColor: themeColor, color: textColor }}
+          className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-3.5 border-b border-white/20 shrink-0"
+        >
+          <h3 className="text-base font-black tracking-wide" style={{ color: textColor }}>Create Custom Size</h3>
           <button
             type="button"
             onClick={onClose}
@@ -309,7 +314,8 @@ export const CreateCustomSizeModal: React.FC<CreateCustomSizeModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 sm:px-6 py-2 rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] text-xs font-black uppercase tracking-wider hover:bg-[#B8913E] transition-all shadow-md cursor-pointer"
+              style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+              className="px-5 sm:px-6 py-2 rounded-xl border text-xs font-black uppercase tracking-wider hover:opacity-90 transition-all shadow-md cursor-pointer"
             >
               Save Custom Size
             </button>

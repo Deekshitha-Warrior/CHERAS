@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react'
 import { Plus, Trash2, Tag, AlertCircle, CheckCircle2, Edit2, X, Check } from 'lucide-react'
 import { expenseService, type ExpenseCategory } from '../../services/expenseService'
+import { useTheme } from '../../store/themeStore'
 
 interface ExpenseCategoriesViewProps {
   categories: ExpenseCategory[]
@@ -11,6 +12,7 @@ export const ExpenseCategoriesView: React.FC<ExpenseCategoriesViewProps> = ({
   categories,
   onCategoriesUpdated,
 }) => {
+  const { themeColor, textColor } = useTheme()
   const [catName, setCatName] = useState('')
   const [editingCategory, setEditingCategory] = useState<ExpenseCategory | null>(null)
   const [loading, setLoading] = useState(false)
@@ -147,7 +149,8 @@ export const ExpenseCategoriesView: React.FC<ExpenseCategoriesViewProps> = ({
               <button
                 type="submit"
                 disabled={loading || !catName.trim()}
-                className="flex-1 h-11 rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] text-xs font-bold hover:bg-[#B8913E] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+                className="flex-1 h-11 rounded-xl border text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 hover:opacity-90"
               >
                 {editingCategory ? (
                   <>

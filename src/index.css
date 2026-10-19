@@ -5,6 +5,10 @@
 @layer base {
   :root {
     --brand-primary: #7B1E2B;
+    --brand-primary-hover: #631722;
+    --brand-primary-text: #FFFFFF;
+    --brand-primary-light: rgba(123, 30, 43, 0.09);
+    --brand-primary-border: rgba(123, 30, 43, 0.25);
     --brand-accent: #C9A24B;
     --brand-bg: #FFFFFF;
     --brand-text: #222222;

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { inventoryService, type InventoryStockItem } from '../../services/inventoryService'
 import { BRAND_EN } from '../../lib/brand'
+import { useTheme } from '../../store/themeStore'
 
 export interface AdjustStockModalProps {
   isOpen: boolean
@@ -30,6 +31,7 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
   item,
   onSuccess,
 }) => {
+  const { themeColor, textColor, hoverColor, lightBg, subtleBorder } = useTheme()
   const [mode, setMode] = useState<AdjustMode>('RESTOCK')
   const [addQuantity, setAddQuantity] = useState<number | ''>(0)
   const [removeQuantity, setRemoveQuantity] = useState<number | ''>(0)
@@ -154,16 +156,16 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
       <div className="absolute inset-0" onClick={onClose} />
       <div className="relative z-10 bg-white rounded-t-3xl sm:rounded-3xl max-w-lg w-full max-h-[100dvh] h-full sm:h-auto sm:max-h-[92vh] border-0 sm:border border-[#F3F4F6] shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="shrink-0 bg-[#7B1E2B] px-4 py-3 sm:px-5 sm:py-3.5 border-b border-[#C9A24B]/30 flex items-center justify-between text-white">
+        <div className="shrink-0 px-4 py-3 sm:px-5 sm:py-3.5 border-b border-white/20 flex items-center justify-between" style={{ backgroundColor: themeColor, color: textColor }}>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#631722] border border-[#C9A24B] flex items-center justify-center text-[#C9A24B]">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: textColor }}>
               <SlidersHorizontal size={16} />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-black tracking-wide text-white leading-tight">
+              <h2 className="text-sm sm:text-base font-black tracking-wide leading-tight" style={{ color: textColor }}>
                 Adjust Inventory Stock ({BRAND_EN})
               </h2>
-              <p className="text-[11px] text-[#C9A24B] font-semibold leading-tight">
+              <p className="text-[11px] font-semibold leading-tight" style={{ color: textColor, opacity: 0.85 }}>
                 Restock, remove stock, or reconcile physical count
               </p>
             </div>
@@ -171,7 +173,8 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+            className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors cursor-pointer"
+            style={{ color: textColor }}
           >
             <X size={15} />
           </button>
@@ -578,12 +581,11 @@ export const AdjustStockModal: React.FC<AdjustStockModalProps> = ({
               type="submit"
               disabled={submitting || delta === 0}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl text-xs font-black transition-all shadow-md disabled:opacity-50 cursor-pointer ${
-                mode === 'RESTOCK'
-                  ? 'bg-[#C9A24B] border border-[#B8913E] text-[#222222] hover:bg-[#B8913E]'
-                  : mode === 'REMOVE'
+                mode === 'REMOVE'
                   ? 'bg-rose-700 text-white hover:bg-rose-800 border border-rose-800'
-                  : 'bg-[#C9A24B] border border-[#B8913E] text-[#222222] hover:bg-[#B8913E]'
+                  : ''
               }`}
+              style={mode !== 'REMOVE' ? { backgroundColor: themeColor, color: textColor } : undefined}
             >
               {submitting ? (
                 <>

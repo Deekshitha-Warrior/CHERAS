@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { alarmSound } from '../lib/alarmAudio'
 import { useAlarmStore } from './alarmStore'
+import { loginViaPortalRpc } from '../services/portalCredentialsService'
 
 export type AdminRole = 'admin' | 'staff' | null
 
@@ -12,6 +13,7 @@ export interface AdminAuthState {
   authError: string | null
   login: (portalId: string, password: string) => Promise<AdminRole | false>
   logout: () => void
+  updateAdminId?: (newId: string) => void
 }
 
 export interface CredentialEvaluationResult {
@@ -219,26 +221,54 @@ export const useAdminAuthStore = create<AdminAuthState>()(
       authError: null,
 
       login: async (portalId: string, password: string) => {
-        const result = evaluatePortalCredentials(portalId, password)
+        // 1. Attempt database RPC authentication first
+        const rpcResult = await loginViaPortalRpc(portalId, password)
 
-        if (result.role === 'admin' || result.role === 'staff') {
+        if (rpcResult.role === 'admin' || rpcResult.role === 'staff') {
           useAlarmStore.getState().resetSilencedState()
           set({
             isLoggedIn: true,
-            role: result.role,
+            role: rpcResult.role,
             adminId: portalId.trim(),
             authError: null,
           })
-          return result.role
+          return rpcResult.role
         }
 
+        // 2. Fall back to environment/code credentials ONLY when database function does not exist
+        if (rpcResult.functionMissing) {
+          const result = evaluatePortalCredentials(portalId, password)
+          if (result.role === 'admin' || result.role === 'staff') {
+            useAlarmStore.getState().resetSilencedState()
+            set({
+              isLoggedIn: true,
+              role: result.role,
+              adminId: portalId.trim(),
+              authError: null,
+            })
+            return result.role
+          }
+          set({
+            isLoggedIn: false,
+            role: null,
+            adminId: null,
+            authError: result.error || 'Invalid Admin or Staff credentials.',
+          })
+          return false
+        }
+
+        // 3. Any other error or failed credentials FAIL CLOSED
         set({
           isLoggedIn: false,
           role: null,
           adminId: null,
-          authError: result.error || 'Invalid Admin or Staff credentials.',
+          authError: rpcResult.error || 'Invalid Admin or Staff credentials.',
         })
         return false
+      },
+
+      updateAdminId: (newId: string) => {
+        set((state) => ({ ...state, adminId: newId.trim() }))
       },
 
       logout: () => {

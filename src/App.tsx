@@ -192,6 +192,7 @@ function AppShell() {
             <Route path="/pos-analytics" element={<Dashboard />} />
             <Route path="/expenses" element={<Dashboard />} />
             <Route path="/dashboard/expenses" element={<Dashboard />} />
+            <Route path="/settings" element={<Dashboard />} />
           </Route>
           <Route
             path="/pos"

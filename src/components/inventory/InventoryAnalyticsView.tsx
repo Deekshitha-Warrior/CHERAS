@@ -16,8 +16,10 @@ import {
   type InventoryStockItem,
 } from '../../services/inventoryService'
 import { downloadCsv } from '../../lib/exportCsv'
+import { useTheme } from '../../store/themeStore'
 
 export const InventoryAnalyticsView: React.FC = () => {
+  const { themeColor, textColor } = useTheme()
   const [range, setRange] = useState<'all' | 'today' | 'week' | 'month'>('all')
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<InventoryAnalyticsSummary>({
@@ -230,9 +232,10 @@ export const InventoryAnalyticsView: React.FC = () => {
             onClick={() => setRange('all')}
             className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
               range === 'all'
-                ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-xs'
+                ? 'shadow-xs'
                 : 'text-gray-600 hover:text-[#111111]'
             }`}
+            style={range === 'all' ? { backgroundColor: themeColor, color: textColor } : undefined}
           >
             All Time
           </button>
@@ -241,9 +244,10 @@ export const InventoryAnalyticsView: React.FC = () => {
             onClick={() => setRange('today')}
             className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
               range === 'today'
-                ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-xs'
+                ? 'shadow-xs'
                 : 'text-gray-600 hover:text-[#111111]'
             }`}
+            style={range === 'today' ? { backgroundColor: themeColor, color: textColor } : undefined}
           >
             Today
           </button>
@@ -252,9 +256,10 @@ export const InventoryAnalyticsView: React.FC = () => {
             onClick={() => setRange('week')}
             className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
               range === 'week'
-                ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-xs'
+                ? 'shadow-xs'
                 : 'text-gray-600 hover:text-[#111111]'
             }`}
+            style={range === 'week' ? { backgroundColor: themeColor, color: textColor } : undefined}
           >
             This Week
           </button>
@@ -263,9 +268,10 @@ export const InventoryAnalyticsView: React.FC = () => {
             onClick={() => setRange('month')}
             className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
               range === 'month'
-                ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-xs'
+                ? 'shadow-xs'
                 : 'text-gray-600 hover:text-[#111111]'
             }`}
+            style={range === 'month' ? { backgroundColor: themeColor, color: textColor } : undefined}
           >
             This Month
           </button>

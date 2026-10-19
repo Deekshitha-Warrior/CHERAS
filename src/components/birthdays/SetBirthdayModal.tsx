@@ -13,6 +13,7 @@ import {
   removeCustomerBirthday,
 } from '../../services/birthdayService'
 import { formatPhoneDisplay } from '../../lib/phone'
+import { useTheme } from '../../store/themeStore'
 
 interface SetBirthdayModalProps {
   customer: CustomerBirthdayRecord
@@ -27,6 +28,7 @@ export const SetBirthdayModal: React.FC<SetBirthdayModalProps> = ({
   onSaved,
   l,
 }) => {
+  const { themeColor, textColor, lightBg } = useTheme()
   const [birthday, setBirthday] = useState(customer.birthday ? customer.birthday.slice(0, 10) : '')
   const [notes, setNotes] = useState(customer.notes || '')
   const [saving, setSaving] = useState(false)
@@ -73,7 +75,7 @@ export const SetBirthdayModal: React.FC<SetBirthdayModalProps> = ({
         {/* Header */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#7B1E2B]/10 text-[#7B1E2B] flex items-center justify-center">
+            <div style={{ backgroundColor: lightBg, color: themeColor }} className="w-8 h-8 rounded-xl flex items-center justify-center">
               <Cake size={17} />
             </div>
             <h3 className="text-base font-black text-[#222222]">
@@ -117,7 +119,7 @@ export const SetBirthdayModal: React.FC<SetBirthdayModalProps> = ({
           {/* Date Picker Input */}
           <div>
             <label className="block text-xs font-black uppercase tracking-wider text-gray-600 mb-1.5 flex items-center gap-1">
-              <Calendar size={13} className="text-[#7B1E2B]" />
+              <Calendar size={13} style={{ color: themeColor }} />
               <span>{l('Date of Birth', 'பிறந்த தேதி')} *</span>
             </label>
             <input
@@ -125,7 +127,7 @@ export const SetBirthdayModal: React.FC<SetBirthdayModalProps> = ({
               required
               value={birthday}
               onChange={(e) => setBirthday(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-[#222222] focus:outline-none focus:border-[#7B1E2B] focus:ring-2 focus:ring-[#7B1E2B]/10 cursor-pointer"
+              className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold text-[#222222] focus:outline-none cursor-pointer"
             />
             <p className="text-[10px] text-gray-400 mt-1">
               {l('Birthdays recur annually automatically on this month & date.', 'பிறந்தநாள் ஒவ்வொரு ஆண்டும் தானாக கணக்கிடப்படும்.')}
@@ -142,7 +144,7 @@ export const SetBirthdayModal: React.FC<SetBirthdayModalProps> = ({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. VIP client, prefers silk saree offers"
-              className="w-full px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs text-[#222222] focus:outline-none focus:border-[#7B1E2B]"
+              className="w-full px-3.5 py-2 bg-white border border-gray-200 rounded-xl text-xs text-[#222222] focus:outline-none"
             />
           </div>
 
@@ -171,7 +173,8 @@ export const SetBirthdayModal: React.FC<SetBirthdayModalProps> = ({
               <button
                 type="submit"
                 disabled={saving}
-                className="px-4 py-1.5 rounded-xl bg-[#7B1E2B] hover:bg-[#641823] text-white text-xs font-black shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                style={{ backgroundColor: themeColor, color: textColor }}
+                className="px-4 py-1.5 rounded-xl text-xs font-black shadow-xs transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-1 hover:opacity-90"
               >
                 <Check size={13} />
                 <span>{saving ? l('Saving...', 'சேமிக்கிறது...') : l('Save Birthday', 'சேமி')}</span>

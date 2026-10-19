@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Calendar, Tag, AlertCircle, Edit2 } from 'lucide-react'
 import { expenseService, type ExpenseCategory, type ExpenseRecord } from '../../services/expenseService'
+import { useTheme } from '../../store/themeStore'
 
 interface RecordExpenseModalProps {
   isOpen: boolean
@@ -18,6 +19,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
   categories,
   expenseToEdit,
 }) => {
+  const { themeColor, textColor } = useTheme()
   const [expenseDate, setExpenseDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [categoryId, setCategoryId] = useState<number | string>(() => categories[0]?.id || '')
   const [amount, setAmount] = useState('')
@@ -238,7 +240,8 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="flex-[1.5] h-11 rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] text-xs font-bold hover:bg-[#B8913E] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+              className="flex-[1.5] h-11 rounded-xl border text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 hover:opacity-90"
             >
               {loading
                 ? expenseToEdit

@@ -884,6 +884,7 @@ export async function updateAdvanceOrder(orderId: string, updates: {
       if (updates.referenceNumber !== undefined) dbPayload.reference_number = updates.referenceNumber.trim()
       if (updates.remarks !== undefined) dbPayload.remarks = updates.remarks.trim()
       if (updates.status !== undefined) dbPayload.status = updates.status
+      dbPayload.remaining_balance = newRemaining
 
       const { data, error } = await supabase
         .from('advance_orders')

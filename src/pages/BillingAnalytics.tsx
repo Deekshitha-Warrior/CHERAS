@@ -12,6 +12,7 @@ import {
 import CompactAnalytics from '../components/dashboard/CompactAnalytics'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { downloadCsv } from '../lib/exportCsv'
+import { useTheme } from '../store/themeStore'
 
 // Custom Malaysian Ringgit icon
 const RMIcon = ({ size = 16, className = '' }: { size?: number; className?: string }) => (
@@ -213,6 +214,7 @@ function StatCard({
 }
 
 export default function BillingAnalytics() {
+  const { themeColor, textColor } = useTheme()
   const { user, loading: authLoading } = useAuthStore()
   const { products, fetchProducts } = useProductStore()
   const l = (en: string, _ta?: string) => en
@@ -604,7 +606,7 @@ export default function BillingAnalytics() {
         <div className="max-w-sm rounded-3xl bg-white p-8 text-center shadow-xl">
           <h1 className="mb-2 text-2xl font-black text-[#111111]">Unauthorized</h1>
           <p className="mb-6 text-sm text-[#374151]">Admin access is required to view billing analytics.</p>
-          <Link to="/" className="inline-flex items-center gap-2 rounded-xl bg-[#7B1E2B] px-5 py-3 text-sm font-bold text-white">
+          <Link to="/" className="inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-sm transition-colors" style={{ backgroundColor: themeColor, color: textColor }}>
             <LayoutDashboard size={16} />
             Go Home
           </Link>
@@ -625,7 +627,7 @@ export default function BillingAnalytics() {
               <img src={BRAND_ICON} alt={BRAND_EN} className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-[#C9A24B]">Admin Billing</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.24em]" style={{ color: themeColor }}>Admin Billing</p>
               <h1 className="mt-1 break-words text-2xl font-black text-[#111111]">{l('Billing Analytics', 'பில் பகுப்பாய்வு')}</h1>
               <p className="mt-1 text-sm text-[#5F5F5F]">Dedicated analytics view for billing, revenue, products, categories, and coupons.</p>
             </div>
@@ -666,9 +668,10 @@ export default function BillingAnalytics() {
                 onClick={() => applyAnalyticsPreset(preset)}
                 className={`rounded-xl px-3 py-1.5 text-[12px] font-black transition-colors ${
                   analyticsDatePreset === preset
-                    ? 'bg-[#7B1E2B] text-white'
+                    ? ''
                     : 'bg-[#F9FAFB] text-[#374151] hover:bg-[#F3F4F6]/40'
                 }`}
+                style={analyticsDatePreset === preset ? { backgroundColor: themeColor, color: textColor } : undefined}
               >
                 {preset === 'all'
                   ? l('All Time', 'எல்லாம்')
@@ -752,9 +755,10 @@ export default function BillingAnalytics() {
                   onClick={() => setBillTypeFilter(v)}
                   className={`rounded-xl px-3 py-1.5 text-[12px] font-black transition-colors ${
                     billTypeFilter === v
-                      ? 'bg-[#7B1E2B] text-white'
+                      ? ''
                       : 'bg-[#F9FAFB] text-[#374151] hover:bg-[#F3F4F6]/40'
                   }`}
+                  style={billTypeFilter === v ? { backgroundColor: themeColor, color: textColor } : undefined}
                 >
                   {label}
                 </button>

@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ChevronDown, Heart, Minus, Plus, ShoppingCart, Star, ArrowLeft } from 'lucide-react'
 import { useCartStore, useFavStore, useProductStore, type Product } from '../store/store'
 import { useLangStore } from '../store/langStore'
+import { useTheme } from '../store/themeStore'
 import {
   calculateLineTotal,
   formatCurrency,
@@ -50,6 +51,7 @@ export default function ProductDetails() {
   const allProducts = useProductStore((state) => state.products)
   const { t, lang } = useLangStore()
   const { toggle, isFav } = useFavStore()
+  const { themeColor, textColor, subtleBorder } = useTheme()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -225,7 +227,7 @@ export default function ProductDetails() {
                 <span className="text-[#9CA3AF]">{formatCurrency(basePrice)}</span>
                 {hasDiscount && <span className="text-[#b0a89a] line-through">{formatCurrency(product.price)}</span>}
               </span>
-              {discount > 0 && <span className="rounded-full bg-[#7B1E2B] px-3 py-1.5 text-[11px] font-black text-white">{discount}% OFF</span>}
+              {discount > 0 && <span className="rounded-full px-3 py-1.5 text-[11px] font-black" style={{ backgroundColor: themeColor, color: textColor }}>{discount}% OFF</span>}
             </div>
           </div>
         </section>
@@ -243,7 +245,8 @@ export default function ProductDetails() {
                   whileTap={{ scale: 0.98 }}
                   onClick={handleMobileAdd}
                   type="button"
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#C9A24B] border border-[#B8913E] py-3 text-sm font-black text-[#222222] hover:bg-[#B8913E] shadow-[0_16px_30px_rgba(201,162,75,0.22)]"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border py-3 text-sm font-black shadow-lg"
+                  style={{ backgroundColor: themeColor, borderColor: themeColor, color: textColor }}
                 >
                   <ShoppingCart size={16} /> Add
                 </motion.button>
@@ -265,9 +268,10 @@ export default function ProductDetails() {
                           onClick={() => handleMobilePackChange(option)}
                           className={`shrink-0 rounded-full border px-3 py-2 text-[11px] font-black transition-colors ${
                             mobilePack?.label === option.label
-                              ? 'border-[#7B1E2B] bg-[#7B1E2B] text-white'
+                              ? ''
                               : 'border-[#ead7b7]/70 bg-[#f7f4ed] text-[#6B7280]'
                           }`}
+                          style={mobilePack?.label === option.label ? { backgroundColor: themeColor, borderColor: themeColor, color: textColor } : undefined}
                         >
                           {option.label}
                         </button>
@@ -334,7 +338,7 @@ export default function ProductDetails() {
                 <span className="text-[#9CA3AF]">{formatCurrency(basePrice)}</span>
                 {hasDiscount && <span className="text-[#b0a89a] line-through">{formatCurrency(product.price)}</span>}
               </span>
-              {discount > 0 && <span className="rounded-full bg-[#7B1E2B] px-3 py-1.5 text-[11px] font-black text-white">{discount}% OFF</span>}
+              {discount > 0 && <span className="rounded-full px-3 py-1.5 text-[11px] font-black" style={{ backgroundColor: themeColor, color: textColor }}>{discount}% OFF</span>}
             </div>
           </div>
         </section>
@@ -361,9 +365,10 @@ export default function ProductDetails() {
                     onClick={() => setSelectedPackOption(option)}
                     className={`shrink-0 rounded-full border px-3 py-2 text-[11px] font-black transition-colors ${
                       selectedPackOption?.label === option.label
-                        ? 'border-[#7B1E2B] bg-[#7B1E2B] text-white'
+                        ? ''
                         : 'border-[#ead7b7]/70 bg-[#f7f4ed] text-[#6B7280]'
                     }`}
+                    style={selectedPackOption?.label === option.label ? { backgroundColor: themeColor, borderColor: themeColor, color: textColor } : undefined}
                   >
                     {option.label}
                   </button>
@@ -442,7 +447,8 @@ export default function ProductDetails() {
           </div>
           <button
             onClick={handleAdd}
-            className="flex-1 rounded-2xl bg-[#C9A24B] border border-[#B8913E] py-3.5 text-sm font-black text-[#222222] hover:bg-[#B8913E] shadow-[0_16px_30px_rgba(201,162,75,0.28)]"
+            className="flex-1 rounded-2xl border py-3.5 text-sm font-black shadow-lg transition-transform hover:-translate-y-0.5"
+            style={{ backgroundColor: themeColor, borderColor: themeColor, color: textColor }}
             type="button"
           >
             <span className="inline-flex items-center justify-center gap-2">

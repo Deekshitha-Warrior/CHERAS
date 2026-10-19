@@ -11,6 +11,7 @@ import {
 } from '../../lib/barcode'
 import { CreateCustomSizeModal } from './CreateCustomSizeModal'
 import { BRAND_EN } from '../../lib/brand'
+import { useTheme } from '../../store/themeStore'
 
 interface BarcodeSettingsDrawerProps {
   isOpen: boolean
@@ -25,6 +26,7 @@ export const BarcodeSettingsDrawer: React.FC<BarcodeSettingsDrawerProps> = ({
   settings,
   onUpdateSettings,
 }) => {
+  const { themeColor, textColor } = useTheme()
   const [customSizes, setCustomSizes] = useState<LabelSizeConfig[]>(getStoredCustomSizes())
   const [showCustomModal, setShowCustomModal] = useState(false)
 
@@ -89,16 +91,19 @@ export const BarcodeSettingsDrawer: React.FC<BarcodeSettingsDrawerProps> = ({
           <div className="absolute inset-0" onClick={onClose} />
           <div className="relative z-10 w-full max-w-sm bg-white h-[100dvh] max-h-[100dvh] shadow-2xl flex flex-col border-l border-gray-200 animate-in slide-in-from-right duration-200">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#C9A24B]/30 bg-[#7B1E2B] text-white shrink-0">
-            <h3 className="text-sm font-black tracking-wide text-white">Barcode Settings</h3>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+            <div
+              style={{ backgroundColor: themeColor, color: textColor }}
+              className="flex items-center justify-between px-5 py-4 border-b border-white/20 shrink-0"
             >
-              <X size={15} />
-            </button>
-          </div>
+              <h3 className="text-sm font-black tracking-wide" style={{ color: textColor }}>Barcode Settings</h3>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors cursor-pointer"
+              >
+                <X size={15} />
+              </button>
+            </div>
 
           {/* Drawer Body */}
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-6">
@@ -247,7 +252,8 @@ export const BarcodeSettingsDrawer: React.FC<BarcodeSettingsDrawerProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-2.5 rounded-xl bg-[#C9A24B] text-[#222222] border border-[#B8913E] font-black text-xs uppercase tracking-wider hover:bg-[#B8913E] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
+              style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+              className="w-full py-2.5 rounded-xl border font-black text-xs uppercase tracking-wider hover:opacity-90 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
             >
               <Check size={14} /> Done
             </button>

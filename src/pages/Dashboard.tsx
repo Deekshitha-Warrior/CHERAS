@@ -59,6 +59,8 @@ import { InventoryTable } from '../components/inventory/InventoryTable'
 import { CategoryManagerView } from '../components/inventory/CategoryManagerView'
 import { ExpensesView } from '../components/expenses/ExpensesView'
 import { BirthdayManagementView } from '../components/birthdays/BirthdayManagementView'
+import { SettingsView } from '../components/settings/SettingsView'
+import { useThemeStore, useTheme } from '../store/themeStore'
 import { expenseService, type ExpenseRecord } from '../services/expenseService'
 import { useNavigationStore } from '../store/navigationStore'
 import { useHardwareBarcodeScanner } from '../hooks/useHardwareBarcodeScanner'
@@ -94,7 +96,7 @@ type DashboardCoupon = {
   usage_count: number
   min_order_value: number
 }
-type TabKey = 'overview' | 'whatsapp' | 'pos_analytics' | 'billing' | 'advance_orders' | 'inventory' | 'expenses' | 'products' | 'categories' | 'coupons' | 'users' | 'history' | 'birthdays'
+type TabKey = 'overview' | 'whatsapp' | 'pos_analytics' | 'billing' | 'advance_orders' | 'inventory' | 'expenses' | 'products' | 'categories' | 'coupons' | 'users' | 'history' | 'birthdays' | 'settings'
 type PosAnalyticsTab = 'revenue' | 'today' | 'products' | 'categories' | 'coupons'
 type ProfileUser = { id: string; email: string; name: string; mobile: string; role: string; created_at: string }
 
@@ -231,6 +233,14 @@ export default function Dashboard() {
   const location = useLocation()
   const navigate = useNavigate()
   const role = useAdminAuthStore(state => state.role)
+  const { themeColor, textColor, hoverColor, lightBg, subtleBorder } = useTheme()
+  const shopSettings = useThemeStore(state => state.settings)
+  const loadThemeSettings = useThemeStore(state => state.loadSettings)
+
+  useEffect(() => {
+    void loadThemeSettings()
+  }, [loadThemeSettings])
+
   const [tab, setTab] = useState<TabKey>(() => {
     const params = new URLSearchParams(location.search)
     const tabParam = params.get('tab') as TabKey | null
@@ -240,6 +250,7 @@ export default function Dashboard() {
     if (location.pathname === '/advance-orders') return 'advance_orders'
     if (location.pathname === '/expenses' || location.pathname === '/dashboard/expenses') return 'expenses'
     if (location.pathname === '/birthdays') return 'birthdays'
+    if (location.pathname === '/settings') return 'settings'
     return 'billing'
   })
   const { setCurrentTab } = useNavigationStore()
@@ -433,6 +444,8 @@ export default function Dashboard() {
       navigate('/dashboard?tab=inventory', { replace: true })
     } else if (tabKey === 'birthdays') {
       navigate('/dashboard?tab=birthdays', { replace: true })
+    } else if (tabKey === 'settings') {
+      navigate('/dashboard?tab=settings', { replace: true })
     } else {
       navigate('/dashboard', { replace: true })
     }
@@ -2031,6 +2044,7 @@ export default function Dashboard() {
         { id: 'birthdays',      icon: <Cake size={18} />,         label: 'Birthdays' },
         { id: 'pos_analytics',  icon: <BarChart2 size={18} />,    label: 'Analytics Dashboard' },
         { id: 'coupons',        icon: <Box size={18} />,          label: 'Coupons' },
+        { id: 'settings',       icon: <SlidersHorizontal size={18} />, label: 'Settings' },
       ]
 
   return (
@@ -2038,10 +2052,11 @@ export default function Dashboard() {
       {/* Sidebar */}
       <aside
         className={[
-          'w-full bg-[#7B1E2B] text-white border-b lg:border-b-0 lg:border-r border-[#C9A24B]/30 flex flex-col shrink-0 h-auto lg:h-full lg:max-h-screen',
-          'transition-[width] duration-300 ease-in-out overflow-hidden',
+          'w-full text-white border-b lg:border-b-0 lg:border-r border-white/20 flex flex-col shrink-0 h-auto lg:h-full lg:max-h-screen',
+          'transition-[width,background-color] duration-300 ease-in-out overflow-hidden',
           sidebarCollapsed ? 'lg:w-[76px]' : 'lg:w-[240px] xl:w-[250px]',
         ].join(' ')}
+        style={{ backgroundColor: themeColor }}
       >
         {/* Desktop brand header */}
         <div className={`hidden lg:flex items-center relative transition-all duration-300 shrink-0 ${sidebarCollapsed ? 'flex-col items-center pt-4 pb-3 px-2 gap-2' : 'px-4 py-3.5 justify-between border-b border-white/10'}`}>
@@ -2055,7 +2070,7 @@ export default function Dashboard() {
             {!sidebarCollapsed && (
               <div className="flex flex-col min-w-0">
                 <h1 className="text-[15px] font-black text-white break-words tracking-wider">{BRAND_EN}</h1>
-                <span className={`text-[8.5px] font-black uppercase tracking-widest px-1.5 py-0.2 rounded w-fit ${role === 'admin' ? 'bg-[#C9A24B]/20 text-[#C9A24B] border border-[#C9A24B]/40' : 'bg-white/10 text-gray-200 border border-white/20'}`}>
+                <span className={`text-[8.5px] font-black uppercase tracking-widest px-1.5 py-0.2 rounded w-fit ${role === 'admin' ? 'bg-white/20 text-white border border-white/30' : 'bg-white/10 text-gray-200 border border-white/20'}`}>
                   {role === 'admin' ? 'ADMIN' : 'STAFF'}
                 </span>
               </div>
@@ -2072,7 +2087,10 @@ export default function Dashboard() {
           </button>
         </div>
         {/* Mobile mini-header */}
-        <div className="flex lg:hidden items-center justify-between px-3 py-2 border-b border-white/10 bg-[#7B1E2B] shrink-0 gap-2">
+        <div
+          className="flex lg:hidden items-center justify-between px-3 py-2 border-b border-white/10 shrink-0 gap-2 transition-[background-color] duration-300"
+          style={{ backgroundColor: themeColor }}
+        >
           <Link to="/pos" title="Go to Billing Panel" className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
             <div
               className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FFFFFF] border border-[#E5E5E5] shrink-0 shadow-sm hover:scale-105 transition-transform p-1 overflow-hidden"
@@ -2084,7 +2102,7 @@ export default function Dashboard() {
               <span className="text-[13px] sm:text-[14px] font-black text-white tracking-wide break-words min-w-0">
                 {BRAND_EN}
               </span>
-              <span className={`shrink-0 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded whitespace-nowrap ${role === 'admin' ? 'bg-[#C9A24B]/20 text-[#C9A24B] border border-[#C9A24B]/40' : 'bg-white/10 text-gray-200 border border-white/20'}`}>
+              <span className={`shrink-0 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded whitespace-nowrap ${role === 'admin' ? 'bg-white/20 text-white border border-white/30' : 'bg-white/10 text-gray-200 border border-white/20'}`}>
                 {role === 'admin' ? 'ADMIN' : 'STAFF'}
               </span>
             </div>
@@ -2117,7 +2135,7 @@ export default function Dashboard() {
                 sidebarCollapsed ? 'lg:w-[42px] lg:justify-center mx-auto' : 'lg:px-3',
                 'px-1 py-1 lg:py-0',
                 'rounded-xl font-medium text-[10px] lg:text-[12.5px] xl:text-[13px] transition-all overflow-hidden cursor-pointer',
-                tab === item.id ? 'bg-[#631722] text-[#C9A24B] font-black border border-[#C9A24B]/40 shadow-md' : 'text-white/80 hover:bg-white/10 hover:text-[#C9A24B]',
+                tab === item.id ? 'bg-white text-gray-900 font-black shadow-md' : 'text-white/80 hover:bg-white/10 hover:text-white',
               ].join(' ')}
             >
               <span className="shrink-0 flex items-center">
@@ -2129,6 +2147,25 @@ export default function Dashboard() {
             </button>
           ))}
         </nav>
+
+        {/* Desktop Admin Access Info Card */}
+        <div className={`hidden lg:block shrink-0 border-t border-white/10 p-2 lg:p-2.5 ${sidebarCollapsed ? 'px-1.5' : 'px-2.5'}`}>
+          <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-white/10 text-white">
+            <div className="w-8 h-8 rounded-xl bg-white/20 font-black flex items-center justify-center text-xs text-white uppercase shrink-0">
+              {role === 'admin' ? 'A' : 'S'}
+            </div>
+            {!sidebarCollapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-black uppercase tracking-wider text-white truncate">
+                  {role === 'admin' ? 'ADMIN ACCESS' : 'STAFF ACCESS'}
+                </p>
+                <p className="text-[10px] text-white/70 font-semibold truncate">
+                  {(shopSettings.name || BRAND_EN).toUpperCase()} • TERMINAL
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Desktop Logout Button anchored at bottom */}
         <div className={`hidden lg:block shrink-0 border-t border-white/10 p-2 lg:p-2.5 ${sidebarCollapsed ? 'px-1.5' : 'px-2.5'}`}>
@@ -2183,7 +2220,8 @@ export default function Dashboard() {
                 { id: 'billing', label: 'Billing' },
               ].map(sub => (
                 <button key={sub.id} onClick={() => setAnalyticsTab(sub.id)}
-                  className={`px-4 py-2 rounded-xl text-[13px] font-bold whitespace-nowrap transition-colors cursor-pointer ${analyticsTab === sub.id ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-sm' : 'bg-slate-50 border border-slate-200 text-gray-700 hover:bg-slate-100 hover:text-[#111111]'}`}>
+                  style={analyticsTab === sub.id ? { backgroundColor: themeColor, color: '#FFFFFF' } : undefined}
+                  className={`px-4 py-2 rounded-xl text-[13px] font-bold whitespace-nowrap transition-colors cursor-pointer ${analyticsTab === sub.id ? 'shadow-sm' : 'bg-slate-50 border border-slate-200 text-gray-700 hover:bg-slate-100 hover:text-[#111111]'}`}>
                   {sub.label}
                 </button>
               ))}
@@ -2419,7 +2457,8 @@ export default function Dashboard() {
                 <div className="flex gap-1">
                   {(['all', 'today', 'week', 'month'] as const).map(preset => (
                     <button key={preset} type="button" onClick={() => applyAnalyticsPreset(preset)}
-                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black transition-colors ${analyticsDatePreset === preset ? 'bg-[#7B1E2B] text-white' : 'bg-[#F9FAFB] text-[#374151] hover:bg-[#F3F4F6]/40'}`}>
+                      className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black transition-colors ${analyticsDatePreset === preset ? '' : 'bg-[#F9FAFB] text-[#374151] hover:bg-[#F3F4F6]/40'}`}
+                      style={analyticsDatePreset === preset ? { backgroundColor: themeColor, color: textColor } : undefined}>
                       {preset === 'all' ? l('All','எல்லாம்') : preset === 'today' ? l('Today','இன்று') : preset === 'week' ? l('Week','வாரம்') : l('Month','மாதம்')}
                     </button>
                   ))}
@@ -2534,8 +2573,9 @@ export default function Dashboard() {
                                   type="button"
                                   onClick={() => setWaExpandedId(isExpanded ? null : order.id)}
                                   className={`px-3 py-1.5 rounded-lg text-[11px] font-black transition-colors whitespace-nowrap ${
-                                    isExpanded ? 'bg-[#7B1E2B] text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                  }`}>
+                                    isExpanded ? '' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                  }`}
+                                  style={isExpanded ? { backgroundColor: themeColor, color: textColor } : undefined}>
                                   {isExpanded ? l('Close', 'மூடு') : l('View', 'பார்')}
                                 </button>
                               </td>
@@ -2712,7 +2752,7 @@ export default function Dashboard() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-widest text-[#7B1E2B] mb-1">{BRAND_EN}</p>
+                  <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: themeColor }}>{BRAND_EN}</p>
                   <h2 className="text-[26px] font-black text-[#111111] tracking-tight">
                     {analyticsGstFilter === 'gst' ? 'GST Revenue' : analyticsGstFilter === 'non_gst' ? 'Non-GST Revenue' : 'Store Revenue'}
                   </h2>
@@ -2781,7 +2821,7 @@ export default function Dashboard() {
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-gray-900 font-bold text-xs hover:bg-gray-50 shadow-2xs transition-all cursor-pointer"
                         title="Export current analytics view to CSV"
                       >
-                        <Download size={13} className="text-[#C9A24B]" />
+                        <Download size={13} style={{ color: themeColor }} />
                         <span>CSV</span>
                       </button>
                       <button
@@ -2803,7 +2843,8 @@ export default function Dashboard() {
                             setExportingPdf(false)
                           }
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C9A24B] text-[#222222] font-black text-xs hover:bg-[#B8913E] shadow-2xs transition-all cursor-pointer disabled:opacity-60"
+                        style={{ backgroundColor: themeColor, color: '#FFFFFF', borderColor: themeColor }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-black text-xs shadow-2xs transition-all cursor-pointer disabled:opacity-60 hover:opacity-90"
                         title="Export PDF report"
                       >
                         {exportingPdf ? <RefreshCw size={13} className="animate-spin" /> : <FileText size={13} />}
@@ -3069,7 +3110,7 @@ export default function Dashboard() {
                           <XAxis dataKey="month" tick={{ fill: '#6B7280', fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} interval={0} angle={-45} textAnchor="end" height={60} />
                           <YAxis hide />
                           <Tooltip cursor={{ fill: '#F9FAFB' }} formatter={(value) => formatCurrency(toNumber(value as number | string, 0))} />
-                          <Bar dataKey="revenue" fill="#D4AF37" radius={[4, 4, 0, 0]} barSize={12} />
+                          <Bar dataKey="revenue" fill="#111111" radius={[4, 4, 0, 0]} barSize={12} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -3084,7 +3125,7 @@ export default function Dashboard() {
                             <span className="text-[#111111]">{analytics.completedOrders}</span>
                           </div>
                           <div className="w-full bg-[#F3F4F6] rounded-full h-2.5">
-                            <div className="bg-[#7B1E2B] h-2.5 rounded-full" style={{ width: '100%' }}></div>
+                            <div className="h-2.5 rounded-full" style={{ backgroundColor: themeColor, width: '100%' }}></div>
                           </div>
                         </div>
                         <div>
@@ -3635,7 +3676,7 @@ export default function Dashboard() {
                   <RefreshCw size={14} className={loading || searchLoading ? 'animate-spin text-[#B38018]' : ''} />
                   <span>{l('Refresh', 'புதுப்பி')}</span>
                 </button>
-                <Link to="/pos" className="inline-flex items-center gap-2 rounded-xl bg-[#7B1E2B] px-4 py-2 text-[13px] font-bold text-white shadow-sm hover:bg-[#631722]">
+                <Link to="/pos" className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-[13px] font-bold shadow-sm transition-colors" style={{ backgroundColor: themeColor, color: textColor }}>
                   <ShoppingCart size={14} /> Open POS
                 </Link>
               </div>
@@ -3710,7 +3751,8 @@ export default function Dashboard() {
                     <button
                       type="submit"
                       disabled={searchLoading}
-                      className="h-11 px-3.5 sm:px-4 rounded-xl bg-[#D4AF37] text-white text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 shrink-0 hover:bg-[#b89528] disabled:opacity-50 transition-colors cursor-pointer"
+                      className="h-11 px-3.5 sm:px-4 rounded-xl text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50 transition-colors cursor-pointer"
+                      style={{ backgroundColor: themeColor, color: textColor }}
                     >
                       {searchLoading ? (
                         <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -3813,15 +3855,23 @@ export default function Dashboard() {
                       onClick={() => setShowAdvancedFilters(v => !v)}
                       className={`w-full lg:w-auto h-11 px-2.5 sm:px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-1 sm:gap-1.5 transition-colors cursor-pointer min-w-0 ${
                         showAdvancedFilters || activeHistoryFiltersCount > 0
-                          ? 'bg-[#7B1E2B] text-white border-[#7B1E2B]'
+                          ? ''
                           : 'bg-[#F9FAFB] text-gray-700 border-gray-200 hover:bg-gray-100'
                       }`}
+                      style={
+                        showAdvancedFilters || activeHistoryFiltersCount > 0
+                          ? { backgroundColor: themeColor, color: textColor, borderColor: themeColor }
+                          : undefined
+                      }
                       title="Toggle detailed filters"
                     >
                       <SlidersHorizontal size={12} className="shrink-0" />
                       <span className="truncate">{l('Filters', 'வடிகட்டி')}</span>
                       {activeHistoryFiltersCount > 0 && (
-                        <span className="w-4 h-4 rounded-full bg-[#D4AF37] text-black text-[9px] font-black flex items-center justify-center shrink-0">
+                        <span
+                          className="w-4 h-4 rounded-full text-[9px] font-black flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: 'rgba(255,255,255,0.25)', color: textColor }}
+                        >
                           {activeHistoryFiltersCount}
                         </span>
                       )}
@@ -4105,7 +4155,7 @@ export default function Dashboard() {
                           <button onClick={() => window.open(`/invoice/${o.id}`, '_blank')} className="inline-flex h-10 sm:min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-green-500 px-2 sm:px-3 text-[12px] font-black text-white transition-colors hover:bg-green-600 cursor-pointer" title="Invoice & Share">
                             <MessageCircle size={14} /> Share
                           </button>
-                          <button onClick={() => startEditOrder(o)} className="inline-flex h-10 sm:min-h-[44px] px-3 items-center justify-center gap-1.5 rounded-xl border border-[#D4AF37]/50 bg-[#D4AF37]/10 text-[12px] font-black text-[#856514] transition-colors hover:bg-[#D4AF37]/20 cursor-pointer" title="Edit Order Details">
+                          <button onClick={() => startEditOrder(o)} className="inline-flex h-10 sm:min-h-[44px] px-3 items-center justify-center gap-1.5 rounded-xl border text-[12px] font-black transition-colors cursor-pointer" style={{ backgroundColor: lightBg, color: themeColor, borderColor: subtleBorder }} title="Edit Order Details">
                             <Edit2 size={13} /> Edit
                           </button>
                         </div>
@@ -4191,7 +4241,7 @@ export default function Dashboard() {
                               <button onClick={() => window.open(`/invoice/${o.id}`, '_blank')} className="rounded-lg p-1.5 text-green-600 transition-colors hover:bg-green-50 cursor-pointer" title="Invoice & Share">
                                 <MessageCircle size={14} />
                               </button>
-                              <button onClick={() => startEditOrder(o)} className="rounded-lg p-1 text-[#B38018] transition-colors hover:bg-[#D4AF37]/10 cursor-pointer" title="Edit Order Details">
+                              <button onClick={() => startEditOrder(o)} className="rounded-lg p-1 transition-colors cursor-pointer" style={{ backgroundColor: lightBg, color: themeColor }} title="Edit Order Details">
                                 <Edit2 size={13} />
                               </button>
                             </div>
@@ -4201,9 +4251,10 @@ export default function Dashboard() {
                               onClick={() => setHistoryExpandedId(historyExpandedId === o.id ? null : o.id)}
                               className={`rounded-lg p-1 transition-colors cursor-pointer ${
                                 historyExpandedId === o.id
-                                  ? 'bg-[#7B1E2B] text-white'
+                                  ? ''
                                   : 'text-[#374151] hover:bg-[#F9FAFB]'
                               }`}
+                              style={historyExpandedId === o.id ? { backgroundColor: themeColor, color: textColor } : undefined}
                               title="View Details"
                             >
                               <ChevronDown size={13} className={`transition-transform ${historyExpandedId === o.id ? 'rotate-180' : ''}`} />
@@ -4269,7 +4320,7 @@ export default function Dashboard() {
                                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                                       {/* Financial Breakdown Card */}
                                       <div className="lg:col-span-1 rounded-xl bg-white p-3.5 border border-gray-200 shadow-xs space-y-2">
-                                        <p className="text-[11px] font-black uppercase tracking-wider text-[#7B1E2B] pb-1 border-b border-gray-100">
+                                        <p className="text-[11px] font-black uppercase tracking-wider pb-1 border-b border-gray-100" style={{ color: themeColor }}>
                                           Financial Breakdown
                                         </p>
                                         <div className="space-y-1.5 text-xs">
@@ -4309,7 +4360,7 @@ export default function Dashboard() {
                                           )}
                                           <div className="border-t border-gray-200 pt-2 flex justify-between font-black text-sm text-gray-900">
                                             <span>Total Bill Amount</span>
-                                            <span className="text-[#7B1E2B]">{formatCurrency(orderTotal)}</span>
+                                            <span style={{ color: themeColor }}>{formatCurrency(orderTotal)}</span>
                                           </div>
                                         </div>
                                       </div>
@@ -4399,7 +4450,8 @@ export default function Dashboard() {
                           const baseQty = opt.value === 'weight' ? 100 : opt.value === 'volume' ? 250 : 1
                           setProdForm(f => ({ ...f, unitType: opt.value, unitLabel, baseQuantity: baseQty, predefinedOptionsText: defaults, allowDecimalQuantity: opt.value === 'weight' || opt.value === 'volume' }))
                         }}
-                        className={`p-3 rounded-xl text-left border-2 transition-colors ${prodForm.unitType === opt.value ? 'border-[#C9A24B] bg-[#7B1E2B]/5' : 'border-[#F3F4F6] hover:border-[#E5E7EB]'}`}>
+                        className={`p-3 rounded-xl text-left border-2 transition-colors ${prodForm.unitType === opt.value ? '' : 'border-[#F3F4F6] hover:border-[#E5E7EB]'}`}
+                        style={prodForm.unitType === opt.value ? { borderColor: themeColor, backgroundColor: lightBg } : undefined}>
                         <p className={`text-[13px] font-black ${prodForm.unitType === opt.value ? 'text-[#111111]' : 'text-[#111111]'}`}>{opt.label}</p>
                         <p className="text-[11px] text-[#6B7280] leading-tight mt-1">{opt.hint}</p>
                       </button>
@@ -4575,7 +4627,8 @@ export default function Dashboard() {
 
                 <div className="flex gap-3 pt-3 border-t border-borderLight">
                   <button type="submit" disabled={loading}
-                    className="flex-grow py-3 bg-[#7B1E2B] hover:bg-[#631722] text-white font-black rounded-xl disabled:opacity-60 transition-colors shadow-sm text-[13px]">
+                    className="flex-grow py-3 font-black rounded-xl disabled:opacity-60 transition-colors shadow-sm text-[13px]"
+                    style={{ backgroundColor: themeColor, color: textColor }}>
                     {loading ? l('Saving...','சேமிக்கிறது...') : editingProd ? l('Update Product','புதுப்பி') : l('Add Product','சேர்க்கவும்')}
                   </button>
                   <button type="button" onClick={() => { setEditingProd(null); setProdForm(emptyForm); setProductNotice('') }}
@@ -4791,7 +4844,8 @@ export default function Dashboard() {
 
                     <div className="flex gap-3 pt-2">
                       <button type="submit" disabled={variantLoading}
-                        className="flex-grow py-3 bg-[#7B1E2B] hover:bg-[#631722] text-white font-black text-[13px] rounded-xl disabled:opacity-60 transition-colors shadow-sm">
+                        className="flex-grow py-3 font-black text-[13px] rounded-xl disabled:opacity-60 transition-colors shadow-sm"
+                        style={{ backgroundColor: themeColor, color: textColor }}>
                         {variantLoading ? l('Saving...', 'சேமிக்கிறது...') : editingVariantId ? l('Update Variant', 'புதுப்பி') : l('Add Variant', 'சேர்')}
                       </button>
                       {editingVariantId && (
@@ -4820,7 +4874,8 @@ export default function Dashboard() {
                             className={`flex items-center justify-between gap-3 p-4 rounded-xl border transition-colors bg-white shadow-sm ${editingVariantId === v.id ? 'border-[#D4AF37] ring-1 ring-maroon-dark/20' : 'border-[#F3F4F6] hover:border-[#E5E7EB]'}`}>
                             <div className="flex items-center gap-3 min-w-0">
                               {v.isDefault && (
-                                <span className="w-5 h-5 rounded-full bg-[#7B1E2B] text-white text-[10px] font-black flex items-center justify-center shrink-0">★</span>
+                                <span className="w-5 h-5 rounded-full text-[10px] font-black flex items-center justify-center shrink-0"
+                                  style={{ backgroundColor: themeColor, color: textColor }}>★</span>
                               )}
                               <div className="min-w-0">
                                 <p className="text-[14px] font-bold text-[#111111] break-words">{v.variantName}</p>
@@ -4924,7 +4979,7 @@ export default function Dashboard() {
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <p className="text-[11px] font-bold text-[#111111] uppercase tracking-wider">Total Redemptions</p>
-                    <div className="w-8 h-8 rounded-full bg-[#7B1E2B] text-[#C9A24B] border border-[#C9A24B]/40 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 border" style={{ backgroundColor: themeColor, color: '#FFFFFF', borderColor: themeColor }}>
                       <Percent size={15} />
                     </div>
                   </div>
@@ -4949,7 +5004,7 @@ export default function Dashboard() {
                 <div>
                   <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-gray-100">
                     <div>
-                      <span className="px-2.5 py-0.5 rounded-full bg-[#7B1E2B] text-[#C9A24B] border border-[#C9A24B]/30 text-[10px] font-black uppercase tracking-wider">
+                      <span className="px-2.5 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-wider" style={{ backgroundColor: themeColor, color: '#FFFFFF', borderColor: themeColor }}>
                         {editingCouponId !== null ? 'EDIT MODE' : 'NEW COUPON'}
                       </span>
                       <h3 className="mt-1.5 text-[18px] font-black text-[#111111]">
@@ -4996,9 +5051,10 @@ export default function Dashboard() {
                           <button
                             type="button"
                             onClick={generateCouponCode}
-                            className="inline-flex items-center gap-1.5 shrink-0 rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] px-4 py-2.5 text-xs font-black uppercase tracking-wider hover:bg-[#B8913E] shadow-xs transition-all cursor-pointer hover:scale-[1.02]"
+                            style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+                            className="inline-flex items-center gap-1.5 shrink-0 rounded-xl border px-4 py-2.5 text-xs font-black uppercase tracking-wider shadow-xs transition-all cursor-pointer hover:opacity-90"
                           >
-                            <Sparkles size={13} className="text-[#B38018]" />
+                            <Sparkles size={13} className="text-white/90" />
                             <span>Generate</span>
                           </button>
                         )}
@@ -5018,7 +5074,7 @@ export default function Dashboard() {
                           type="number"
                           min="1"
                           max="100"
-                          className="w-full rounded-xl border border-gray-300 bg-[#FAFAFA] px-3.5 py-2.5 text-[13px] font-bold text-[#111111] outline-none transition-all focus:border-[#7B1E2B] focus:bg-white focus:ring-1 focus:ring-[#111111]"
+                          className="w-full rounded-xl border border-gray-300 bg-[#FAFAFA] px-3.5 py-2.5 text-[13px] font-bold text-[#111111] outline-none transition-all focus:bg-white focus:ring-1 focus:ring-[#111111]"
                           placeholder="10"
                           value={couponForm.percentage}
                           onChange={e => setCouponForm(f => ({ ...f, percentage: e.target.value }))}
@@ -5031,7 +5087,7 @@ export default function Dashboard() {
                         <input
                           type="number"
                           min="0"
-                          className="w-full rounded-xl border border-gray-300 bg-[#FAFAFA] px-3.5 py-2.5 text-[13px] font-bold text-[#111111] outline-none transition-all focus:border-[#7B1E2B] focus:bg-white focus:ring-1 focus:ring-[#111111]"
+                          className="w-full rounded-xl border border-gray-300 bg-[#FAFAFA] px-3.5 py-2.5 text-[13px] font-bold text-[#111111] outline-none transition-all focus:bg-white focus:ring-1 focus:ring-[#111111]"
                           placeholder="0 = no minimum"
                           value={couponForm.min_order_value}
                           onChange={e => setCouponForm(f => ({ ...f, min_order_value: e.target.value }))}
@@ -5047,7 +5103,7 @@ export default function Dashboard() {
                         </label>
                         <input
                           type="date"
-                          className="w-full rounded-xl border border-gray-300 bg-[#FAFAFA] px-3.5 py-2.5 text-[13px] font-bold text-[#111111] outline-none transition-all focus:border-[#7B1E2B] focus:bg-white focus:ring-1 focus:ring-[#111111]"
+                          className="w-full rounded-xl border border-gray-300 bg-[#FAFAFA] px-3.5 py-2.5 text-[13px] font-bold text-[#111111] outline-none transition-all focus:bg-white focus:ring-1 focus:ring-[#111111]"
                           value={couponForm.expiry_date}
                           onChange={e => setCouponForm(f => ({ ...f, expiry_date: e.target.value }))}
                         />
@@ -5059,7 +5115,7 @@ export default function Dashboard() {
                         <input
                           type="number"
                           min="1"
-                          className="w-full rounded-xl border border-gray-300 bg-[#FAFAFA] px-3.5 py-2.5 text-[13px] font-bold text-[#111111] outline-none transition-all focus:border-[#7B1E2B] focus:bg-white focus:ring-1 focus:ring-[#111111]"
+                          className="w-full rounded-xl border border-gray-300 bg-[#FAFAFA] px-3.5 py-2.5 text-[13px] font-bold text-[#111111] outline-none transition-all focus:bg-white focus:ring-1 focus:ring-[#111111]"
                           placeholder="Unlimited"
                           value={couponForm.usage_limit}
                           onChange={e => setCouponForm(f => ({ ...f, usage_limit: e.target.value }))}
@@ -5072,9 +5128,10 @@ export default function Dashboard() {
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="w-full rounded-xl bg-[#C9A24B] border border-[#B8913E] text-[#222222] py-3 text-[13px] font-black uppercase tracking-wider shadow-md hover:bg-[#B8913E] hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer flex items-center justify-center gap-2"
+                    style={{ backgroundColor: themeColor, color: '#FFFFFF', borderColor: themeColor }}
+                    className="w-full rounded-xl border py-3 text-[13px] font-black uppercase tracking-wider shadow-md transition-all cursor-pointer flex items-center justify-center gap-2 hover:opacity-90"
                   >
-                    <Ticket size={15} className="text-[#B38018]" />
+                    <Ticket size={15} className="text-white/90" />
                     <span>{editingCouponId !== null ? l('Update Coupon', 'கூப்பனை புதுப்பி') : l('Create Coupon', 'கூப்பனை உருவாக்கு')}</span>
                   </button>
                 </div>
@@ -5087,7 +5144,7 @@ export default function Dashboard() {
                     <h3 className="text-[18px] font-black text-[#111111]">
                       {l('All Coupons', 'அனைத்து கூப்பன்கள்')}
                     </h3>
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#7B1E2B] text-white text-[11px] font-black">
+                    <span className="px-2.5 py-0.5 rounded-full text-white text-[11px] font-black" style={{ backgroundColor: themeColor }}>
                       {coupons.length}
                     </span>
                   </div>
@@ -5107,8 +5164,8 @@ export default function Dashboard() {
                         key={coupon.id}
                         className={`rounded-xl border p-4 shadow-xs transition-all ${
                           isEditing
-                            ? 'border-[#D4AF37] bg-[#FBFAF6] ring-2 ring-[#D4AF37]/30'
-                            : 'border-gray-200 bg-white hover:border-[#D4AF37]/60 hover:shadow-md'
+                            ? 'border-gray-400 bg-[#FBFAF6] ring-2 ring-gray-200'
+                            : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
                         }`}
                       >
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -5134,7 +5191,7 @@ export default function Dashboard() {
                               )}
                             </div>
 
-                            <p className="text-[13px] font-black text-[#B48811]">
+                            <p className="text-[13px] font-black text-gray-800">
                               {coupon.percentage}% OFF
                               {coupon.min_order_value > 0 && ` • min order ₹${coupon.min_order_value}`}
                             </p>
@@ -5148,9 +5205,10 @@ export default function Dashboard() {
                           <div className="flex shrink-0 items-center gap-2">
                             <button
                               onClick={() => void toggleCoupon(coupon)}
+                              style={coupon.is_active ? { backgroundColor: themeColor, color: '#FFFFFF', borderColor: themeColor } : undefined}
                               className={`rounded-lg px-3 py-1.5 text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
                                 coupon.is_active
-                                  ? 'bg-[#7B1E2B] text-[#C9A24B] border border-[#C9A24B]/40 hover:bg-[#631722]'
+                                  ? 'border shadow-xs hover:opacity-90'
                                   : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
                               }`}
                               title={coupon.is_active ? 'Click to deactivate' : 'Click to activate'}
@@ -5297,6 +5355,11 @@ export default function Dashboard() {
         {tab === 'birthdays' && (
           <BirthdayManagementView />
         )}
+
+        {/* ── SETTINGS TAB ── */}
+        {tab === 'settings' && (
+          <SettingsView />
+        )}
         {/* Footer: sits at the end of the scrolling content, visible only when scrolled to the bottom */}
         <div className="mt-10 border-t border-gray-200 pt-4 pb-1 text-center text-[12px] font-semibold text-[#9CA3AF] tracking-wide print:hidden">
           Powered by Cenexa Systems © 2026
@@ -5336,7 +5399,8 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => void openOrderInvoice(invoicePreviewOrder, 'download')}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl bg-[#7B1E2B] px-3 text-xs font-black text-white hover:bg-[#631722]"
+                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 text-xs font-black shadow-sm transition-colors"
+                    style={{ backgroundColor: themeColor, color: textColor }}
                   >
                     <Download size={15} /> Download
                   </button>
@@ -5494,7 +5558,8 @@ export default function Dashboard() {
                 <button
                   type="submit"
                   disabled={savingOrderEdit}
-                  className="h-10 px-5 rounded-xl bg-[#C9A24B] text-xs font-bold text-[#222222] hover:bg-[#B8913E] shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="h-10 px-5 rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  style={{ backgroundColor: themeColor, color: textColor }}
                 >
                   {savingOrderEdit && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
                   <span>{savingOrderEdit ? l('Saving...', 'சேமிக்கிறது...') : l('Save Changes', 'மாற்றங்களை சேமி')}</span>

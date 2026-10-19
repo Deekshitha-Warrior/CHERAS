@@ -10,8 +10,10 @@ import {
 import { useLangStore } from '../store/langStore'
 import { formatCurrency } from '../lib/retail'
 import { getProductImage, onImgError } from '../lib/productImages'
+import { useTheme } from '../store/themeStore'
 
 export default function ProductCard({ product }: { product: Product }) {
+  const { themeColor, textColor, lightBg, subtleBorder } = useTheme()
   const { items, addItem, removeItem, updateQuantity } = useCartStore()
   const { toggle, isFav } = useFavStore()
   const openProduct = useProductModalStore((s) => s.openProduct)
@@ -169,7 +171,8 @@ export default function ProductCard({ product }: { product: Product }) {
                     transition={{ duration: 0.14 }}
                     type="button"
                     onClick={openModal}
-                    className="flex w-full items-center justify-between rounded-xl bg-[#7B1E2B]/8 px-3 py-2 text-[11px] font-black text-[#111111] ring-1 ring-[#111111]/20 active:bg-[#7B1E2B]/12"
+                    className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-[11px] font-black ring-1 ring-[#111111]/20"
+                    style={{ backgroundColor: lightBg, color: themeColor }}
                   >
                     <span>{l('In Cart', 'கூடையில்')}</span>
                     <ChevronRight size={12} className="text-[#374151]" />
@@ -185,7 +188,8 @@ export default function ProductCard({ product }: { product: Product }) {
                     whileTap={{ scale: 0.97 }}
                     type="button"
                     onClick={handleAdd}
-                    className="flex w-full items-center justify-center gap-1 rounded-xl border-2 border-[#7B1E2B] px-3 py-2 text-[12px] font-black text-[#111111] transition-colors active:bg-[#7B1E2B] active:text-white"
+                    className="flex w-full items-center justify-center gap-1 rounded-xl border-2 px-3 py-2 text-[12px] font-black transition-colors"
+                    style={{ borderColor: themeColor, color: themeColor }}
                   >
                     {l('ADD', 'சேர்')}
                     <ChevronRight size={11} />
@@ -199,24 +203,27 @@ export default function ProductCard({ product }: { product: Product }) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 4 }}
                   transition={{ duration: 0.14 }}
-                  className="flex items-center justify-between rounded-xl bg-[#7B1E2B] px-1.5 py-1"
+                  className="flex items-center justify-between rounded-xl px-1.5 py-1"
+                  style={{ backgroundColor: themeColor, color: textColor }}
                 >
                   <button
                     type="button"
                     onClick={handleDecrement}
                     aria-label="Decrease quantity"
-                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 text-white active:bg-white/25"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 active:bg-white/25"
+                    style={{ color: textColor }}
                   >
                     <Minus size={12} strokeWidth={3} />
                   </button>
-                  <span className="min-w-[1.5rem] text-center text-[13px] font-black text-white tabular-nums">
+                  <span className="min-w-[1.5rem] text-center text-[13px] font-black tabular-nums" style={{ color: textColor }}>
                     {packQty}
                   </span>
                   <button
                     type="button"
                     onClick={handleIncrement}
                     aria-label="Increase quantity"
-                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 text-white active:bg-white/25"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/15 active:bg-white/25"
+                    style={{ color: textColor }}
                   >
                     <Plus size={12} strokeWidth={3} />
                   </button>
@@ -232,7 +239,8 @@ export default function ProductCard({ product }: { product: Product }) {
                   whileTap={{ scale: 0.97 }}
                   type="button"
                   onClick={handleAdd}
-                  className="flex w-full items-center justify-center rounded-xl border-2 border-[#7B1E2B] px-3 py-2 text-[12px] font-black text-[#111111] transition-colors active:bg-[#7B1E2B] active:text-white"
+                  className="flex w-full items-center justify-center rounded-xl border-2 px-3 py-2 text-[12px] font-black transition-colors"
+                  style={{ borderColor: themeColor, color: themeColor }}
                 >
                   {l('ADD', 'சேர்')}
                 </motion.button>

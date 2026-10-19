@@ -16,6 +16,7 @@ import {
 } from '../services/advanceOrderService'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { lookupCustomerByPhone, saveCustomerBirthday, getLocalBirthdaysMap } from '../services/birthdayService'
+import { useTheme } from '../store/themeStore'
 
 // Custom Malaysian Ringgit icon
 const RMIcon = ({ size = 20, className = '' }: { size?: number; className?: string }) => (
@@ -47,6 +48,7 @@ const inputClass = 'w-full rounded-xl border border-[#F3F4F6] bg-white px-3.5 py
 
 export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps = {}) {
   const role = useAdminAuthStore(state => state.role)
+  const { themeColor, textColor, hoverColor, lightBg, subtleBorder } = useTheme()
   const products = useProductStore(state => state.products)
   const [orders, setOrders] = useState<AdvanceOrder[]>([])
   const [loading, setLoading] = useState(true)
@@ -149,6 +151,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
       setError(err instanceof Error ? err.message : 'Failed to update advance order')
     } finally {
       setSavingEdit(false)
+      document.body.style.overflow = ''
     }
   }
 
@@ -533,7 +536,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
   return <div className="space-y-5">
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <p className="text-xs font-black uppercase tracking-[.18em] text-[#B38018]">Separate from sales</p>
+        <p className="text-xs font-black uppercase tracking-[.18em]" style={{ color: themeColor }}>Separate from sales</p>
         <h2 className="text-2xl font-black text-[#111111]">Advance Orders</h2>
         <p className="mt-1 text-sm text-gray-500">Deposits never count as revenue. Full order value is recognized only after final payment.</p>
       </div>
@@ -545,7 +548,8 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
             setDepositSplit(emptySplitInput())
             setCreateOpen(true)
           }}
-          className="flex items-center gap-1.5 rounded-xl bg-[#C9A24B] hover:bg-[#B8913E] text-[#222222] border border-[#B8913E] px-4 py-2.5 text-xs font-black shadow-md cursor-pointer transition active:scale-95"
+          style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+          className="flex items-center gap-1.5 rounded-xl border px-4 py-2.5 text-xs font-black shadow-md cursor-pointer transition active:scale-95 hover:opacity-90"
         >
           + New Advance Order
         </button>
@@ -557,7 +561,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
           title="Refresh Advance Orders"
           aria-label="Refresh Advance Orders"
         >
-          <RefreshCw size={16} className={`shrink-0 ${loading ? 'animate-spin text-[#B38018]' : 'text-gray-600'}`} />
+          <RefreshCw size={16} className={`shrink-0 ${loading ? 'animate-spin' : 'text-gray-600'}`} style={loading ? { color: themeColor } : undefined} />
           <span className="hidden sm:inline">Refresh</span>
         </button>
       </div>
@@ -573,7 +577,16 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
         </label>
         <div className="flex flex-wrap gap-2">
           {(['all','pending','ready','completed','cancelled'] as StatusFilter[]).map(value => (
-            <button key={value} onClick={() => setStatusFilter(value)} className={`rounded-lg px-3 py-2 text-xs font-black capitalize transition-all cursor-pointer ${statusFilter === value ? 'bg-[#7B1E2B] text-[#C9A24B] shadow-xs' : 'bg-slate-100 text-gray-600 hover:bg-slate-200'}`}>
+            <button
+              key={value}
+              onClick={() => setStatusFilter(value)}
+              style={statusFilter === value ? { backgroundColor: themeColor, color: textColor } : undefined}
+              className={`rounded-lg px-3 py-2 text-xs font-black capitalize transition-all cursor-pointer ${
+                statusFilter === value
+                  ? 'shadow-xs'
+                  : 'bg-slate-100 text-gray-600 hover:bg-slate-200'
+              }`}
+            >
               {value}
             </button>
           ))}
@@ -677,7 +690,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
                   <td className="px-4 py-3.5 align-middle whitespace-nowrap">
                     <select
                       value={order.status}
-                      disabled={order.status === 'completed' || order.status === 'cancelled' || !!order.invoice_number || !!order.completed_order_id}
+                      disabled={order.status === 'completed' || order.status === 'cancelled'}
                       onChange={e => void changeStatus(order, e.target.value as AdvanceStatus)}
                       className={`rounded-xl border px-2.5 py-1.5 text-xs font-black outline-none shadow-xs transition-colors cursor-pointer disabled:opacity-80 disabled:cursor-not-allowed ${STATUS_STYLES[order.status]}`}
                     >
@@ -690,10 +703,8 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
                   </td>
                   <td className="px-4 py-3.5 align-middle whitespace-nowrap">
                     <div className="flex items-center gap-1.5">
-                      {/* Receive Balance Button (strictly when no invoice exists, not completed, not cancelled, and pending/ready) */}
-                      {!order.invoice_number &&
-                        !order.completed_order_id &&
-                        order.status !== 'completed' &&
+                      {/* Receive Balance Button (strictly when not completed, not cancelled, and pending/ready) */}
+                      {order.status !== 'completed' &&
                         order.status !== 'cancelled' &&
                         ['pending_deposit', 'waiting_final_payment', 'ready_for_delivery'].includes(order.status) && (
                         <button
@@ -707,11 +718,12 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
                       )}
 
                       {/* Edit Advance Order Icon (when not completed or cancelled) */}
-                      {order.status !== 'completed' && order.status !== 'cancelled' && !order.invoice_number && !order.completed_order_id && (
+                      {order.status !== 'completed' && order.status !== 'cancelled' && (
                         <button
                           type="button"
                           onClick={() => startEditAdvance(order)}
-                          className="w-8 h-8 rounded-lg bg-[#7B1E2B]/10 hover:bg-[#7B1E2B]/20 text-[#7B1E2B] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                          style={{ backgroundColor: lightBg, color: themeColor }}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer shrink-0 hover:opacity-80"
                           title="Edit Advance Order"
                         >
                           <Edit2 size={15}/>
@@ -809,7 +821,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
           </div>
           <div className="mt-6 flex justify-end gap-3">
             <button type="button" onClick={()=>setCreateOpen(false)} className="rounded-xl border border-gray-200 px-5 py-2.5 font-bold cursor-pointer hover:bg-gray-50 transition text-gray-700">Cancel</button>
-            <button disabled={saving} className="rounded-xl bg-[#C9A24B] hover:bg-[#B8913E] px-5 py-2.5 font-black text-[#222222] border border-[#B8913E] shadow-md disabled:opacity-50 cursor-pointer transition">{saving?'Creating...':'Create & Save Advance Receipt'}</button>
+            <button disabled={saving} style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }} className="rounded-xl px-5 py-2.5 font-black border shadow-md disabled:opacity-50 cursor-pointer transition hover:opacity-90">{saving?'Creating...':'Create & Save Advance Receipt'}</button>
           </div>
         </form>
       </div>,
@@ -866,19 +878,19 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
         {/* Drawer Panel covering full view height */}
         <div className="relative z-10 h-full w-full max-w-xl bg-white shadow-2xl flex flex-col border-l border-[#F3F4F6] animate-in slide-in-from-right duration-200">
           {/* Sticky Drawer Header */}
-          <div className="shrink-0 px-6 py-4 border-b border-[#C9A24B]/30 bg-[#7B1E2B] text-white flex items-center justify-between">
+          <div className="shrink-0 px-6 py-4 border-b border-white/20 text-white flex items-center justify-between" style={{ backgroundColor: themeColor, color: textColor }}>
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#631722] border border-[#C9A24B]/50 flex items-center justify-center text-[#C9A24B] shrink-0">
+              <div className="w-9 h-9 rounded-xl border border-white/30 flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: textColor }}>
                 <FileText size={18} />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-black text-[#C9A24B] tracking-wider font-mono">{selected.deposit_id}</span>
+                  <span className="text-xs font-black tracking-wider font-mono opacity-90" style={{ color: textColor }}>{selected.deposit_id}</span>
                   <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border ${STATUS_STYLES[selected.status]}`}>
                     {STATUS_LABELS[selected.status]}
                   </span>
                 </div>
-                <h3 className="text-base font-black text-white tracking-wide">Order Details</h3>
+                <h3 className="text-base font-black tracking-wide" style={{ color: textColor }}>Order Details</h3>
               </div>
             </div>
             <button
@@ -1108,7 +1120,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
           {/* Sticky Drawer Footer */}
           <div className="shrink-0 px-6 py-4 border-t border-gray-200 bg-slate-50 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              {selected.status !== 'completed' && selected.status !== 'cancelled' && !selected.invoice_number && !selected.completed_order_id && (
+              {selected.status !== 'completed' && selected.status !== 'cancelled' && (
                 <button
                   type="button"
                   onClick={() => {
@@ -1224,7 +1236,11 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
 
           <div className="mt-6 flex justify-end gap-3">
             <button type="button" onClick={() => setEditingOrder(null)} className="rounded-xl border border-gray-200 px-5 py-2.5 font-bold cursor-pointer hover:bg-gray-50 transition text-gray-700">Cancel</button>
-            <button disabled={savingEdit} className="rounded-xl bg-[#C9A24B] hover:bg-[#B8913E] px-5 py-2.5 font-black text-[#222222] border border-[#B8913E] shadow-md disabled:opacity-50 cursor-pointer transition">
+            <button
+              disabled={savingEdit}
+              style={{ backgroundColor: themeColor, color: textColor, borderColor: themeColor }}
+              className="rounded-xl border px-5 py-2.5 font-black shadow-md disabled:opacity-50 cursor-pointer transition hover:opacity-90"
+            >
               {savingEdit ? 'Updating Order...' : 'Save & Update Values'}
             </button>
           </div>
@@ -1243,7 +1259,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
           
           <h3 className="text-xl font-black text-[#111111]">Payment Received & Completed!</h3>
           <p className="mt-1 text-xs text-[#6B7280]">
-            Invoice <span className="font-mono font-bold text-[#7B1E2B]">#{formatInvoiceNo(completionModalOrder.invoice_number || completionModalOrder.deposit_id)}</span> generated successfully.
+            Invoice <span className="font-mono font-bold" style={{ color: themeColor }}>#{formatInvoiceNo(completionModalOrder.invoice_number || completionModalOrder.deposit_id)}</span> generated successfully.
           </p>
 
           <div className="mt-4 rounded-2xl bg-gray-50 border border-gray-100 p-4 text-left space-y-2 text-xs">

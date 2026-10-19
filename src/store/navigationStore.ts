@@ -15,6 +15,7 @@ export type DashboardTab =
   | 'users'
   | 'overview'
   | 'birthdays'
+  | 'settings'
 
 interface NavigationState {
   currentTab: DashboardTab

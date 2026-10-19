@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { X, PlusCircle, AlertCircle } from 'lucide-react'
 import { useLangStore } from '../../store/langStore'
+import { useTheme } from '../../store/themeStore'
 
 interface Props {
   isOpen: boolean
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export const AddUnregisteredItemModal: React.FC<Props> = ({ isOpen, onClose, onSubmit }) => {
+  const { themeColor, textColor } = useTheme()
   const { lang } = useLangStore()
   const l = (en: string, ta: string) => (lang === 'ta' ? ta : en)
 
@@ -195,16 +197,17 @@ export const AddUnregisteredItemModal: React.FC<Props> = ({ isOpen, onClose, onS
             <button
               type="submit"
               disabled={isSubmitting}
-              className="h-8 px-3.5 text-[11px] font-bold rounded-lg bg-[#C9A24B] text-[#222222] border border-[#B8913E] hover:bg-[#B8913E] transition-all shadow-xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer font-black"
+              className="h-8 px-3.5 text-[11px] font-bold rounded-lg transition-all shadow-xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer font-black"
+              style={{ backgroundColor: themeColor, color: textColor }}
             >
               {isSubmitting ? (
                 <>
-                  <span className="w-3 h-3 border-2 border-[#222222]/30 border-t-[#222222] rounded-full animate-spin inline-block" />
+                  <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
                   <span>{l('Adding...', 'சேர்க்கிறது...')}</span>
                 </>
               ) : (
                 <>
-                  <PlusCircle className="w-3.5 h-3.5 text-[#B38018]" />
+                  <PlusCircle className="w-3.5 h-3.5" />
                   <span>{l('Add to Bill', 'பில்லில் சேர்')}</span>
                 </>
               )}

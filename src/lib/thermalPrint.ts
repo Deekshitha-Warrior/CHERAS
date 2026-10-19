@@ -1,4 +1,5 @@
 import { BRAND_ADDRESS, BRAND_EMAIL, BRAND_EN, BRAND_PRIMARY_PHONE_DISPLAY, BRAND_GSTIN } from './brand'
+import { LOGO_BASE64 } from './logoBase64'
 import { formatCurrency, formatInvoiceNo } from './retail'
 import { printHtmlDocument } from './printHtml'
 
@@ -116,8 +117,10 @@ export function printThermalReceipt(data: ThermalReceiptData) {
       <body>
         <div class="receipt-container" style="width: 76mm; max-width: 76mm; margin: 0; margin-left: 0; margin-right: auto; text-align: left;">
         <div class="text-center mb-2">
-          <div style="font-size: 28px; line-height: 1; margin: 0 auto 4px auto; letter-spacing: 1px;">${(data.storeName || BRAND_EN).charAt(0).toUpperCase()}</div>
-          <div style="font-size: 15px; letter-spacing: 1px;">${(data.storeName || BRAND_EN).toUpperCase()}</div>
+          <div style="display: flex; justify-content: center; align-items: center; margin: 0 auto 6px auto; text-align: center;">
+            <img src="${LOGO_BASE64}" alt="RASI TEX" style="width: 120px; max-height: 60px; object-fit: contain; margin: 0 auto; display: block;" />
+          </div>
+          <div style="font-size: 15px; letter-spacing: 1px; font-weight: 800; margin-bottom: 2px;">${(data.storeName || BRAND_EN).toUpperCase()}</div>
           <div style="font-size: 9.5px; margin-top: 2px; line-height: 1.3;">${data.storeAddress || BRAND_ADDRESS}</div>
           <div class="mt-1" style="font-size: 10px;">GSTIN: ${data.storeGstin || BRAND_GSTIN}</div>
           <div style="font-size: 10px;">Ph: ${BRAND_PRIMARY_PHONE_DISPLAY}</div>

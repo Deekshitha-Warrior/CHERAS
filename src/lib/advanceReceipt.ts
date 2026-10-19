@@ -312,12 +312,10 @@ export function printAdvanceReceipt(order: AdvanceOrder) {
 </head>
 <body>
   <div class="receipt-container" style="width: 76mm; max-width: 76mm; margin: 0; margin-left: 0; margin-right: auto; text-align: left;">
-  <!-- Header / Circular Badge -->
+  <!-- Header / Logo -->
   <div class="text-center" style="margin-bottom: 4px;">
-    <div style="display: flex; justify-content: center; margin-bottom: 6px;">
-      <div style="width: 44px; height: 44px; border-radius: 50%; border: 3px solid #000; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 900; line-height: 1; font-family: inherit;">
-        ${esc(BRAND_EN).charAt(0).toUpperCase()}
-      </div>
+    <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 6px;">
+      <img src="${LOGO_BASE64}" alt="${esc(BRAND_EN)}" style="height: 48px; max-width: 140px; object-fit: contain; margin: 0 auto; display: block;" />
     </div>
     <div style="font-size: 17px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">${esc(BRAND_EN)}</div>
     <div style="font-size: 10px; margin-top: 3px; color: #222; line-height: 1.35; padding: 0 4px;">${esc(BRAND_ADDRESS)}</div>

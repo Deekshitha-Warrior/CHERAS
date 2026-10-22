@@ -5,7 +5,7 @@ import fs from 'fs';
 /**
  * Safe Utility Script: generate-app-icons.mjs
  *
- * Generates every raster asset from the master RASI TEX logo file public/rasi-logo.png (or .jpeg):
+ * Generates every raster asset from the master Cheras Clothing logo file public/cheras-logo.png:
  *  - PWA icons (standard + Android maskable with safe-zone padding)
  *  - iOS Apple Touch icon
  *  - Favicons
@@ -16,61 +16,111 @@ import fs from 'fs';
 
 const ROOT_DIR = process.cwd();
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
-const CANDIDATES = ['png', 'svg', 'jpg', 'jpeg', 'webp'].map((ext) =>
-  path.join(PUBLIC_DIR, `rasi-logo.${ext}`)
-);
+
+const CANDIDATES = [
+  'cheras-logo.png',
+  'cheras-clothing-logo.png',
+  'cheras-logo.jpeg',
+  'logo.png',
+  'rasi-logo.png',
+].map((file) => path.join(PUBLIC_DIR, file));
+
 const SRC_ICON = CANDIDATES.find((p) => fs.existsSync(p));
-const BG = { r: 255, g: 255, b: 255, alpha: 1 };
+
+const PRINT_CANDIDATES = [
+  'cheras-clothing-logo.png',
+  'cheras-logo.png',
+  'logo.png',
+].map((file) => path.join(PUBLIC_DIR, file));
+
+const PRINT_SRC_ICON = PRINT_CANDIDATES.find((p) => fs.existsSync(p)) || SRC_ICON;
+
+// Cheras logo has a rich dark backdrop
+const BG = { r: 0, g: 0, b: 0, alpha: 1 };
 
 async function main() {
   if (!SRC_ICON) {
     console.error(`Source logo not found. Expected one of:\n${CANDIDATES.join('\n')}`);
     process.exit(1);
   }
-  console.log(`Using master logo: ${SRC_ICON}`);
+  console.log(`Using master icon: ${SRC_ICON}`);
+  console.log(`Using print logo: ${PRINT_SRC_ICON}`);
 
   // Square icon with the logo contained inside `logoSize` and centred on the canvas.
-  async function generateSquareIcon(canvasSize, logoSize, outputPath, background) {
+  async function generateSquareIcon(canvasSize, logoSize, outputPaths, background) {
+    const targets = Array.isArray(outputPaths) ? outputPaths : [outputPaths];
     const logo = await sharp(SRC_ICON, { density: 384 })
       .resize(logoSize, logoSize, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png()
       .toBuffer();
     const offset = Math.round((canvasSize - logoSize) / 2);
-    await sharp({ create: { width: canvasSize, height: canvasSize, channels: 4, background: background || { r: 0, g: 0, b: 0, alpha: 0 } } })
+    const rendered = await sharp({ create: { width: canvasSize, height: canvasSize, channels: 4, background: background || { r: 0, g: 0, b: 0, alpha: 0 } } })
       .composite([{ input: logo, left: offset, top: offset }])
       .png({ compressionLevel: 9 })
-      .toFile(outputPath);
-    console.log(`-> Generated ${path.basename(outputPath)} (${canvasSize}x${canvasSize})`);
+      .toBuffer();
+
+    for (const outPath of targets) {
+      fs.writeFileSync(outPath, rendered);
+      console.log(`-> Generated ${path.basename(outPath)} (${canvasSize}x${canvasSize})`);
+    }
   }
 
   // 1. Android Adaptive / PWA Maskable Icons (logo inside the ~70% safe zone on a solid background)
-  await generateSquareIcon(512, 360, path.join(PUBLIC_DIR, 'rasi-icon-maskable-512.png'), BG);
-  await generateSquareIcon(192, 135, path.join(PUBLIC_DIR, 'rasi-icon-maskable-192.png'), BG);
+  await generateSquareIcon(512, 360, [
+    path.join(PUBLIC_DIR, 'cheras-icon-maskable-512.png'),
+    path.join(PUBLIC_DIR, 'rasi-icon-maskable-512.png'),
+  ], BG);
+
+  await generateSquareIcon(192, 135, [
+    path.join(PUBLIC_DIR, 'cheras-icon-maskable-192.png'),
+    path.join(PUBLIC_DIR, 'rasi-icon-maskable-192.png'),
+  ], BG);
 
   // 2. Standard "any" icons
-  await generateSquareIcon(512, 512, path.join(PUBLIC_DIR, 'rasi-icon-512.png'));
-  await generateSquareIcon(192, 192, path.join(PUBLIC_DIR, 'rasi-icon-192.png'));
-  await generateSquareIcon(512, 512, path.join(PUBLIC_DIR, 'rasi-icon.png'));
+  await generateSquareIcon(512, 512, [
+    path.join(PUBLIC_DIR, 'cheras-icon-512.png'),
+    path.join(PUBLIC_DIR, 'rasi-icon-512.png'),
+  ]);
+
+  await generateSquareIcon(192, 192, [
+    path.join(PUBLIC_DIR, 'cheras-icon-192.png'),
+    path.join(PUBLIC_DIR, 'rasi-icon-192.png'),
+  ]);
+
+  await generateSquareIcon(512, 512, [
+    path.join(PUBLIC_DIR, 'cheras-icon.png'),
+    path.join(PUBLIC_DIR, 'cheras-icon-white.png'),
+    path.join(PUBLIC_DIR, 'cheras-logo-white.png'),
+    path.join(PUBLIC_DIR, 'rasi-icon.png'),
+    path.join(PUBLIC_DIR, 'rasi-icon-white.png'),
+    path.join(PUBLIC_DIR, 'rasi-logo.png'),
+    path.join(PUBLIC_DIR, 'rasi-logo-white.png'),
+  ]);
 
   // 3. Apple Touch Icon for iOS (opaque)
-  await generateSquareIcon(180, 150, path.join(PUBLIC_DIR, 'apple-touch-icon.png'), BG);
+  await generateSquareIcon(180, 150, [
+    path.join(PUBLIC_DIR, 'apple-touch-icon.png'),
+  ], BG);
 
   // 4. Favicons
-  await generateSquareIcon(64, 64, path.join(PUBLIC_DIR, 'rasi-favicon.png'));
-  await generateSquareIcon(64, 64, path.join(PUBLIC_DIR, 'favicon.png'));
+  await generateSquareIcon(64, 64, [
+    path.join(PUBLIC_DIR, 'cheras-favicon.png'),
+    path.join(PUBLIC_DIR, 'rasi-favicon.png'),
+    path.join(PUBLIC_DIR, 'favicon.png'),
+  ]);
 
   // 5. PNG data URI used by jsPDF / thermal / print templates
-  const logoPng = await sharp(SRC_ICON, { density: 384 })
-    .resize(256, 256, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+  const printLogo = await sharp(PRINT_SRC_ICON, { density: 384 })
+    .resize(256, 256, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
     .png({ compressionLevel: 9 })
     .toBuffer();
   fs.writeFileSync(
     path.join(ROOT_DIR, 'src', 'lib', 'logoBase64.ts'),
-    `export const LOGO_BASE64 = 'data:image/png;base64,${logoPng.toString('base64')}'\n`,
+    `export const LOGO_BASE64 = 'data:image/png;base64,${printLogo.toString('base64')}'\n`,
   );
   console.log('-> Generated src/lib/logoBase64.ts');
 
-  console.log('\nAll RASI TEX PWA icons and print logo generated successfully.');
+  console.log('\nAll Cheras Clothing PWA icons and print logo generated successfully.');
 }
 
 main().catch((err) => {

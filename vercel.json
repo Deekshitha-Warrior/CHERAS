@@ -4,7 +4,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/((?!assets/|favicon|robots|rasi|manifest|sw|workbox|.*\\.[a-zA-Z0-9]+$).*)",
+      "source": "/((?!assets/|favicon|robots|rasi|cheras|manifest|sw|workbox|.*\\.[a-zA-Z0-9]+$).*)",
       "destination": "/index.html"
     }
   ],

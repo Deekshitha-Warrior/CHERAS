@@ -70,9 +70,9 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
   IF p_entity_type = 'variant' THEN
-    RETURN 'ULV' || LPAD(nextval('public.barcode_variant_seq')::TEXT, 8, '0');
+    RETURN 'CCV' || LPAD(nextval('public.barcode_variant_seq')::TEXT, 8, '0');
   ELSE
-    RETURN 'ULP' || LPAD(nextval('public.barcode_product_seq')::TEXT, 8, '0');
+    RETURN 'CCP' || LPAD(nextval('public.barcode_product_seq')::TEXT, 8, '0');
   END IF;
 END;
 $$;

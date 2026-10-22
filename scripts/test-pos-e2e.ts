@@ -349,7 +349,7 @@ interface WebAppManifest {
   icons: ManifestIcon[]
 }
 
-test('PWA-CONFIG-01', 'Web App Manifest defines valid RASI TEX branding, icons, and standalone mode', () => {
+test('PWA-CONFIG-01', 'Web App Manifest defines valid Cheras Clothing branding, icons, and standalone mode', () => {
   const manifestPath = path.resolve(process.cwd(), 'public/manifest.webmanifest')
   assert(fs.existsSync(manifestPath), `manifest.webmanifest must exist at ${manifestPath}`)
 
@@ -357,10 +357,10 @@ test('PWA-CONFIG-01', 'Web App Manifest defines valid RASI TEX branding, icons, 
   const manifest = JSON.parse(content) as WebAppManifest
 
   assert(
-    manifest.name.includes('RASI TEX'),
-    `Expected name to contain 'RASI TEX', got: ${manifest.name}`
+    manifest.name.includes('Cheras Clothing'),
+    `Expected name to contain 'Cheras Clothing', got: ${manifest.name}`
   )
-  assert(manifest.short_name === 'RASI TEX', `Expected short_name 'RASI TEX', got: ${manifest.short_name}`)
+  assert(manifest.short_name === 'Cheras Clothing', `Expected short_name 'Cheras Clothing', got: ${manifest.short_name}`)
   assert(manifest.display === 'standalone', `Expected display 'standalone', got: ${manifest.display}`)
   assert(manifest.theme_color === '#7B1E2B', `Expected theme_color '#7B1E2B', got: ${manifest.theme_color}`)
   assert(manifest.background_color === '#FFFFFF', `Expected background_color '#FFFFFF', got: ${manifest.background_color}`)
@@ -386,7 +386,7 @@ test('PWA-CONFIG-02', 'All manifest referenced icons exist on filesystem', () =>
 
 async function run() {
   console.log('=================================================================')
-  console.log('  RASI TEX POS — Phase 4 & 5 Automated Test Suite')
+  console.log('  Cheras Clothing POS — Phase 4 & 5 Automated Test Suite')
   console.log('=================================================================\n')
 
   for (const { id, name, fn } of tests) {

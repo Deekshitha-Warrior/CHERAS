@@ -123,7 +123,7 @@ export const SettingsView: React.FC = () => {
     setCustomHex(DEFAULT_THEME_COLOR)
     setThemeColor(DEFAULT_THEME_COLOR)
     await saveThemeColorToDB(DEFAULT_THEME_COLOR)
-    showNotice('success', 'Restored default RASI TEX Maroon theme (#7B1E2B).')
+    showNotice('success', 'Restored default Cheras Clothing Maroon theme (#7B1E2B).')
   }
 
   // Handle saving full shop profile
@@ -315,7 +315,7 @@ export const SettingsView: React.FC = () => {
                   type="button"
                   onClick={handleResetColor}
                   className="h-11 px-3.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold transition-all cursor-pointer shadow-xs flex items-center gap-1.5 shrink-0"
-                  title="Reset to default RASI TEX Maroon (#7B1E2B)"
+                  title="Reset to default Cheras Clothing Maroon (#7B1E2B)"
                 >
                   <RotateCcw size={13} />
                   <span>Reset</span>
@@ -426,7 +426,7 @@ export const SettingsView: React.FC = () => {
                     required
                     value={formData.owner_name}
                     onChange={(e) => setFormData({ ...formData, owner_name: e.target.value })}
-                    placeholder="e.g. Rafeekmohamed"
+                    placeholder="e.g. Cheras Clothing"
                     className="w-full h-11 pl-10 pr-3.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-[#111111] focus:outline-none focus:border-black transition-all"
                   />
                 </div>
@@ -444,7 +444,7 @@ export const SettingsView: React.FC = () => {
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. RASI TEX"
+                    placeholder="e.g. Cheras Clothing"
                     className="w-full h-11 pl-10 pr-3.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-[#111111] focus:outline-none focus:border-black transition-all"
                   />
                 </div>
@@ -459,7 +459,7 @@ export const SettingsView: React.FC = () => {
                   type="text"
                   value={formData.tagline}
                   onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
-                  placeholder="e.g. Exclusive Sarees & Readymade"
+                  placeholder="e.g. Exclusive Mens, Womens & Kids Wear"
                   className="w-full h-11 px-3.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-[#111111] focus:outline-none focus:border-black transition-all"
                 />
               </div>
@@ -476,7 +476,7 @@ export const SettingsView: React.FC = () => {
                     required
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="e.g. +91 9080501232"
+                    placeholder="e.g. +91 9715083947"
                     className="w-full h-11 pl-10 pr-3.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-[#111111] focus:outline-none focus:border-black transition-all"
                   />
                 </div>
@@ -493,7 +493,7 @@ export const SettingsView: React.FC = () => {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="e.g. rasitexofficial@gmail.com"
+                    placeholder="e.g. cherasclothing777@gmail.com"
                     className="w-full h-11 pl-10 pr-3.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-[#111111] focus:outline-none focus:border-black transition-all"
                   />
                 </div>
@@ -511,7 +511,7 @@ export const SettingsView: React.FC = () => {
                     required
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="e.g. 35, Kalaignar Nootrandu Vanika Valagam, Thanjai Salai, Thiruvarur - 610001"
+                    placeholder="e.g. 74, cheras clothing,avinashi road, opposite to gov medical college,Coimbatore 641014."
                     className="w-full pl-10 pr-3.5 py-2.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-[#111111] focus:outline-none focus:border-black transition-all resize-none"
                   />
                 </div>
@@ -526,7 +526,7 @@ export const SettingsView: React.FC = () => {
                   type="text"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  placeholder="e.g. Thiruvarur, Tamil Nadu"
+                  placeholder="e.g. Coimbatore, Tamil Nadu"
                   className="w-full h-11 px-3.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-[#111111] focus:outline-none focus:border-black transition-all"
                 />
               </div>
@@ -559,7 +559,7 @@ export const SettingsView: React.FC = () => {
                     type="url"
                     value={formData.instagram_url}
                     onChange={(e) => setFormData({ ...formData, instagram_url: e.target.value })}
-                    placeholder="e.g. https://www.instagram.com/rasitex_official/"
+                    placeholder="e.g. https://instagram.com/cherasclothing_official?obrf=eG52MzN2d3loemli"
                     className="w-full h-11 pl-10 pr-3.5 bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-[#111111] focus:outline-none focus:border-black transition-all"
                   />
                 </div>

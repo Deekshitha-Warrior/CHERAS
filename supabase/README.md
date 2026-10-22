@@ -1,4 +1,4 @@
-# RASI TEX Supabase Setup
+# Cheras Clothing Supabase Setup
 
 Apply the migrations in filename order to your dedicated Supabase project.
 

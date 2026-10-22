@@ -178,7 +178,7 @@ interface MetaEnvHolder {
  * Creates an integrity token for session validation to guard against role tampering.
  */
 export function createSessionIntegrityToken(adminId: string, role: string, timestamp: number): string {
-  const seed = `${adminId}:${role}:${timestamp}:rasi-tex-secure-portal`
+  const seed = `${adminId}:${role}:${timestamp}:cheras-clothing-secure-portal`
   let hash = 0
   for (let i = 0; i < seed.length; i++) {
     const char = seed.charCodeAt(i)

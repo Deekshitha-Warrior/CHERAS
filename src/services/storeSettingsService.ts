@@ -1,7 +1,7 @@
 /**
  * storeSettingsService.ts
  * Manages shop profile, brand customization, theme colors, and real-time database synchronization.
- * Designed for RASI TEX POS & Administration.
+ * Designed for Cheras Clothing POS & Administration.
  */
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
@@ -35,28 +35,28 @@ export interface ShopSettings {
   updated_at?: string
 }
 
-export const DEFAULT_THEME_COLOR = '#7B1E2B' // RASI Tex Classic Maroon
+export const DEFAULT_THEME_COLOR = '#7B1E2B' // Classic Maroon
 
 export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   id: 1,
-  name: BRAND_EN || 'RASI TEX',
-  owner_name: BRAND_OWNER_NAME || 'Rafeekmohamed',
-  tagline: 'Exclusive Sarees & Readymade',
-  phone: BRAND_PHONE_DISPLAY || '+91 9080501232',
-  email: BRAND_EMAIL || 'rasitexofficial@gmail.com',
-  address: BRAND_ADDRESS || '35, Kalaignar Nootrandu Vanika Valagam, Thanjai Salai, Thiruvarur - 610001',
-  city: 'Thiruvarur, Tamil Nadu',
+  name: BRAND_EN || 'Cheras Clothing',
+  owner_name: BRAND_OWNER_NAME || '',
+  tagline: 'Exclusive Mens, Womens & Kids Wear',
+  phone: BRAND_PHONE_DISPLAY || '+91 9715083947',
+  email: BRAND_EMAIL || 'cherasclothing777@gmail.com',
+  address: BRAND_ADDRESS || '74, cheras clothing,avinashi road, opposite to gov medical college,Coimbatore 641014.',
+  city: 'Coimbatore, Tamil Nadu',
   business_hours: 'Open Daily 9:30 AM - 9:30 PM',
-  instagram_url: BRAND_INSTAGRAM_URL || 'https://www.instagram.com/rasitex_official/',
-  catalog_headline: 'Exclusive Sarees, Men\'s Wear & Kids',
+  instagram_url: BRAND_INSTAGRAM_URL || 'https://instagram.com/cherasclothing_official?obrf=eG52MzN2d3loemli',
+  catalog_headline: 'Exclusive Mens Wear, Womens Wear & Kids Wear',
   gstin: BRAND_GSTIN || '33APAPR3524F1Z9',
-  logo_url: BRAND_ICON || '/rasi-icon-white.png',
+  logo_url: BRAND_ICON || '/cheras-icon.png',
   theme_color: DEFAULT_THEME_COLOR,
   gst_enabled: true,
 }
 
-const STORAGE_SETTINGS_KEY = 'rasi_store_settings_v1'
-const STORAGE_THEME_KEY = 'rasi_theme_color_v1'
+const STORAGE_SETTINGS_KEY = 'cheras_store_settings_v1'
+const STORAGE_THEME_KEY = 'cheras_theme_color_v1'
 
 /**
  * Adjust hex color brightness by percentage (e.g., -15 for darker hover)

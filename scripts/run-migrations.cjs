@@ -1,5 +1,5 @@
 /**
- * Automated Sequential Supabase Migration Runner for RASI TEX POS
+ * Automated Sequential Supabase Migration Runner for Cheras Clothing POS
  * 
  * Sequentially executes all .sql migration files in supabase/migrations/ one-by-one.
  * 
@@ -42,7 +42,7 @@ const CONSOLIDATED_FILE = path.join(__dirname, '..', 'supabase', 'all_migrations
  */
 function syncConsolidatedSql(files) {
   let consolidated = '-- ==========================================================================\n';
-  consolidated += '-- RASI TEX POS - CONSOLIDATED SUPABASE DATABASE MIGRATIONS\n';
+  consolidated += '-- CHERAS CLOTHING POS - CONSOLIDATED SUPABASE DATABASE MIGRATIONS\n';
   consolidated += '-- Total Production Migrations: ' + files.length + '\n';
   consolidated += '-- Generated: ' + new Date().toISOString() + '\n';
   consolidated += '-- ==========================================================================\n\n';
@@ -76,7 +76,7 @@ function syncConsolidatedSql(files) {
       consolidated += '-- ==========================================================================\n';
       consolidated += '-- ⚠️ IMPORTANT NOTICE FOR SUPABASE SQL EDITOR USERS:\n';
       consolidated += '-- Migrations 1 through ' + files.length + ' above are the active production migrations\n';
-      consolidated += '-- required for RASI TEX POS (Catalog, Orders, Inventory, Barcodes, Advances,\n';
+      consolidated += '-- required for Cheras Clothing POS (Catalog, Orders, Inventory, Barcodes, Advances,\n';
       consolidated += '-- Expenses, Split Payments, and Customer Birthdays & Offers).\n';
       consolidated += '--\n';
       consolidated += '-- The migration(s) below are PROPOSED DRAFTS that enforce strict least-privilege RLS\n';
@@ -189,7 +189,7 @@ async function connectPgClient(candidates) {
 
 async function main() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('📦 RASI TEX - SEQUENTIAL SUPABASE MIGRATION RUNNER');
+  console.log('📦 CHERAS CLOTHING - SEQUENTIAL SUPABASE MIGRATION RUNNER');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`Supabase URL      : ${SUPABASE_URL}`);
   console.log(`Project Ref       : ${projectRef || 'unknown'}`);

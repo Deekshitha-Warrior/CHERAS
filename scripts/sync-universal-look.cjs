@@ -24,17 +24,17 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 const TARGET_SETTINGS = {
   id: 1,
-  name: 'RASI TEX',
-  owner_name: 'Rafeekmohamed',
-  phone: '9080501232',
-  email: 'rasitexofficial@gmail.com',
-  address: '35, Kalaignar Nootrandu Vanika Valagam, Thanjai Salai, Thiruvarur - 610001',
+  name: 'Cheras Clothing',
+  owner_name: '',
+  phone: '9715083947',
+  email: 'cherasclothing777@gmail.com',
+  address: '74, cheras clothing,avinashi road, opposite to gov medical college,Coimbatore 641014.',
   updated_at: new Date().toISOString(),
 };
 
 async function syncBrand() {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('🏪 RASI TEX - SUPABASE BRAND SYNCHRONIZATION');
+  console.log('🏪 CHERAS CLOTHING - SUPABASE BRAND SYNCHRONIZATION');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`Connecting to: ${SUPABASE_URL}\n`);
 
@@ -76,7 +76,7 @@ async function syncBrand() {
     console.log(`   • Phone      : ${upsertedSettings.phone}`);
     console.log(`   • Email      : ${upsertedSettings.email}`);
     console.log(`   • Address    : ${upsertedSettings.address}`);
-    console.log(`   • Instagram  : @rasitex_official (https://www.instagram.com/rasitex_official/) - stored in src/lib/brand.ts (no DB column)`);
+    console.log(`   • Instagram  : https://instagram.com/cherasclothing_official?obrf=eG52MzN2d3loemli`);
     console.log(`   • Updated At : ${upsertedSettings.updated_at}\n`);
   }
 
@@ -92,16 +92,19 @@ async function syncBrand() {
     console.log(`   Found ${categories.length} existing categories.`);
     // Check if any legacy category name exists
     const legacyCategories = categories.filter(c => 
-      /purple\s*boutique|sreeja|chaji/i.test(c.name || '')
+      /rasi|purple\s*boutique|sreeja|chaji|universal\s*look|madhura/i.test(c.name || '')
     );
     if (legacyCategories.length > 0) {
       console.log(`   Found ${legacyCategories.length} legacy category references to update.`);
       for (const leg of legacyCategories) {
         let cleanName = leg.name
-          .replace(/purple\s*boutique/gi, 'RASI TEX')
-          .replace(/chaji\s*mens\s*wear/gi, 'RASI TEX')
-          .replace(/chaji/gi, 'RASI TEX')
-          .replace(/universal\s*look/gi, 'RASI TEX');
+          .replace(/purple\s*boutique/gi, 'Cheras Clothing')
+          .replace(/chaji\s*mens\s*wear/gi, 'Cheras Clothing')
+          .replace(/chaji/gi, 'Cheras Clothing')
+          .replace(/universal\s*look/gi, 'Cheras Clothing')
+          .replace(/madhura\s*tex/gi, 'Cheras Clothing')
+          .replace(/rasi\s*tex/gi, 'Cheras Clothing')
+          .replace(/rasi/gi, 'Cheras Clothing');
         await supabase
           .from('categories')
           .update({ name: cleanName })

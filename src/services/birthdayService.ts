@@ -3,7 +3,7 @@
  * Manages customer birthday tracking, birthday promotional offers,
  * WhatsApp birthday greeting compilation, and calendar date calculations.
  *
- * Designed for RASI TEX POS & Inventory Management.
+ * Designed for Cheras Clothing POS & Inventory Management.
  */
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase'

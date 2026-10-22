@@ -311,8 +311,8 @@ async function main() {
       .single()
 
     if (error) throw new Error(`Error: ${error.message}`)
-    if (data.name !== 'RASI TEX') {
-      throw new Error(`Expected name 'RASI TEX', found: '${data.name}'`)
+    if (data.name !== 'Cheras Clothing') {
+      throw new Error(`Expected name 'Cheras Clothing', found: '${data.name}'`)
     }
     return `Verified: ${data.name} | Phone: ${data.phone} | Address: ${data.address}`
   })

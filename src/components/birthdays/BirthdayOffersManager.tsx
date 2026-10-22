@@ -411,7 +411,7 @@ Show this message at billing counter to claim. Have a great day! 🎉`)
                       { tag: '{name}', label: 'Customer Name' },
                       { tag: '{offer}', label: 'Offer Description' },
                       { tag: '{coupon_code}', label: 'Coupon Code' },
-                      { tag: '{shop_name}', label: 'RASI TEX' },
+                      { tag: '{shop_name}', label: 'Cheras Clothing' },
                       { tag: '{phone}', label: 'Phone' },
                       { tag: '{address}', label: 'Address' },
                       { tag: '{instagram}', label: 'Instagram' },

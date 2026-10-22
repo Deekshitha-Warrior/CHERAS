@@ -1,5 +1,5 @@
 /**
- * RASI TEX POS — Authentication Security Automated Test Suite
+ * Cheras Clothing POS — Authentication Security Automated Test Suite
  * Validates fail-closed behavior, production credential enforcement,
  * development-only fallback gating, and session integrity.
  */
@@ -225,7 +225,7 @@ test('SESS-04: Logged-out state is valid and role is null', () => {
 
 async function run() {
   console.log('=================================================================')
-  console.log('  RASI TEX POS — Authentication Security Test Suite')
+  console.log('  Cheras Clothing POS — Authentication Security Test Suite')
   console.log('=================================================================\n')
 
   for (const { name, fn } of tests) {

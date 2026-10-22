@@ -39,6 +39,16 @@ async function uploadLogos() {
 
   // 2. Upload logo files from public/ to branding bucket
   const filesToUpload = [
+    { local: 'cheras-clothing-logo.png', mime: 'image/png' },
+    { local: 'cheras-logo.png', mime: 'image/png' },
+    { local: 'cheras-logo-white.png', mime: 'image/png' },
+    { local: 'cheras-icon.png', mime: 'image/png' },
+    { local: 'cheras-icon-white.png', mime: 'image/png' },
+    { local: 'cheras-icon-512.png', mime: 'image/png' },
+    { local: 'cheras-icon-192.png', mime: 'image/png' },
+    { local: 'cheras-icon-maskable-512.png', mime: 'image/png' },
+    { local: 'cheras-icon-maskable-192.png', mime: 'image/png' },
+    { local: 'cheras-favicon.png', mime: 'image/png' },
     { local: 'rasi-logo.png', mime: 'image/png' },
     { local: 'rasi-logo-white.png', mime: 'image/png' },
     { local: 'rasi-icon.png', mime: 'image/png' },
@@ -75,11 +85,11 @@ async function uploadLogos() {
 
   // Also upload standard aliases 'logo.png' and 'icon.png'
   console.log('\nUploading aliases (logo.png, icon.png)...');
-  await supabase.storage.from('branding').upload('logo.png', fs.readFileSync(path.join(__dirname, '..', 'public', 'rasi-logo.png')), {
+  await supabase.storage.from('branding').upload('logo.png', fs.readFileSync(path.join(__dirname, '..', 'public', 'cheras-logo.png')), {
     contentType: 'image/png',
     upsert: true
   });
-  await supabase.storage.from('branding').upload('icon.png', fs.readFileSync(path.join(__dirname, '..', 'public', 'rasi-icon.png')), {
+  await supabase.storage.from('branding').upload('icon.png', fs.readFileSync(path.join(__dirname, '..', 'public', 'cheras-icon.png')), {
     contentType: 'image/png',
     upsert: true
   });

@@ -194,7 +194,7 @@ export async function exportAnalyticsToCSV({ data, activeTab, datePreset, dateFr
     )
     .join('\r\n')
 
-  const filename = `RasiTex_Analytics_${activeTab}_${datePreset || 'all'}_${new Date().toISOString().slice(0, 10)}.csv`
+  const filename = `CherasClothing_Analytics_${activeTab}_${datePreset || 'all'}_${new Date().toISOString().slice(0, 10)}.csv`
   await downloadCsv(filename, csvContent)
 }
 
@@ -512,7 +512,7 @@ export async function exportAnalyticsToPDF({
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width
 
     pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, Math.min(297, pdfHeight))
-    pdf.save(`RasiTex_Analytics_Report_${activeTab}_${datePreset || 'all'}_${new Date().toISOString().slice(0, 10)}.pdf`)
+    pdf.save(`CherasClothing_Analytics_Report_${activeTab}_${datePreset || 'all'}_${new Date().toISOString().slice(0, 10)}.pdf`)
   } catch (error) {
     console.error('Failed to generate Analytics PDF:', error)
     throw error

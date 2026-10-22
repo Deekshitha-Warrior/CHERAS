@@ -6,15 +6,15 @@ BEGIN;
 -- 1. Ensure required columns exist on store_settings
 ALTER TABLE public.store_settings
   ADD COLUMN IF NOT EXISTS theme_color TEXT DEFAULT '#7B1E2B',
-  ADD COLUMN IF NOT EXISTS tagline TEXT DEFAULT 'Exclusive Sarees & Readymade',
-  ADD COLUMN IF NOT EXISTS city TEXT DEFAULT 'Thiruvarur, Tamil Nadu',
+  ADD COLUMN IF NOT EXISTS tagline TEXT DEFAULT 'Exclusive Mens, Womens & Kids Wear',
+  ADD COLUMN IF NOT EXISTS city TEXT DEFAULT 'Coimbatore, Tamil Nadu',
   ADD COLUMN IF NOT EXISTS business_hours TEXT DEFAULT 'Open Daily 9:30 AM - 9:30 PM',
-  ADD COLUMN IF NOT EXISTS instagram_url TEXT DEFAULT 'https://www.instagram.com/rasitex_official/',
-  ADD COLUMN IF NOT EXISTS catalog_headline TEXT DEFAULT 'Exclusive Sarees, Men''s Wear & Kids',
+  ADD COLUMN IF NOT EXISTS instagram_url TEXT DEFAULT 'https://instagram.com/cherasclothing_official?obrf=eG52MzN2d3loemli',
+  ADD COLUMN IF NOT EXISTS catalog_headline TEXT DEFAULT 'Exclusive Mens Wear, Womens Wear & Kids Wear',
   ADD COLUMN IF NOT EXISTS gstin TEXT DEFAULT '33APAPR3524F1Z9',
-  ADD COLUMN IF NOT EXISTS logo_url TEXT DEFAULT '/rasi-icon-white.png';
+  ADD COLUMN IF NOT EXISTS logo_url TEXT DEFAULT '/cheras-icon.png';
 
--- 2. Upsert initial RASI TEX store profile record into store_settings (id = 1)
+-- 2. Upsert initial Cheras Clothing store profile record into store_settings (id = 1)
 INSERT INTO public.store_settings (
   id,
   name,
@@ -35,32 +35,32 @@ INSERT INTO public.store_settings (
 )
 VALUES (
   1,
-  'RASI TEX',
-  'Rafeekmohamed',
-  '+91 9080501232',
-  'rasitexofficial@gmail.com',
-  '35, Kalaignar Nootrandu Vanika Valagam, Thanjai Salai, Thiruvarur - 610001',
-  'Thiruvarur, Tamil Nadu',
+  'Cheras Clothing',
+  '',
+  '9715083947',
+  'cherasclothing777@gmail.com',
+  '74, cheras clothing,avinashi road, opposite to gov medical college,Coimbatore 641014.',
+  'Coimbatore, Tamil Nadu',
   'Open Daily 9:30 AM - 9:30 PM',
-  'Exclusive Sarees & Readymade',
-  'https://www.instagram.com/rasitex_official/',
-  'Exclusive Sarees, Men''s Wear & Kids',
+  'Exclusive Mens, Womens & Kids Wear',
+  'https://instagram.com/cherasclothing_official?obrf=eG52MzN2d3loemli',
+  'Exclusive Mens Wear, Womens Wear & Kids Wear',
   '33APAPR3524F1Z9',
   '#7B1E2B',
-  '/rasi-icon-white.png',
+  '/cheras-icon.png',
   TRUE,
   NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
-  owner_name = CASE WHEN store_settings.owner_name = '' OR store_settings.owner_name IS NULL THEN EXCLUDED.owner_name ELSE store_settings.owner_name END,
+  owner_name = EXCLUDED.owner_name,
   phone = EXCLUDED.phone,
   email = EXCLUDED.email,
   address = EXCLUDED.address,
-  city = COALESCE(store_settings.city, EXCLUDED.city),
+  city = EXCLUDED.city,
   business_hours = COALESCE(store_settings.business_hours, EXCLUDED.business_hours),
   tagline = COALESCE(store_settings.tagline, EXCLUDED.tagline),
-  instagram_url = COALESCE(store_settings.instagram_url, EXCLUDED.instagram_url),
+  instagram_url = EXCLUDED.instagram_url,
   catalog_headline = COALESCE(store_settings.catalog_headline, EXCLUDED.catalog_headline),
   gstin = COALESCE(store_settings.gstin, EXCLUDED.gstin),
   theme_color = COALESCE(store_settings.theme_color, EXCLUDED.theme_color),

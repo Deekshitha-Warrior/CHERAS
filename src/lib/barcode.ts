@@ -149,6 +149,7 @@ export interface BarcodeQueueItem {
   variantName?: string
   barcodeValue: string
   price: number
+  originalInventoryPrice?: number
   costPrice?: number
   noOfLabels: number
   header: string

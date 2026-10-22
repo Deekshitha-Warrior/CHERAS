@@ -11,6 +11,9 @@ import {
   CheckCircle,
   AlertCircle,
   ChevronDown,
+  Tag,
+  Database,
+  ArrowRight,
 } from 'lucide-react'
 import {
   type BarcodeQueueItem,
@@ -23,11 +26,40 @@ import {
 } from '../../lib/barcode'
 import { BRAND_EN } from '../../lib/brand'
 import { barcodeService } from '../../services/barcodeService'
+import { updateItemPrice } from '../../services/productService'
 import { fetchVariantsByProduct, type ProductVariant } from '../../services/variantService'
 import { useProductStore } from '../../store/store'
 import { useTheme } from '../../store/themeStore'
 import { BarcodeSettingsDrawer } from './BarcodeSettingsDrawer'
 import { BarcodeSheetPreviewModal } from './BarcodeSheetPreviewModal'
+
+/**
+ * Extracts numeric price from a line3 string (e.g. "Price: ₹800", "₹800", "800")
+ */
+export function extractPriceFromLine3(text: string): number | null {
+  if (!text) return null
+  if (text.includes('%')) return null
+  const cleaned = text.replace(/,/g, '')
+  const match = cleaned.match(/(?:(?:rs\.?|inr|₹|price\s*:?)\s*)?(\d+(?:\.\d{1,2})?)/i)
+  if (match) {
+    const val = parseFloat(match[1])
+    return !isNaN(val) && val > 0 ? val : null
+  }
+  return null
+}
+
+interface PriceChangePrompt {
+  productId: number
+  productName: string
+  variantId?: string | null
+  variantName?: string
+  oldPrice: number
+  newPrice: number
+  queueItemId?: string
+  source: 'form' | 'queue' | 'action'
+  pendingQueueItem?: BarcodeQueueItem
+  onAfterDecision?: () => void
+}
 
 interface ProductOption {
   id: number
@@ -108,6 +140,11 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
 
   // Queue of items to generate (Bottom Table)
   const [queue, setQueue] = useState<BarcodeQueueItem[]>([])
+
+  // Price Change Prompt Modal State
+  const [pricePrompt, setPricePrompt] = useState<PriceChangePrompt | null>(null)
+  const [isUpdatingPrice, setIsUpdatingPrice] = useState(false)
+  const [confirmedDecisions, setConfirmedDecisions] = useState<Record<string, number>>({})
 
   // Submission & Status
   const [generating, setGenerating] = useState(false)
@@ -275,6 +312,10 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
       return
     }
 
+    const basePrice = selectedVariant?.price || selectedProduct.price
+    const parsedPrice = extractPriceFromLine3(line3)
+    const effectivePrice = parsedPrice !== null ? parsedPrice : basePrice
+
     const newItem: BarcodeQueueItem = {
       id: `queue_${Date.now()}_${Math.random()}`,
       productId: selectedProduct.id,
@@ -282,7 +323,8 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
       variantId: selectedVariant?.id || null,
       variantName: selectedVariant?.variantName || undefined,
       barcodeValue: itemCode.trim(),
-      price: selectedVariant?.price || selectedProduct.price,
+      price: effectivePrice,
+      originalInventoryPrice: basePrice,
       costPrice: selectedProduct.cost_price || 0,
       noOfLabels: finalLabels,
       header: header.trim(),
@@ -291,6 +333,23 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
       line3: line3.trim(),
       line4: line4.trim(),
       selected: true,
+    }
+
+    if (parsedPrice !== null && parsedPrice !== basePrice) {
+      const key = `${selectedProduct.id}_${selectedVariant?.id || 'base'}_${parsedPrice}`
+      if (confirmedDecisions[key] !== parsedPrice) {
+        setPricePrompt({
+          productId: selectedProduct.id,
+          productName: selectedProduct.name,
+          variantId: selectedVariant?.id,
+          variantName: selectedVariant?.variantName,
+          oldPrice: basePrice,
+          newPrice: parsedPrice,
+          source: 'form',
+          pendingQueueItem: newItem,
+        })
+        return
+      }
     }
 
     setQueue((prev) => [...prev, newItem])
@@ -310,8 +369,142 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
     value: string | number | boolean
   ) => {
     setQueue((prev) =>
-      prev.map((it) => (it.id === id ? { ...it, [field]: value } : it))
+      prev.map((it) => {
+        if (it.id !== id) return it
+        const updated = { ...it, [field]: value }
+        if (field === 'line3' && typeof value === 'string') {
+          const parsed = extractPriceFromLine3(value)
+          if (parsed !== null) {
+            updated.price = parsed
+          }
+        }
+        return updated
+      })
     )
+  }
+
+  const handleConfirmUpdateInventory = async () => {
+    if (!pricePrompt) return
+    setIsUpdatingPrice(true)
+    try {
+      await updateItemPrice({
+        entityType: pricePrompt.variantId ? 'variant' : 'product',
+        id: pricePrompt.variantId || pricePrompt.productId,
+        newPrice: pricePrompt.newPrice,
+      })
+
+      await fetchProducts(true)
+
+      setQueue((prev) =>
+        prev.map((it) => {
+          const matches =
+            it.productId === pricePrompt.productId &&
+            (pricePrompt.variantId ? it.variantId === pricePrompt.variantId : !it.variantId)
+          if (matches) {
+            return {
+              ...it,
+              price: pricePrompt.newPrice,
+              originalInventoryPrice: pricePrompt.newPrice,
+              line3: it.line3.includes('%') ? it.line3 : `Price: ₹${pricePrompt.newPrice}`,
+            }
+          }
+          return it
+        })
+      )
+
+      if (pricePrompt.source === 'form' && pricePrompt.pendingQueueItem) {
+        const updatedPending = {
+          ...pricePrompt.pendingQueueItem,
+          price: pricePrompt.newPrice,
+          originalInventoryPrice: pricePrompt.newPrice,
+          line3: `Price: ₹${pricePrompt.newPrice}`,
+        }
+        setQueue((prev) => [...prev, updatedPending])
+        setNoOfLabels('1')
+      }
+
+      const key = `${pricePrompt.productId}_${pricePrompt.variantId || 'base'}_${pricePrompt.newPrice}`
+      setConfirmedDecisions((prev) => ({ ...prev, [key]: pricePrompt.newPrice }))
+
+      setStatusMessage({
+        type: 'success',
+        text: `Inventory price for "${pricePrompt.productName}" updated to ₹${pricePrompt.newPrice} in database!`,
+      })
+
+      const afterAction = pricePrompt.onAfterDecision
+      setPricePrompt(null)
+      afterAction?.()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to update inventory price'
+      setStatusMessage({ type: 'error', text: msg })
+    } finally {
+      setIsUpdatingPrice(false)
+    }
+  }
+
+  const handleConfirmTemporaryPrice = () => {
+    if (!pricePrompt) return
+
+    setQueue((prev) =>
+      prev.map((it) => {
+        const matches =
+          it.productId === pricePrompt.productId &&
+          (pricePrompt.variantId ? it.variantId === pricePrompt.variantId : !it.variantId)
+        if (matches) {
+          return {
+            ...it,
+            price: pricePrompt.newPrice,
+          }
+        }
+        return it
+      })
+    )
+
+    if (pricePrompt.source === 'form' && pricePrompt.pendingQueueItem) {
+      const updatedPending = {
+        ...pricePrompt.pendingQueueItem,
+        price: pricePrompt.newPrice,
+      }
+      setQueue((prev) => [...prev, updatedPending])
+      setNoOfLabels('1')
+    }
+
+    const key = `${pricePrompt.productId}_${pricePrompt.variantId || 'base'}_${pricePrompt.newPrice}`
+    setConfirmedDecisions((prev) => ({ ...prev, [key]: pricePrompt.newPrice }))
+
+    setStatusMessage({
+      type: 'success',
+      text: `Using temporary price ₹${pricePrompt.newPrice} for barcode printing. Inventory price remains ₹${pricePrompt.oldPrice}.`,
+    })
+
+    const afterAction = pricePrompt.onAfterDecision
+    setPricePrompt(null)
+    afterAction?.()
+  }
+
+  const checkUnconfirmedPrices = (onProceed: () => void): boolean => {
+    for (const item of queue.filter((it) => it.selected)) {
+      const parsedPrice = extractPriceFromLine3(item.line3)
+      const basePrice = item.originalInventoryPrice ?? item.price
+      if (parsedPrice !== null && parsedPrice !== basePrice) {
+        const key = `${item.productId}_${item.variantId || 'base'}_${parsedPrice}`
+        if (confirmedDecisions[key] !== parsedPrice) {
+          setPricePrompt({
+            productId: item.productId,
+            productName: item.productName,
+            variantId: item.variantId,
+            variantName: item.variantName,
+            oldPrice: basePrice,
+            newPrice: parsedPrice,
+            queueItemId: item.id,
+            source: 'action',
+            onAfterDecision: onProceed,
+          })
+          return false
+        }
+      }
+    }
+    return true
   }
 
   const handleToggleSelectAll = (checked: boolean) => {
@@ -326,6 +519,10 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
     const selectedItems = queue.filter((it) => it.selected)
     if (selectedItems.length === 0) {
       setStatusMessage({ type: 'error', text: 'Please add and select at least one item to generate barcodes' })
+      return
+    }
+
+    if (!checkUnconfirmedPrices(() => { void handleGenerateAndCommitStock() })) {
       return
     }
 
@@ -409,7 +606,8 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
     const allStickers: string[] = []
     selectedItems.forEach((item) => {
       const count = Math.max(1, item.noOfLabels)
-      const fullTitle = `${item.productName}${item.variantName ? ` (${item.variantName})` : ''}`
+      const fullTitle = item.line1?.trim() || `${item.productName}${item.variantName ? ` (${item.variantName})` : ''}`
+      const effectivePrice = extractPriceFromLine3(item.line3) ?? item.price
       const svgMarkup = generateBarcodeSvgString(item.barcodeValue, {
         width: barcodeBarWidth,
         height: barcodeHeightPx,
@@ -422,14 +620,14 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
       for (let i = 0; i < count; i++) {
         allStickers.push(`
           <div class="label-sticker">
-            ${settings.showCompanyName ? `<div class="header">${item.header || BRAND_EN}</div>` : ''}
+            ${settings.showCompanyName ? `<div class="header">${item.header?.trim() || BRAND_EN}</div>` : ''}
             ${settings.showItemName ? `<div class="prod-title">${fullTitle}</div>` : ''}
             <div class="barcode-box">
               ${svgMarkup}
             </div>
             <div class="footer">
-              <span>${item.line2 ? `<span class="tag">${item.line2}</span>` : `<span class="tag">${BRAND_EN}</span>`}</span>
-              ${settings.showSalePrice ? `<span class="price">₹${item.price}</span>` : ''}
+              <span>${item.line2?.trim() ? `<span class="tag">${item.line2.trim()}</span>` : `<span class="tag">${BRAND_EN}</span>`}</span>
+              ${settings.showSalePrice ? `<span class="price">₹${effectivePrice}</span>` : ''}
             </div>
           </div>
         `)
@@ -870,6 +1068,7 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
                               variantName: v.variantName,
                               barcodeValue: `CC${Math.floor(1000000 + Math.random() * 9000000)}`,
                               price: v.price || selectedProduct.price,
+                              originalInventoryPrice: v.price || selectedProduct.price,
                               costPrice: selectedProduct.cost_price || 0,
                               noOfLabels: parseInt(noOfLabels, 10) || 1,
                               header: header || BRAND_EN,
@@ -1256,6 +1455,25 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
                               onChange={(e) =>
                                 handleUpdateQueueItem(item.id, 'line3', e.target.value)
                               }
+                              onBlur={(e) => {
+                                const parsedPrice = extractPriceFromLine3(e.target.value)
+                                const basePrice = item.originalInventoryPrice ?? item.price
+                                if (parsedPrice !== null && parsedPrice !== basePrice) {
+                                  const key = `${item.productId}_${item.variantId || 'base'}_${parsedPrice}`
+                                  if (confirmedDecisions[key] !== parsedPrice) {
+                                    setPricePrompt({
+                                      productId: item.productId,
+                                      productName: item.productName,
+                                      variantId: item.variantId,
+                                      variantName: item.variantName,
+                                      oldPrice: basePrice,
+                                      newPrice: parsedPrice,
+                                      queueItemId: item.id,
+                                      source: 'queue',
+                                    })
+                                  }
+                                }
+                              }}
                               className="w-28 h-8 px-2 rounded-lg border border-gray-300 text-xs outline-none focus:border-[#7B1E2B]"
                             />
                           </td>
@@ -1329,7 +1547,11 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
               {queue.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setShowSheetPreviewModal(true)}
+                  onClick={() => {
+                    if (checkUnconfirmedPrices(() => setShowSheetPreviewModal(true))) {
+                      setShowSheetPreviewModal(true)
+                    }
+                  }}
                   style={{ borderColor: themeColor, color: themeColor }}
                   className="px-2.5 py-1.5 sm:px-5 sm:py-2.5 rounded-xl border-2 bg-white text-[11px] sm:text-xs font-black uppercase tracking-wider hover:bg-gray-100 transition-all cursor-pointer shrink-0"
                 >
@@ -1382,6 +1604,116 @@ export const CreateBarcodeModal: React.FC<CreateBarcodeModalProps> = ({
           sizeConfig={currentSizeConfig}
           onPrint={printQueueDirectly}
         />
+      )}
+
+      {/* Price Change Confirmation Popup Modal */}
+      {pricePrompt && (
+        <div className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 flex flex-col gap-4 relative animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+                  <Tag size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-gray-900 leading-tight">
+                    Update Inventory Price?
+                  </h3>
+                  <p className="text-xs font-semibold text-gray-500">
+                    Price edit detected for barcode label
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleConfirmTemporaryPrice}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors cursor-pointer"
+                title="Keep temporary price for print"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Product & Price comparison card */}
+            <div className="rounded-2xl bg-gray-50 border border-gray-200 p-4 flex flex-col gap-2.5">
+              <div className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                <span>{pricePrompt.productName}</span>
+                {pricePrompt.variantName && (
+                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
+                    {pricePrompt.variantName}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between bg-white rounded-xl p-3 border border-gray-200">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Current Inventory Price
+                  </span>
+                  <span className="text-sm font-bold text-gray-600 line-through">
+                    ₹{pricePrompt.oldPrice}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-700">
+                  <ArrowRight size={16} />
+                </div>
+
+                <div className="flex flex-col text-right">
+                  <span className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
+                    New Label Price
+                  </span>
+                  <span className="text-base font-black text-emerald-700">
+                    ₹{pricePrompt.newPrice}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-600 leading-relaxed">
+              Would you like to permanently update the inventory price for this product, or keep this as a temporary price for this barcode label only?
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-2.5 pt-1">
+              {/* Option 1: Update Inventory Price */}
+              <button
+                type="button"
+                onClick={handleConfirmUpdateInventory}
+                disabled={isUpdatingPrice}
+                style={{ backgroundColor: themeColor, color: textColor }}
+                className="w-full py-3 px-4 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md hover:opacity-95 transition-all flex items-center justify-between cursor-pointer disabled:opacity-50"
+              >
+                <div className="flex items-center gap-2">
+                  <Database size={16} />
+                  <span>Update Inventory Price (₹{pricePrompt.newPrice})</span>
+                </div>
+                {isUpdatingPrice ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                ) : (
+                  <span className="text-[10px] opacity-80 lowercase">(save to database)</span>
+                )}
+              </button>
+
+              {/* Option 2: Temporary Price Only */}
+              <button
+                type="button"
+                onClick={handleConfirmTemporaryPrice}
+                disabled={isUpdatingPrice}
+                className="w-full py-2.5 px-4 rounded-2xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-800 font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-between cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <Printer size={16} className="text-gray-500" />
+                  <span>Temporary Price (Print Only)</span>
+                </div>
+                <span className="text-[10px] text-gray-500 font-semibold lowercase">
+                  (keep inv ₹{pricePrompt.oldPrice})
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>,
     document.body

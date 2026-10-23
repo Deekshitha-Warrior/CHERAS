@@ -126,7 +126,7 @@ export const inventoryService = {
     // 1. Fetch products with deterministic fixed order (never shifts when updated)
     const { data: products, error: prodErr } = await supabase
       .from('products')
-      .select('id, name, name_ta, price, offer_price, purchase_price, stock_quantity, low_stock_alert, unit, unit_type, category, category_id, image_url, barcode, sku, is_active, sort_order, created_at, updated_at')
+      .select('id, name, name_ta, price, offer_price, purchase_price, cost_price, stock_quantity, low_stock_alert, unit, unit_type, category, category_id, image_url, barcode, sku, is_active, sort_order, created_at, updated_at')
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
       .order('id', { ascending: true })
@@ -139,7 +139,7 @@ export const inventoryService = {
     // 2. Fetch variants with deterministic fixed order (never shifts when updated)
     const { data: variants, error: varErr } = await supabase
       .from('product_variants')
-      .select('id, product_id, variant_name, price, purchase_price, stock, barcode, sku, is_active, sort_order, created_at, updated_at')
+      .select('id, product_id, variant_name, price, purchase_price, cost_price, stock, barcode, sku, is_active, sort_order, created_at, updated_at')
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true })
       .order('id', { ascending: true })
@@ -224,55 +224,59 @@ export const inventoryService = {
 
         // Each variant is a sellable SKU
         for (const v of sortedVariants) {
+          const vCost = (v as any).cost_price != null ? Number((v as any).cost_price) : (v.purchase_price != null ? Number(v.purchase_price) : undefined)
+          const pCost = (p as any).cost_price != null ? Number((p as any).cost_price) : (p.purchase_price != null ? Number(p.purchase_price) : undefined)
+          const resolvedCost = vCost !== undefined ? vCost : pCost
           items.push({
-            id: `var-${v.id}`,
+              id: `var-${v.id}`,
+              product_id: p.id,
+              variant_id: v.id,
+              entity_type: 'variant',
+              name: p.name,
+              name_ta: p.name_ta,
+              variant_name: v.variant_name,
+              sku: v.sku || p.sku,
+              barcode: v.barcode,
+              stock: Number(v.stock) || 0,
+              low_stock_threshold: threshold,
+              price: Number(v.price) || Number(p.price) || 0,
+              offer_price: p.offer_price ? Number(p.offer_price) : undefined,
+              purchase_price: resolvedCost,
+              cost_price: resolvedCost,
+              unit: p.unit,
+              unit_type: p.unit_type,
+              category: resolvedCategory,
+              image_url: p.image_url,
+              is_active: v.is_active && p.is_active,
+              updated_at: v.updated_at || p.updated_at
+            })
+          }
+        } else {
+          // Non-variant product
+          const pCost = (p as any).cost_price != null ? Number((p as any).cost_price) : (p.purchase_price != null ? Number(p.purchase_price) : undefined)
+          items.push({
+            id: `prod-${p.id}`,
             product_id: p.id,
-            variant_id: v.id,
-            entity_type: 'variant',
+            variant_id: null,
+            entity_type: 'product',
             name: p.name,
             name_ta: p.name_ta,
-            variant_name: v.variant_name,
-            sku: v.sku || p.sku,
-            barcode: v.barcode,
-            stock: Number(v.stock) || 0,
+            variant_name: undefined,
+            sku: p.sku,
+            barcode: p.barcode,
+            stock: Number(p.stock_quantity) || 0,
             low_stock_threshold: threshold,
-            price: Number(v.price) || Number(p.price) || 0,
+            price: Number(p.price) || 0,
             offer_price: p.offer_price ? Number(p.offer_price) : undefined,
-            purchase_price: v.purchase_price ? Number(v.purchase_price) : (p.purchase_price ? Number(p.purchase_price) : undefined),
-            cost_price: v.purchase_price ? Number(v.purchase_price) : (p.purchase_price ? Number(p.purchase_price) : undefined),
+            purchase_price: pCost,
+            cost_price: pCost,
             unit: p.unit,
             unit_type: p.unit_type,
             category: resolvedCategory,
             image_url: p.image_url,
-            is_active: v.is_active && p.is_active,
-            updated_at: v.updated_at || p.updated_at
+            is_active: p.is_active,
+            updated_at: p.updated_at
           })
-        }
-      } else {
-        // Non-variant product
-        items.push({
-          id: `prod-${p.id}`,
-          product_id: p.id,
-          variant_id: null,
-          entity_type: 'product',
-          name: p.name,
-          name_ta: p.name_ta,
-          variant_name: undefined,
-          sku: p.sku,
-          barcode: p.barcode,
-          stock: Number(p.stock_quantity) || 0,
-          low_stock_threshold: threshold,
-          price: Number(p.price) || 0,
-          offer_price: p.offer_price ? Number(p.offer_price) : undefined,
-          purchase_price: p.purchase_price ? Number(p.purchase_price) : undefined,
-          cost_price: p.purchase_price ? Number(p.purchase_price) : undefined,
-          unit: p.unit,
-          unit_type: p.unit_type,
-          category: resolvedCategory,
-          image_url: p.image_url,
-          is_active: p.is_active,
-          updated_at: p.updated_at
-        })
       }
     }
 

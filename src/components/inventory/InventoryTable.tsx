@@ -645,6 +645,7 @@ export const InventoryTable: React.FC = () => {
                       ...it,
                       price: updated.price,
                       purchase_price: updated.cost_price ?? it.purchase_price,
+                      cost_price: updated.cost_price ?? it.cost_price ?? it.purchase_price,
                     }
                   : it
               )

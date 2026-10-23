@@ -118,9 +118,11 @@ export const AddEditProductView: React.FC<{
     setCategoryId(matchedCatId)
 
     setPrice(String(p.price || ''))
-    setPurchasePrice(String(p.purchasePrice || ''))
+    const existingCost = (p as any).costPrice ?? p.purchasePrice ?? (p as any).cost_price ?? (p as any).purchase_price
+    setPurchasePrice(existingCost != null && existingCost !== '' && Number(existingCost) >= 0 ? String(existingCost) : '')
     setStockQuantity(String(p.stockQuantity ?? p.stock ?? 0))
-    setLowStockAlert(p.lowStockAlert ? String(p.lowStockAlert) : '5')
+    const existingAlert = p.lowStockAlert ?? (p as any).low_stock_alert
+    setLowStockAlert(existingAlert != null && Number(existingAlert) > 0 ? String(existingAlert) : '5')
     setBarcode(p.barcode || '')
     setDescription(p.description || '')
     setHasVariants(Boolean(p.hasVariants))
@@ -135,7 +137,7 @@ export const AddEditProductView: React.FC<{
             variantName: v.variantName,
             sizeLabel: v.sizeLabel || v.variantName,
             price: v.price,
-            costPrice: v.purchasePrice || 0,
+            costPrice: (v as any).costPrice ?? v.purchasePrice ?? 0,
             stock: v.stock || 0,
             customBarcode: v.barcode || '',
           }))
@@ -300,7 +302,11 @@ export const AddEditProductView: React.FC<{
     const validVariants = variantRows.filter((v) => v.variantName.trim() !== '')
     const firstVariant = validVariants[0]
     const priceNum = hasVariants && firstVariant ? (Number(firstVariant.price) || 0) : (parseFloat(price) || 0)
-    const costNum = hasVariants && firstVariant ? (Number(firstVariant.costPrice) || 0) : (parseFloat(purchasePrice) || 0)
+    const parsedCost = parseFloat(purchasePrice)
+    const costNum = hasVariants && firstVariant
+      ? (Number(firstVariant.costPrice) > 0 ? Number(firstVariant.costPrice) : (!isNaN(parsedCost) ? parsedCost : 0))
+      : (!isNaN(parsedCost) ? parsedCost : 0)
+    const costVal = (purchasePrice.trim() !== '' || (hasVariants && firstVariant?.costPrice !== undefined && String(firstVariant.costPrice).trim() !== '')) ? costNum : null
 
     if (!hasVariants && priceNum <= 0) {
       setStatusMessage({ type: 'error', text: 'Price must be greater than 0' })
@@ -343,7 +349,8 @@ export const AddEditProductView: React.FC<{
               category_id: categoryId ? Number(categoryId) : null,
               price: priceNum,
               offer_price: priceNum,
-              purchase_price: costNum,
+              purchase_price: costVal,
+              cost_price: costVal,
               low_stock_alert: alertThreshold,
               barcode: barcode.trim() || null,
               description: description.trim() || '',
@@ -392,7 +399,9 @@ export const AddEditProductView: React.FC<{
           for (const v of variantRows) {
             if (!v.variantName.trim()) continue
             const vPrice = Number(v.price) > 0 ? Number(v.price) : priceNum
-            const vCost = Number(v.costPrice) > 0 ? Number(v.costPrice) : costNum
+            const vParsed = parseFloat(String(v.costPrice))
+            const vCost = !isNaN(vParsed) && vParsed >= 0 ? vParsed : (costNum || 0)
+            const vCostVal = !isNaN(vParsed) && vParsed >= 0 ? vParsed : costVal
             const vStock = Math.max(0, Number(v.stock) || 0)
             totalVariantStock += vStock
 
@@ -405,7 +414,8 @@ export const AddEditProductView: React.FC<{
                   variant_name: v.variantName.trim(),
                   size_label: v.sizeLabel?.trim() || v.variantName.trim(),
                   price: vPrice,
-                  purchase_price: vCost,
+                  purchase_price: vCostVal,
+                  cost_price: vCostVal,
                   stock: vStock,
                   barcode: v.customBarcode?.trim() || null,
                   is_active: true,
@@ -444,7 +454,8 @@ export const AddEditProductView: React.FC<{
                   variant_name: v.variantName.trim(),
                   size_label: v.sizeLabel?.trim() || v.variantName.trim(),
                   price: vPrice,
-                  purchase_price: vCost,
+                  purchase_price: vCostVal,
+                  cost_price: vCostVal,
                   stock: vStock,
                   barcode: v.customBarcode?.trim() || null,
                 })
@@ -477,7 +488,8 @@ export const AddEditProductView: React.FC<{
               category_id: categoryId ? Number(categoryId) : null,
               price: priceNum,
               offer_price: priceNum,
-              purchase_price: costNum,
+              purchase_price: costVal,
+              cost_price: costVal,
               low_stock_alert: alertThreshold,
               barcode: null,
               description: description.trim() || '',
@@ -506,7 +518,8 @@ export const AddEditProductView: React.FC<{
               category_id: categoryId ? Number(categoryId) : null,
               price: priceNum,
               offer_price: priceNum,
-              purchase_price: costNum,
+              purchase_price: costVal,
+              cost_price: costVal,
               low_stock_alert: alertThreshold,
               barcode: barcode.trim() || null,
               description: description.trim() || '',
@@ -570,7 +583,8 @@ export const AddEditProductView: React.FC<{
               category_id: categoryId ? Number(categoryId) : null,
               price: priceNum,
               offer_price: priceNum,
-              purchase_price: costNum,
+              purchase_price: costVal,
+              cost_price: costVal,
               low_stock_alert: alertThreshold,
               barcode: null,
               description: description.trim() || '',
@@ -587,7 +601,9 @@ export const AddEditProductView: React.FC<{
           for (const v of variantRows) {
             if (!v.variantName.trim()) continue
             const vPrice = Number(v.price) > 0 ? Number(v.price) : priceNum
-            const vCost = Number(v.costPrice) > 0 ? Number(v.costPrice) : costNum
+            const vParsed = parseFloat(String(v.costPrice))
+            const vCost = !isNaN(vParsed) && vParsed >= 0 ? vParsed : (costNum || 0)
+            const vCostVal = !isNaN(vParsed) && vParsed >= 0 ? vParsed : costVal
             const vStock = Math.max(0, Number(v.stock) || 0)
 
             const { data: createdVar } = await supabase
@@ -597,7 +613,8 @@ export const AddEditProductView: React.FC<{
                 variant_name: v.variantName.trim(),
                 size_label: v.sizeLabel?.trim() || v.variantName.trim(),
                 price: vPrice,
-                purchase_price: vCost,
+                purchase_price: vCostVal,
+                cost_price: vCostVal,
                 stock: vStock,
                 barcode: v.customBarcode?.trim() || null,
                 is_active: true,

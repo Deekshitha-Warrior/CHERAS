@@ -15,8 +15,9 @@ interface Props {
 export const QuickPriceModal: React.FC<Props> = ({ isOpen, item, onClose, onSuccess }) => {
   const { themeColor, textColor } = useTheme()
   const [sellingPrice, setSellingPrice] = useState<string>(item ? String(item.price ?? '') : '')
+  const initialCost = item ? (item.cost_price ?? item.purchase_price) : undefined
   const [costPrice, setCostPrice] = useState<string>(
-    item && item.purchase_price !== undefined ? String(item.purchase_price) : ''
+    initialCost !== undefined ? String(initialCost) : ''
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -25,7 +26,8 @@ export const QuickPriceModal: React.FC<Props> = ({ isOpen, item, onClose, onSucc
   useEffect(() => {
     if (item) {
       setSellingPrice(String(item.price ?? ''))
-      setCostPrice(item.purchase_price !== undefined ? String(item.purchase_price) : '')
+      const resolvedCost = item.cost_price ?? item.purchase_price
+      setCostPrice(resolvedCost !== undefined ? String(resolvedCost) : '')
       setError('')
     }
   }, [item])

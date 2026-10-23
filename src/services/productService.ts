@@ -6,11 +6,11 @@ import { supabase } from '../lib/supabase'
  */
 const PRODUCT_COLUMNS = [
   'id', 'name', 'name_ta', 'tamil_name', 'category', 'category_id',
-  'remedy', 'price', 'offer_price', 'unit_type', 'unit_label',
+  'remedy', 'price', 'offer_price', 'purchase_price', 'cost_price', 'unit_type', 'unit_label',
   'base_quantity', 'stock_quantity', 'stock_unit', 'allow_decimal_quantity',
   'predefined_options', 'is_active', 'sort_order', 'unit', 'rating',
   'description', 'description_ta', 'benefits', 'benefits_ta',
-  'image_url', 'image', 'has_variants', 'barcode', 'sku',
+  'image_url', 'image', 'has_variants', 'barcode', 'sku', 'low_stock_alert',
 ].join(', ')
 
 export function fetchAllCategories() {
@@ -43,6 +43,7 @@ export async function updateItemPrice(params: {
     }
     if (params.newCostPrice !== undefined && params.newCostPrice >= 0) {
       updatePayload.purchase_price = params.newCostPrice
+      updatePayload.cost_price = params.newCostPrice
     }
     const { error } = await supabase
       .from('product_variants')
@@ -56,6 +57,7 @@ export async function updateItemPrice(params: {
     }
     if (params.newCostPrice !== undefined && params.newCostPrice >= 0) {
       updatePayload.purchase_price = params.newCostPrice
+      updatePayload.cost_price = params.newCostPrice
     }
     const { error } = await supabase
       .from('products')

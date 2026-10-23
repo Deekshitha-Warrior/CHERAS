@@ -47,9 +47,8 @@ import { Invoice } from '../components/Invoice'
 import { printThermalReceipt } from '../lib/thermalPrint'
 import { buildProfessionalWhatsAppMessage } from '../lib/whatsappMessage'
 import { invoicePdfFile, invoicePdfFileFromElement, generateInvoicePdfFromData } from '../lib/invoicePdf'
-import { formatPhoneDisplay, formatPhoneForCSV } from '../lib/phone'
+import { formatPhoneDisplay, formatPhoneForCSV, toWhatsAppUrl } from '../lib/phone'
 import { downloadCsv } from '../lib/exportCsv'
-// toWhatsAppUrl removed - using direct link building in handlers
 import { createVariant, updateVariant, deleteVariant, setDefaultVariant, type ProductVariant } from '../services/variantService'
 import { useVariantStore } from '../store/store'
 import Pos from './Pos'
@@ -66,7 +65,7 @@ import { useNavigationStore } from '../store/navigationStore'
 import { useHardwareBarcodeScanner } from '../hooks/useHardwareBarcodeScanner'
 import { BarcodeRedirectDialog } from '../components/pos/BarcodeRedirectDialog'
 import { exportAnalyticsToCSV, exportAnalyticsToPDF } from '../services/analyticsExport'
-import { BRAND_EN, BRAND_ICON } from '../lib/brand'
+import { BRAND_EN, BRAND_ICON, BRAND_ADDRESS, BRAND_PRIMARY_PHONE_DISPLAY } from '../lib/brand'
 import {
   ResponsiveContainer,
   XAxis,
@@ -303,6 +302,10 @@ export default function Dashboard() {
   const [couponSaveError, setCouponSaveError] = useState('')
   const [couponSaveSuccess, setCouponSaveSuccess] = useState('')
   const [editingCouponId, setEditingCouponId] = useState<number | null>(null)
+  const [whatsappModalCoupon, setWhatsappModalCoupon] = useState<DashboardCoupon | null>(null)
+  const [whatsappPhone, setWhatsappPhone] = useState('')
+  const [whatsappCustomerName, setWhatsappCustomerName] = useState('')
+  const [whatsappPhoneError, setWhatsappPhoneError] = useState('')
 
   // Variant management state
   const { getVariants, refetchVariants } = useVariantStore()
@@ -1538,6 +1541,81 @@ export default function Dashboard() {
     await supabase.from('coupons').update({ is_active: !coupon.is_active }).eq('id', coupon.id)
     await loadCoupons()
   }
+
+  const openWhatsAppModal = (coupon: DashboardCoupon) => {
+    setWhatsappModalCoupon(coupon)
+    setWhatsappPhone('')
+    setWhatsappCustomerName('')
+    setWhatsappPhoneError('')
+  }
+
+  const generateCouponWhatsAppMessage = (coupon: DashboardCoupon, customerName?: string) => {
+    const nameGreeting = customerName?.trim()
+      ? `Dear *${customerName.trim()}*, 👋`
+      : `Hello there! 👋`
+
+    const minOrderLine = coupon.min_order_value && coupon.min_order_value > 0
+      ? `📦 *Min Order:* ₹${coupon.min_order_value.toLocaleString('en-IN')}\n`
+      : `📦 *Min Order:* No minimum purchase required!\n`
+
+    let expiryLine = `⏳ *Validity:* Limited time offer!\n`
+    if (coupon.expiry_date) {
+      const d = new Date(coupon.expiry_date)
+      const formatted = d.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+      expiryLine = `⏳ *Valid Until:* ${formatted}\n`
+    }
+
+    return (
+      `✨ *EXCLUSIVE GIFT FOR YOU!* 🎁\n\n` +
+      `${nameGreeting} We're delighted to share a special discount coupon with you from *${BRAND_EN}*! 🛍️👗✨\n\n` +
+      `━━━━━━━━━━━━━━━━━━━\n` +
+      `🎟️ *COUPON CODE:* *${coupon.code.toUpperCase()}*\n` +
+      `🔥 *DISCOUNT:* *${coupon.percentage}% FLAT OFF*\n` +
+      `${minOrderLine}` +
+      `${expiryLine}` +
+      `━━━━━━━━━━━━━━━━━━━\n\n` +
+      `🌟 *How to Redeem:*\n` +
+      `1️⃣ Visit our store or order directly on WhatsApp / website.\n` +
+      `2️⃣ Show or apply coupon code *${coupon.code.toUpperCase()}* at billing to get *${coupon.percentage}% OFF* instantly! 💃🕺\n\n` +
+      `📍 *${BRAND_EN}*\n` +
+      `🏢 ${BRAND_ADDRESS}\n` +
+      `📞 Call/WhatsApp: ${BRAND_PRIMARY_PHONE_DISPLAY}\n\n` +
+      `Happy Shopping! 🛍️✨`
+    )
+  }
+
+  const handleSendCouponWhatsApp = (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!whatsappModalCoupon) return
+
+    const cleanDigits = whatsappPhone.replace(/\D/g, '')
+    if (!cleanDigits || cleanDigits.length < 10) {
+      setWhatsappPhoneError('Please enter a valid 10-digit mobile number')
+      return
+    }
+
+    const message = generateCouponWhatsAppMessage(whatsappModalCoupon, whatsappCustomerName)
+    const url = toWhatsAppUrl(cleanDigits, message)
+
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setWhatsappModalCoupon(null)
+    setWhatsappPhone('')
+    setWhatsappCustomerName('')
+    setWhatsappPhoneError('')
+  }
+
+  useEffect(() => {
+    if (!whatsappModalCoupon) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setWhatsappModalCoupon(null)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [whatsappModalCoupon])
 
   // Keep a stable ref to the debounced loader so realtime events don't
   // trigger a full data reload more than once every 4 seconds.
@@ -5250,6 +5328,14 @@ export default function Dashboard() {
 
                           <div className="flex shrink-0 items-center gap-2">
                             <button
+                              type="button"
+                              onClick={() => openWhatsAppModal(coupon)}
+                              className="w-8 h-8 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-[#25D366] text-[#25D366] hover:text-white flex items-center justify-center transition-all cursor-pointer shadow-xs"
+                              title={l('Send Coupon via WhatsApp', 'WhatsApp மூலம் கூப்பனை அனுப்பவும்')}
+                            >
+                              <MessageCircle size={14} />
+                            </button>
+                            <button
                               onClick={() => void toggleCoupon(coupon)}
                               style={coupon.is_active ? { backgroundColor: themeColor, color: '#FFFFFF', borderColor: themeColor } : undefined}
                               className={`rounded-lg px-3 py-1.5 text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
@@ -5289,6 +5375,136 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+
+            {/* WhatsApp Coupon Share Modal */}
+            {whatsappModalCoupon && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-150"
+                onClick={() => setWhatsappModalCoupon(null)}
+              >
+                <div
+                  className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-in zoom-in-95 duration-150"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white shrink-0 shadow-inner">
+                        <MessageCircle size={22} className="fill-white/20" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black leading-tight">
+                          {l('Share via WhatsApp', 'WhatsApp மூலம் பகிரவும்')}
+                        </h3>
+                        <p className="text-xs text-emerald-100 font-medium">
+                          Coupon: <span className="font-mono font-bold uppercase">{whatsappModalCoupon.code}</span> ({whatsappModalCoupon.percentage}% OFF)
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setWhatsappModalCoupon(null)}
+                      className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/25 flex items-center justify-center text-white transition-colors cursor-pointer"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  {/* Modal Body */}
+                  <form onSubmit={handleSendCouponWhatsApp} className="p-5 space-y-4">
+                    {/* Coupon Card Summary */}
+                    <div className="bg-[#FBFAF6] border border-[#F3F4F6] rounded-xl p-3 flex items-center justify-between gap-3">
+                      <div>
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Selected Coupon</span>
+                        <span className="text-base font-mono font-black text-gray-900 tracking-wider">{whatsappModalCoupon.code}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="inline-block px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-black">
+                          {whatsappModalCoupon.percentage}% FLAT OFF
+                        </span>
+                        {whatsappModalCoupon.min_order_value > 0 && (
+                          <span className="text-[10px] text-gray-500 block mt-0.5 font-medium">
+                            Min Order ₹{whatsappModalCoupon.min_order_value}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* WhatsApp Mobile Number Input */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                        {l('Customer WhatsApp Number', 'வாடிக்கையாளர் வாட்ஸ்அப் எண்')} <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex rounded-xl border border-gray-300 bg-gray-50/50 focus-within:border-emerald-500 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all overflow-hidden">
+                        <span className="inline-flex items-center px-3.5 bg-gray-100 border-r border-gray-200 text-xs font-bold text-gray-600 select-none">
+                          +91
+                        </span>
+                        <input
+                          type="tel"
+                          autoFocus
+                          maxLength={15}
+                          placeholder="Enter 10-digit mobile number"
+                          value={whatsappPhone}
+                          onChange={(e) => {
+                            setWhatsappPhone(e.target.value)
+                            if (whatsappPhoneError) setWhatsappPhoneError('')
+                          }}
+                          className="flex-1 px-3.5 py-2.5 text-sm font-semibold text-gray-900 bg-transparent outline-none placeholder:text-gray-400"
+                        />
+                      </div>
+                      {whatsappPhoneError && (
+                        <p className="mt-1.5 text-xs font-semibold text-red-600 flex items-center gap-1">
+                          <AlertCircle size={12} /> {whatsappPhoneError}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Customer Name Input (Optional) */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                        {l('Customer Name (Optional)', 'வாடிக்கையாளர் பெயர் (விருப்பத்திற்குரியது)')}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Priya or Ramesh"
+                        value={whatsappCustomerName}
+                        onChange={(e) => setWhatsappCustomerName(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 bg-gray-50/50 text-sm font-medium text-gray-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-none transition-all placeholder:text-gray-400"
+                      />
+                    </div>
+
+                    {/* Message Live Preview */}
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider flex items-center justify-between">
+                        <span>{l('Message Preview', 'செய்தி முன்னோட்டம்')}</span>
+                        <span className="text-[10px] text-emerald-700 font-semibold lowercase">✨ with emojis</span>
+                      </label>
+                      <div className="bg-[#E7F8EE]/70 border border-[#C6EDD4] rounded-xl p-3 text-[11px] leading-relaxed text-gray-800 font-mono whitespace-pre-wrap max-h-36 overflow-y-auto hide-scrollbar">
+                        {generateCouponWhatsAppMessage(whatsappModalCoupon, whatsappCustomerName)}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => setWhatsappModalCoupon(null)}
+                        className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                      >
+                        {l('Cancel', 'ரத்து செய்')}
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-5 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#1EBE5D] text-white text-xs font-black shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+                      >
+                        <MessageCircle size={15} />
+                        <span>{l('Send on WhatsApp', 'WhatsApp-ல் அனுப்பு')}</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         )}        {tab === 'users' && (
           <div className="space-y-6">

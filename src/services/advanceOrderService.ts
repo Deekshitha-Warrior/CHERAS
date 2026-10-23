@@ -1,5 +1,5 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
-import { parseSplit, splitTotal, type SplitDetails } from '../lib/payments'
+import { emptySplit, parseSplit, splitTotal, type SplitDetails } from '../lib/payments'
 import { useProductStore, useVariantStore } from '../store/store'
 
 export type AdvanceStatus = 'pending_deposit' | 'ready_for_delivery' | 'waiting_final_payment' | 'completed' | 'cancelled'
@@ -29,6 +29,9 @@ export type AdvanceOrder = {
   completed_order_id: string | null
   invoice_number: string | null
   final_payment_method: string | null
+  deposit_payment_method?: string | null
+  payment_method?: string | null
+  deposit_split_details?: SplitDetails
   /** Full cash / QR / card amounts collected for this order (deposit + final payment). */
   split_details?: SplitDetails
   subtotal?: number
@@ -146,6 +149,41 @@ const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
     resolvedSubtotal = total
   }
 
+  // Resolve deposit payment method from attached payments, explicit fields, or local storage
+  let depositPaymentMethod: string | null = row.deposit_payment_method
+    ? String(row.deposit_payment_method)
+    : row.payment_method
+      ? String(row.payment_method)
+      : null
+
+  let depositSplit: SplitDetails | undefined = row.deposit_split_details
+    ? parseSplit(row.deposit_split_details)
+    : row.split_details
+      ? parseSplit(row.split_details)
+      : undefined
+
+  if (!depositPaymentMethod && Array.isArray(row.advance_order_payments)) {
+    const dep = (row.advance_order_payments as Array<Record<string, unknown>>).find(p => p.payment_type === 'deposit')
+    if (dep) {
+      depositPaymentMethod = String(dep.payment_method || '')
+      if (dep.split_details) {
+        depositSplit = parseSplit(dep.split_details)
+      }
+    }
+  }
+
+  if (!depositPaymentMethod && row.id) {
+    try {
+      const localDep = loadLocalPayments().find(p => p.advance_order_id === String(row.id) && p.payment_type === 'deposit')
+      if (localDep) {
+        depositPaymentMethod = localDep.payment_method
+        if (localDep.split_details) {
+          depositSplit = parseSplit(localDep.split_details)
+        }
+      }
+    } catch { /* optional */ }
+  }
+
   return {
     ...row,
     id: String(row.id || ''),
@@ -171,6 +209,10 @@ const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
     completed_order_id: row.completed_order_id ? String(row.completed_order_id) : null,
     invoice_number: row.invoice_number ? String(row.invoice_number) : null,
     final_payment_method: row.final_payment_method ? String(row.final_payment_method) : null,
+    deposit_payment_method: depositPaymentMethod,
+    payment_method: depositPaymentMethod,
+    deposit_split_details: depositSplit,
+    split_details: depositSplit ?? (row.split_details ? parseSplit(row.split_details) : undefined),
     subtotal: resolvedSubtotal,
     delivery_charge: deliveryCharge,
     discount_amount: discountAmount,
@@ -634,11 +676,29 @@ export async function listAdvanceOrders(throwOnError = false): Promise<AdvanceOr
   const local = loadLocalOrders()
   if (isSupabaseConfigured) {
     try {
-      const { data, error } = await supabase.from('advance_orders').select('*').order('created_at', { ascending: false })
-      if (error) {
-        console.error('[listAdvanceOrders] Supabase error:', error.message)
-        if (throwOnError) throw new Error(error.message)
-      } else if (Array.isArray(data)) {
+      let data: unknown[] | null = null
+      const res = await supabase
+        .from('advance_orders')
+        .select('*, advance_order_payments(payment_type, payment_method, split_details)')
+        .order('created_at', { ascending: false })
+
+      if (res.error) {
+        // Fallback to select('*') in case join is restricted
+        const fallbackRes = await supabase
+          .from('advance_orders')
+          .select('*')
+          .order('created_at', { ascending: false })
+        if (fallbackRes.error) {
+          console.error('[listAdvanceOrders] Supabase error:', fallbackRes.error.message)
+          if (throwOnError) throw new Error(fallbackRes.error.message)
+        } else {
+          data = fallbackRes.data
+        }
+      } else {
+        data = res.data
+      }
+
+      if (Array.isArray(data)) {
         const remote = data.map(row => normalizeOrder(row as Record<string, unknown>))
         const remoteIds = new Set(remote.map(r => r.id))
         const localOnly = local.filter(l => !remoteIds.has(l.id))
@@ -686,7 +746,7 @@ export async function createAdvanceOrder(input: {
       throw new Error('Split payment amounts must add up to the deposit amount.')
     }
   }
-  const splitDetails = input.paymentMethod === 'split' ? parseSplit(input.splitDetails) : {}
+  const splitDetails: SplitDetails = input.paymentMethod === 'split' ? parseSplit(input.splitDetails) : emptySplit()
 
   let createdOrder: AdvanceOrder | null = null
 
@@ -703,6 +763,12 @@ export async function createAdvanceOrder(input: {
         console.error('[createAdvanceOrder] Supabase error:', error.message)
       } else if (data) {
         createdOrder = normalizeOrder(rpcRow(data))
+        createdOrder.deposit_payment_method = input.paymentMethod
+        createdOrder.payment_method = input.paymentMethod
+        if (input.paymentMethod === 'split') {
+          createdOrder.deposit_split_details = splitDetails
+          createdOrder.split_details = splitDetails
+        }
         // Patch reference_number and financial breakdown fields
         const patchPayload: Record<string, unknown> = {}
         if (input.referenceNumber.trim()) patchPayload.reference_number = input.referenceNumber.trim()
@@ -765,6 +831,10 @@ export async function createAdvanceOrder(input: {
       completed_order_id: null,
       invoice_number: null,
       final_payment_method: null,
+      deposit_payment_method: input.paymentMethod,
+      payment_method: input.paymentMethod,
+      deposit_split_details: splitDetails,
+      split_details: splitDetails,
       subtotal: input.subtotal ?? Number(input.totalAmount),
       delivery_charge: input.deliveryCharge ?? 0,
       discount_amount: input.discountAmount ?? 0,
@@ -799,6 +869,10 @@ export async function createAdvanceOrder(input: {
     saveLocalPayments(currentPayments)
   }
 
+  if (!createdOrder) {
+    throw new Error('Failed to create advance order')
+  }
+
   // Ensure products snapshot is present
   const orderProducts = (createdOrder.products && createdOrder.products.length > 0) ? createdOrder.products : (input.products || [])
   createdOrder.products = orderProducts
@@ -817,7 +891,7 @@ export async function createAdvanceOrder(input: {
   }
 
   const localOrders = loadLocalOrders()
-  const updated = [createdOrder, ...localOrders.filter(o => o.id !== createdOrder!.id)]
+  const updated: AdvanceOrder[] = [createdOrder, ...localOrders.filter(o => o.id !== createdOrder.id)]
   saveLocalOrders(updated)
   return createdOrder
 }

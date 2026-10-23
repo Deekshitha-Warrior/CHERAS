@@ -56,6 +56,7 @@ export function advanceReceiptPdf(order: AdvanceOrder) {
   const deliveryFormatted = order.expected_delivery_date
     ? new Date(`${order.expected_delivery_date}T00:00:00`).toLocaleDateString('en-IN')
     : '-'
+  const paymentFormatted = resolveAdvancePaymentLabel(order)
 
   const rows = [
     ['Customer', order.customer_name],
@@ -64,6 +65,7 @@ export function advanceReceiptPdf(order: AdvanceOrder) {
     ['Product', order.product_name],
     ['Category', order.category || '-'],
     ['Expected delivery', deliveryFormatted],
+    ['Payment', paymentFormatted],
   ]
   let y = 60
   rows.forEach(([label, value]) => {
@@ -155,12 +157,30 @@ export function advanceReceiptPdf(order: AdvanceOrder) {
   return new File([doc.output('blob')], `Advance-Receipt-${order.deposit_id}.pdf`, { type: 'application/pdf' })
 }
 
+export function resolveAdvancePaymentLabel(order: AdvanceOrder): string {
+  // 1. Explicit deposit payment method (e.g. 'card', 'upi', 'cash', 'split')
+  const depMode = order.deposit_payment_method || order.payment_method
+  const depSplit = order.deposit_split_details || order.split_details
+  if (depMode) {
+    return formatPaymentLabel(depMode, depSplit)
+  }
+
+  // 2. If split details exist with payments
+  if (depSplit && (depSplit.cash > 0 || depSplit.qr > 0 || depSplit.card > 0)) {
+    return formatPaymentLabel('split', depSplit)
+  }
+
+  // 3. Fallback to final_payment_method if already completed
+  if (order.final_payment_method) {
+    return formatPaymentLabel(order.final_payment_method, order.split_details)
+  }
+
+  return 'Cash'
+}
+
 export function printAdvanceReceipt(order: AdvanceOrder) {
   try {
-    const paymentLabel = order.final_payment_method
-      ? (order.final_payment_method === 'upi' ? 'UPI / QR' : order.final_payment_method === 'split' ? formatPaymentLabel('split', order.split_details) : order.final_payment_method.toUpperCase())
-      : ''
-    const depositPayment = paymentLabel || 'Cash'
+    const depositPayment = resolveAdvancePaymentLabel(order)
 
     const dateStr = (() => {
       try {

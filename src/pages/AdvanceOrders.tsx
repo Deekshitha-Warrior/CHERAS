@@ -505,6 +505,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
       depositAmount: order.deposit_amount,
       remainingBalance: order.remaining_balance,
       expectedDeliveryDate: order.expected_delivery_date,
+      paymentMethod: order.deposit_payment_method || order.payment_method || undefined,
     })
     window.open(toWhatsAppUrl(order.phone, message), '_blank', 'noopener,noreferrer')
   }

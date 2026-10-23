@@ -87,8 +87,25 @@ export const Invoice: React.FC<InvoiceProps> = ({
     >
       {/* ── HEADER ────────────────────────────────────────────────── */}
       <div className="invoice-header" style={{ textAlign: 'center', borderBottom: '1px solid #F3F4F6', paddingBottom: 20, marginBottom: 20 }}>
-        <div style={{ width: 64, height: 64, margin: '0 auto 10px auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <img src={LOGO_BASE64 || BRAND_ICON} alt={BRAND_EN} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+        <div
+          style={{
+            width: 52,
+            height: 52,
+            margin: '0 auto 10px auto',
+            borderRadius: '50%',
+            background: '#7B1E2B',
+            color: '#C9A24B',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 30,
+            fontWeight: 900,
+            fontFamily: "'Playfair Display', Georgia, serif",
+            border: '2px solid #C9A24B',
+            boxShadow: '0 2px 6px rgba(123, 30, 43, 0.25)',
+          }}
+        >
+          C
         </div>
         <div style={{ fontSize: 24, fontWeight: 900, color: '#7B1E2B', letterSpacing: 2, textTransform: 'uppercase' }}>
           {BRAND_EN}

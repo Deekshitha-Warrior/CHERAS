@@ -63,13 +63,15 @@ export function createInvoicePdf(data: InvoicePdfData): Blob {
   doc.line(left, y, right, y)
   y += 10
 
-  try {
-    doc.addImage(LOGO_BASE64, 'PNG', left, y, 22, 22)
-  } catch {
-    doc.setTextColor(primaryColor)
-    doc.setFontSize(16)
-    doc.text(BRAND_EN.toUpperCase(), left, y + 10)
-  }
+  doc.setFillColor(123, 30, 43)
+  doc.circle(left + 11, y + 11, 10, 'F')
+  doc.setDrawColor(201, 162, 75)
+  doc.setLineWidth(0.6)
+  doc.circle(left + 11, y + 11, 10, 'S')
+  doc.setTextColor(201, 162, 75)
+  doc.setFont('times', 'bold')
+  doc.setFontSize(18)
+  doc.text('C', left + 11, y + 16.5, { align: 'center' })
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(14)
   doc.setTextColor(primaryColor)

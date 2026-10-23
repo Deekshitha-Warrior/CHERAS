@@ -118,7 +118,7 @@ export function printThermalReceipt(data: ThermalReceiptData) {
         <div class="receipt-container" style="width: 76mm; max-width: 76mm; margin: 0; margin-left: 0; margin-right: auto; text-align: left;">
         <div class="text-center mb-2">
           <div style="display: flex; justify-content: center; align-items: center; margin: 0 auto 6px auto; text-align: center;">
-            <img src="${LOGO_BASE64}" alt="Cheras Clothing" style="width: 120px; max-height: 60px; object-fit: contain; margin: 0 auto; display: block;" />
+            <div style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; font-family: serif; line-height: 1; text-align: center; margin: 0 auto;">C</div>
           </div>
           <div style="font-size: 15px; letter-spacing: 1px; font-weight: 800; margin-bottom: 2px;">${(data.storeName || BRAND_EN).toUpperCase()}</div>
           <div style="font-size: 9.5px; margin-top: 2px; line-height: 1.3;">${data.storeAddress || BRAND_ADDRESS}</div>

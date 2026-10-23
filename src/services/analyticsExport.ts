@@ -240,8 +240,8 @@ export async function exportAnalyticsToPDF({
       <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #D4AF37; padding-bottom: 14px; margin-bottom: 18px;">
         <div>
           <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: #FFFFFF; border: 1px solid #E5E5E5; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 2px; box-sizing: border-box; flex-shrink: 0;">
-              <img src="${LOGO_BASE64}" style="width: 100%; height: 100%; object-fit: contain; display: block;" alt="${BRAND_EN} Logo" />
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #7B1E2B; border: 1.5px solid #C9A24B; display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box; flex-shrink: 0; color: #C9A24B; font-size: 26px; font-weight: 900; font-family: serif;">
+              C
             </div>
             <div>
               <h1 style="margin: 0; font-size: 20px; font-weight: 900; letter-spacing: 0.5px; color: #111111; text-transform: uppercase; line-height: 1.15;">${BRAND_EN}</h1>

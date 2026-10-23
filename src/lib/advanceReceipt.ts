@@ -22,11 +22,15 @@ export function advanceReceiptPdf(order: AdvanceOrder) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   doc.setFillColor('#111111')
   doc.rect(0, 0, 210, 5, 'F')
-  try {
-    doc.addImage(LOGO_BASE64, 'PNG', 16, 9, 16, 16)
-  } catch (_err) {
-    /* ignore missing logo */
-  }
+  doc.setFillColor(123, 30, 43)
+  doc.circle(24, 17, 8, 'F')
+  doc.setDrawColor(201, 162, 75)
+  doc.setLineWidth(0.5)
+  doc.circle(24, 17, 8, 'S')
+  doc.setTextColor(201, 162, 75)
+  doc.setFont('times', 'bold')
+  doc.setFontSize(16)
+  doc.text('C', 24, 21.5, { align: 'center' })
   doc.setTextColor('#111111')
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(18)
@@ -315,7 +319,7 @@ export function printAdvanceReceipt(order: AdvanceOrder) {
   <!-- Header / Logo -->
   <div class="text-center" style="margin-bottom: 4px;">
     <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 6px;">
-      <img src="${LOGO_BASE64}" alt="${esc(BRAND_EN)}" style="height: 48px; max-width: 140px; object-fit: contain; margin: 0 auto; display: block;" />
+      <div style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid #000; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; font-family: serif; line-height: 1; text-align: center; margin: 0 auto;">C</div>
     </div>
     <div style="font-size: 17px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">${esc(BRAND_EN)}</div>
     <div style="font-size: 10px; margin-top: 3px; color: #222; line-height: 1.35; padding: 0 4px;">${esc(BRAND_ADDRESS)}</div>

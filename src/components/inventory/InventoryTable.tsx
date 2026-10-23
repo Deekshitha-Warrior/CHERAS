@@ -55,7 +55,16 @@ export const InventoryTable: React.FC = () => {
     try {
       void fetchProducts(true)
       const data = await inventoryService.fetchInventoryItems()
-      setItems(data)
+      setItems((prevItems) => {
+        if (!prevItems || prevItems.length === 0) return data
+        const newItemsMap = new Map(data.map((d) => [d.id, d]))
+        const orderedExisting = prevItems
+          .map((prev) => newItemsMap.get(prev.id))
+          .filter((item): item is InventoryStockItem => item !== undefined)
+        const existingIds = new Set(prevItems.map((p) => p.id))
+        const brandNewItems = data.filter((d) => !existingIds.has(d.id))
+        return [...orderedExisting, ...brandNewItems]
+      })
 
       // Alert sound and modal when viewing inventory with low stock
       const lowStockFlagged = data

@@ -24,6 +24,8 @@ export function fetchAllProducts() {
     .from('products')
     .select(PRODUCT_COLUMNS)
     .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
 }
 
 export async function updateItemPrice(params: {

@@ -87,27 +87,62 @@ export interface InventoryAnalyticsSummary {
   movements: InventoryMovement[]
 }
 
+const SIZE_ORDER_MAP: Record<string, number> = {
+  'xxs': 10,
+  'xs': 20,
+  's': 30,
+  'm': 40,
+  'l': 50,
+  'xl': 60,
+  '2xl': 70,
+  'xxl': 70,
+  '3xl': 80,
+  'xxxl': 80,
+  '4xl': 90,
+  'xxxxl': 90,
+  '5xl': 100,
+  '6xl': 110,
+  'free size': 120,
+  'one size': 120,
+}
+
+function getVariantSortScore(variantName: string): number {
+  const clean = variantName.trim().toLowerCase()
+  if (SIZE_ORDER_MAP[clean] !== undefined) {
+    return SIZE_ORDER_MAP[clean]
+  }
+  const num = parseInt(clean, 10)
+  if (!isNaN(num) && String(num) === clean) {
+    return 200 + num
+  }
+  return 1000
+}
+
 export const inventoryService = {
   /**
-   * Fetch complete SKU/variant level inventory list.
+   * Fetch complete SKU/variant level inventory list with fixed deterministic ordering.
    */
   async fetchInventoryItems(): Promise<InventoryStockItem[]> {
-    // 1. Fetch products
+    // 1. Fetch products with deterministic fixed order (never shifts when updated)
     const { data: products, error: prodErr } = await supabase
       .from('products')
-      .select('id, name, name_ta, price, offer_price, purchase_price, stock_quantity, low_stock_alert, unit, unit_type, category, category_id, image_url, barcode, sku, is_active, updated_at')
-      .order('name', { ascending: true })
+      .select('id, name, name_ta, price, offer_price, purchase_price, stock_quantity, low_stock_alert, unit, unit_type, category, category_id, image_url, barcode, sku, is_active, sort_order, created_at, updated_at')
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
 
     if (prodErr) {
       console.error('[inventoryService.fetchInventoryItems] Products error:', prodErr)
       throw prodErr
     }
 
-    // 2. Fetch variants
+    // 2. Fetch variants with deterministic fixed order (never shifts when updated)
     const { data: variants, error: varErr } = await supabase
       .from('product_variants')
-      .select('id, product_id, variant_name, price, purchase_price, stock, barcode, sku, is_active, updated_at')
+      .select('id, product_id, variant_name, price, purchase_price, stock, barcode, sku, is_active, sort_order, created_at, updated_at')
       .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
 
     if (varErr) {
       console.error('[inventoryService.fetchInventoryItems] Variants error:', varErr)
@@ -169,8 +204,26 @@ export const inventoryService = {
       const prodVariants = variantsByProduct.get(p.id)
 
       if (prodVariants && prodVariants.length > 0) {
-        // Multi-variant product: each variant is a sellable SKU
-        for (const v of prodVariants) {
+        // Multi-variant product: sort variants in stable natural size order
+        const sortedVariants = [...prodVariants].sort((a, b) => {
+          if ((a.sort_order ?? 0) !== (b.sort_order ?? 0)) {
+            return (a.sort_order ?? 0) - (b.sort_order ?? 0)
+          }
+          const scoreA = getVariantSortScore(a.variant_name || '')
+          const scoreB = getVariantSortScore(b.variant_name || '')
+          if (scoreA !== scoreB) {
+            return scoreA - scoreB
+          }
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0
+          if (timeA !== timeB) {
+            return timeA - timeB
+          }
+          return String(a.id).localeCompare(String(b.id))
+        })
+
+        // Each variant is a sellable SKU
+        for (const v of sortedVariants) {
           items.push({
             id: `var-${v.id}`,
             product_id: p.id,

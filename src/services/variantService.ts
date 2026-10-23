@@ -72,6 +72,8 @@ export async function fetchAllVariants(): Promise<{ data: ProductVariant[]; erro
     .select(VARIANT_COLS)
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
 
   if (error) return { data: [], error: error.message }
   return {
@@ -89,6 +91,8 @@ export async function fetchVariantsByProduct(productId: string): Promise<Product
     .eq('product_id', productId)
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true })
 
   return (data || []).map(r => mapVariant(r as Record<string, unknown>))
 }

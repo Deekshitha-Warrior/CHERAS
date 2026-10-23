@@ -46,7 +46,7 @@ import { normalizeStructuredOrderItem, formatInvoiceNo } from '../lib/retail'
 import { Invoice } from '../components/Invoice'
 import { printThermalReceipt } from '../lib/thermalPrint'
 import { buildProfessionalWhatsAppMessage } from '../lib/whatsappMessage'
-import { invoicePdfFile } from '../lib/invoicePdf'
+import { invoicePdfFile, invoicePdfFileFromElement, generateInvoicePdfFromData } from '../lib/invoicePdf'
 import { formatPhoneDisplay, formatPhoneForCSV } from '../lib/phone'
 import { downloadCsv } from '../lib/exportCsv'
 // toWhatsAppUrl removed - using direct link building in handlers
@@ -315,6 +315,8 @@ export default function Dashboard() {
   const [analyticsTab, setAnalyticsTab] = useState('revenue')
 
   const [invoicePreviewOrder, setInvoicePreviewOrder] = useState<DashboardOrder | null>(null)
+  const invoiceModalRef = useRef<HTMLDivElement>(null)
+  const [downloadingModalPdf, setDownloadingModalPdf] = useState(false)
 
   // WA detail expansion
   const [waExpandedId, setWaExpandedId] = useState<string | null>(null)
@@ -1354,53 +1356,105 @@ export default function Dashboard() {
     })
   }
 
+  const downloadInvoiceAsPdf = async (order: DashboardOrder, element?: HTMLElement | null) => {
+    const preview = getOrderWhatsAppPreview(order)
+    if (!preview) {
+      alert('This order has no invoice details available.')
+      return
+    }
+
+    const invoiceNo = order.invoice_no || order.id
+    try {
+      let file: File
+      if (element) {
+        file = await invoicePdfFileFromElement(element, invoiceNo)
+      } else {
+        const rawGst = Number(order.total_gst || order.gst_amount || 0)
+        const rawCgst = Number(order.cgst_amount || (rawGst > 0 ? rawGst / 2 : 0))
+        const rawSgst = Number(order.sgst_amount || (rawGst > 0 ? rawGst / 2 : 0))
+        file = await generateInvoicePdfFromData({
+          invoiceNo: formatInvoiceNo(invoiceNo),
+          date: order.created_at,
+          customerName: order.customer_name,
+          phone: order.phone,
+          address: order.address,
+          items: preview.items as unknown as import('../components/Invoice').InvoiceItem[],
+          subtotal: preview.subtotal,
+          shipping: order.delivery_charge,
+          deliveryCharge: order.delivery_charge,
+          discountAmount: order.discount_amount,
+          couponCode: order.coupon_code || undefined,
+          manualDiscountAmount: order.manual_discount_amount,
+          gstAmount: rawGst,
+          cgstAmount: rawCgst,
+          sgstAmount: rawSgst,
+          gstRate: Number(order.gst_rate || 0),
+          paymentMode: formatPaymentLabel(order.payment_mode, order.split_details) || order.payment_mode,
+          total: order.total,
+          status: order.status,
+        })
+      }
+
+      const url = URL.createObjectURL(file)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = file.name
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    } catch (err) {
+      console.error('Failed to download invoice PDF:', err)
+      // Fallback to vector PDF
+      const rawGst = Number(order.total_gst || 0)
+      const rawCgst = Number(order.cgst_amount || (rawGst > 0 ? rawGst / 2 : 0))
+      const rawSgst = Number(order.sgst_amount || (rawGst > 0 ? rawGst / 2 : 0))
+      const fallbackFile = invoicePdfFile({
+        invoiceNo,
+        date: order.created_at,
+        customerName: order.customer_name,
+        phone: order.phone,
+        address: order.address,
+        items: preview.items as unknown as Array<Record<string, unknown>>,
+        subtotal: preview.subtotal,
+        shipping: order.delivery_charge,
+        discountAmount: order.discount_amount,
+        manualDiscountAmount: order.manual_discount_amount,
+        gstAmount: rawGst,
+        cgstAmount: rawCgst,
+        sgstAmount: rawSgst,
+        gstRate: Number(order.gst_rate || 0),
+        couponCode: order.coupon_code || null,
+        paymentMode: formatPaymentLabel(order.payment_mode, order.split_details) || order.payment_mode,
+        total: order.total,
+      })
+      const fallbackUrl = URL.createObjectURL(fallbackFile)
+      const fallbackLink = document.createElement('a')
+      fallbackLink.href = fallbackUrl
+      fallbackLink.download = fallbackFile.name
+      document.body.appendChild(fallbackLink)
+      fallbackLink.click()
+      document.body.removeChild(fallbackLink)
+      setTimeout(() => URL.revokeObjectURL(fallbackUrl), 60000)
+    }
+  }
+
   const openOrderInvoice = async (order: DashboardOrder, mode: 'view' | 'download' | 'print') => {
     if (mode === 'view') {
       setInvoicePreviewOrder(order)
       return
     }
 
-    if (order.invoice_pdf_url) {
-      const link = document.createElement('a')
-      link.href = order.invoice_pdf_url
-      if (mode === 'download') link.download = `Invoice-${order.invoice_no || order.id}.pdf`
-      if (mode === 'download') { link.click(); return }
-      const opened = window.open(order.invoice_pdf_url, '_blank', 'noopener,noreferrer')
-      if (mode === 'print') opened?.addEventListener('load', () => opened.print())
-      return
-    }
-    const preview = getOrderWhatsAppPreview(order)
-    if (!preview) { alert('This order has no invoice details available.'); return }
-    const rawGst = Number(order.total_gst || 0)
-    const rawCgst = Number(order.cgst_amount || (rawGst > 0 ? rawGst / 2 : 0))
-    const rawSgst = Number(order.sgst_amount || (rawGst > 0 ? rawGst / 2 : 0))
-    const file = invoicePdfFile({
-      invoiceNo: order.invoice_no || order.id,
-      date: order.created_at,
-      customerName: order.customer_name,
-      phone: order.phone,
-      address: order.address,
-      items: preview.items as unknown as Array<Record<string, unknown>>,
-      subtotal: preview.subtotal,
-      shipping: order.delivery_charge,
-      discountAmount: order.discount_amount,
-      manualDiscountAmount: order.manual_discount_amount,
-      gstAmount: rawGst,
-      cgstAmount: rawCgst,
-      sgstAmount: rawSgst,
-      gstRate: Number(order.gst_rate || 0),
-      couponCode: order.coupon_code || null,
-      paymentMode: formatPaymentLabel(order.payment_mode, order.split_details) || order.payment_mode,
-      total: order.total,
-    })
-    const url = URL.createObjectURL(file)
     if (mode === 'download') {
-      const link = document.createElement('a'); link.href = url; link.download = file.name; link.click()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      const targetElement = invoicePreviewOrder?.id === order.id ? invoiceModalRef.current : null
+      await downloadInvoiceAsPdf(order, targetElement)
       return
     }
-    const opened = window.open(url, '_blank', 'noopener,noreferrer')
-    if (mode === 'print') opened?.addEventListener('load', () => opened.print())
+
+    if (mode === 'print') {
+      handlePrintReceipt(order)
+      return
+    }
   }
 
   const generateCouponCode = () => {
@@ -5390,16 +5444,25 @@ export default function Dashboard() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => void openOrderInvoice(invoicePreviewOrder, 'download')}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 text-xs font-black shadow-sm transition-colors"
+                    disabled={downloadingModalPdf}
+                    onClick={async () => {
+                      if (downloadingModalPdf) return
+                      setDownloadingModalPdf(true)
+                      try {
+                        await downloadInvoiceAsPdf(invoicePreviewOrder, invoiceModalRef.current)
+                      } finally {
+                        setDownloadingModalPdf(false)
+                      }
+                    }}
+                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl px-3 text-xs font-black shadow-sm transition-colors disabled:opacity-60 cursor-pointer"
                     style={{ backgroundColor: themeColor, color: textColor }}
                   >
-                    <Download size={15} /> Download
+                    <Download size={15} /> {downloadingModalPdf ? 'Generating...' : 'Download'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setInvoicePreviewOrder(null)}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111111]"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-[#6B7280] hover:bg-[#F9FAFB] hover:text-[#111111] cursor-pointer"
                     aria-label="Close invoice preview"
                   >
                     <X size={19} />
@@ -5407,7 +5470,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 sm:p-5">
-                <div className="mx-auto max-w-3xl overflow-hidden rounded-xl bg-white shadow-sm">
+                <div ref={invoiceModalRef} className="mx-auto max-w-3xl overflow-hidden rounded-xl bg-white shadow-sm">
                   <Invoice
                     invoiceNo={formatInvoiceNo(invoicePreviewOrder.invoice_no || invoicePreviewOrder.id)}
                     date={invoicePreviewOrder.created_at}

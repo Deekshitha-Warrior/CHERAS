@@ -15,7 +15,7 @@ import { barcodeService } from '../services/barcodeService'
 import { normalizeBarcode } from '../lib/barcode'
 import { Invoice } from '../components/Invoice'
 import CatalogModal from '../components/CatalogModal'
-import { invoicePdfFile } from '../lib/invoicePdf'
+import { invoicePdfFile, generateInvoicePdfFromData } from '../lib/invoicePdf'
 import { uploadInvoicePdf } from '../lib/storage'
 import { createOrderWithStock } from '../services/orderService'
 import { createAdvanceOrder, type AdvanceOrder, type AdvancePaymentMethod } from '../services/advanceOrderService'
@@ -1211,27 +1211,65 @@ export default function Pos(props: PosProps = {}) {
 
   const persistInvoicePdf = async (inv: InvoiceSnap) => {
     try {
-      const file = invoicePdfFile({
-        invoiceNo: inv.invoiceNo,
-        date: inv.date,
-        customerName: inv.customerName,
-        phone: inv.phone,
-        address: inv.address,
-        items: inv.items.map(item => ({ name: item.name, qty: item.qty, unit: item.selectedUnit, price: Number(item.basePrice) || 0, line_total: item.lineTotal })),
-        subtotal: inv.subtotal,
-        shipping: inv.shipping,
-        discountAmount: inv.couponDiscount,
-        couponDiscount: inv.couponDiscount,
-        couponCode: inv.couponCode,
-        manualDiscountAmount: inv.manualDiscountAmount,
-        manualDiscount: inv.manualDiscountAmount,
-        gstAmount: inv.gstAmount,
-        cgstAmount: inv.gstAmount > 0 ? Math.round((inv.gstAmount / 2) * 100) / 100 : 0,
-        sgstAmount: inv.gstAmount > 0 ? Math.round((inv.gstAmount / 2) * 100) / 100 : 0,
-        gstRate: inv.gstRate,
-        paymentMode: inv.paymentMode,
-        total: inv.total,
-      })
+      const rawGst = Number(inv.gstAmount || 0)
+      const rawCgst = rawGst > 0 ? Math.round((rawGst / 2) * 100) / 100 : 0
+      const rawSgst = rawGst > 0 ? Math.round((rawGst / 2) * 100) / 100 : 0
+      let file: File
+      try {
+        file = await generateInvoicePdfFromData({
+          invoiceNo: inv.invoiceNo,
+          date: inv.date,
+          customerName: inv.customerName,
+          phone: inv.phone,
+          address: inv.address,
+          items: inv.items.map(item => ({
+            id: item.id,
+            name: item.name,
+            qty: item.qty,
+            unit: item.selectedUnit,
+            unit_type: item.unitType,
+            price: Number(item.basePrice) || 0,
+            base_price: Number(item.basePrice) || 0,
+            line_total: item.lineTotal,
+            lineTotal: item.lineTotal,
+          })),
+          subtotal: inv.subtotal,
+          shipping: inv.shipping,
+          deliveryCharge: inv.shipping,
+          discountAmount: inv.couponDiscount || 0,
+          couponCode: inv.couponCode,
+          manualDiscountAmount: inv.manualDiscountAmount || 0,
+          gstAmount: rawGst,
+          cgstAmount: rawCgst,
+          sgstAmount: rawSgst,
+          gstRate: inv.gstRate,
+          paymentMode: inv.paymentMode,
+          total: inv.total,
+          status: 'completed',
+        })
+      } catch {
+        file = invoicePdfFile({
+          invoiceNo: inv.invoiceNo,
+          date: inv.date,
+          customerName: inv.customerName,
+          phone: inv.phone,
+          address: inv.address,
+          items: inv.items.map(item => ({ name: item.name, qty: item.qty, unit: item.selectedUnit, price: Number(item.basePrice) || 0, line_total: item.lineTotal })),
+          subtotal: inv.subtotal,
+          shipping: inv.shipping,
+          discountAmount: inv.couponDiscount,
+          couponDiscount: inv.couponDiscount,
+          couponCode: inv.couponCode,
+          manualDiscountAmount: inv.manualDiscountAmount,
+          manualDiscount: inv.manualDiscountAmount,
+          gstAmount: inv.gstAmount,
+          cgstAmount: rawCgst,
+          sgstAmount: rawSgst,
+          gstRate: inv.gstRate,
+          paymentMode: inv.paymentMode,
+          total: inv.total,
+        })
+      }
       // Upload PDF and save its URL — total fields already saved immediately after RPC
       const url = await uploadInvoicePdf(file, inv.invoiceNo)
       await supabase.from('orders').update({ invoice_pdf_url: url }).eq('id', inv.id)

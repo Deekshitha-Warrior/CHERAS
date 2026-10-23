@@ -297,7 +297,16 @@ export default function DigitalInvoice() {
       // Use synchronous vector PDF to preserve the transient user click gesture for Web Share API,
       // and fall back to native AirPrint/PDF preview via window.print().
       if (isIOS) {
-        const file = invoicePdfFile(pdfData)
+        let file: File
+        try {
+          if (invoiceElementRef.current) {
+            file = await invoicePdfFileFromElement(invoiceElementRef.current, invoice.invoice_no)
+          } else {
+            file = invoicePdfFile(pdfData)
+          }
+        } catch {
+          file = invoicePdfFile(pdfData)
+        }
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({

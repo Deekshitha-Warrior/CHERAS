@@ -1,9 +1,12 @@
+import React from 'react'
+import { createRoot } from 'react-dom/client'
 import { formatPhoneDisplay } from './phone'
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import { BRAND_ADDRESS, BRAND_EN, BRAND_PHONE_DISPLAY, BRAND_GSTIN } from './brand'
 import { formatCurrency, formatQuantityDisplay, normalizeStructuredOrderItem, formatInvoiceNo } from './retail'
 import { LOGO_BASE64 } from './logoBase64'
+import { Invoice, type InvoiceProps } from '../components/Invoice'
 
 export type InvoicePdfData = {
   invoiceNo: string
@@ -44,7 +47,8 @@ export function createInvoicePdf(data: InvoicePdfData): Blob {
   const pageWidth = 210
   const left = 16
   const right = 194
-  const primaryColor = '#111111' // Deep Royal Navy
+  const primaryColor = '#7B1E2B' // Cheras Deep Burgundy
+  const goldColor = '#C9A24B' // Cheras Gold
   const ink = '#1F1F1F'
   const muted = '#6B7280'
   let y = 16
@@ -112,13 +116,13 @@ export function createInvoicePdf(data: InvoicePdfData): Blob {
   }
   y += customerBoxHeight + 9
 
-  doc.setFillColor(primaryColor)
+  doc.setFillColor(123, 30, 43) // #7B1E2B
   doc.rect(left, y, right - left, 9, 'F')
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(7)
-  doc.setTextColor('#ffffff')
+  doc.setTextColor(201, 162, 75) // #C9A24B
   doc.text('#', left + 4, y + 6)
-  doc.text('ITEM DESCRIPTION', left + 14, y + 6)
+  doc.text('ITEM / SKU', left + 14, y + 6)
   doc.text('QTY', 140, y + 6, { align: 'right' })
   doc.text('RATE', 166, y + 6, { align: 'right' })
   doc.text('AMOUNT', right - 4, y + 6, { align: 'right' })
@@ -162,8 +166,8 @@ export function createInvoicePdf(data: InvoicePdfData): Blob {
     : (totalTax > 0 ? '2.5' : '')
   const rateLabel = halfRateStr ? ` (${halfRateStr}%)` : ''
 
-  if (couponDisc > 0) rows.push([`Coupon Disc.${data.couponCode ? ` (${data.couponCode})` : ''}`, `-${money(couponDisc)}`, '#D4AF37'])
-  if (manualDisc > 0) rows.push(['Manual Discount', `-${money(manualDisc)}`, '#D4AF37'])
+  if (couponDisc > 0) rows.push([`Coupon Disc.${data.couponCode ? ` (${data.couponCode})` : ''}`, `-${money(couponDisc)}`, goldColor])
+  if (manualDisc > 0) rows.push(['Manual Discount', `-${money(manualDisc)}`, goldColor])
   if (rawCgst > 0) rows.push([`CGST${rateLabel}`, `+${money(rawCgst)}`, ink])
   if (rawSgst > 0) rows.push([`SGST${rateLabel}`, `+${money(rawSgst)}`, ink])
   if (!rawCgst && !rawSgst && (data.gstAmount || 0) > 0) {
@@ -172,7 +176,7 @@ export function createInvoicePdf(data: InvoicePdfData): Blob {
   if ((data.shipping || 0) > 0) rows.push(['Delivery Charges', `+${money(data.shipping)}`, ink])
   doc.setFontSize(9)
   rows.forEach(([label, value, color]) => { doc.setFont('helvetica', 'normal'); doc.setTextColor(color); doc.text(label, 143, y, { align: 'right' }); doc.text(value, right - 4, y, { align: 'right' }); y += 7 })
-  doc.setDrawColor(primaryColor)
+  doc.setDrawColor(201, 162, 75) // #C9A24B
   doc.setLineWidth(0.7)
   doc.line(118, y - 3, right, y - 3)
   doc.setFont('helvetica', 'bold')
@@ -188,7 +192,7 @@ export function createInvoicePdf(data: InvoicePdfData): Blob {
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)
   doc.setTextColor(primaryColor)
-  doc.text('THANK YOU FOR SHOPPING WITH US', pageWidth / 2, y + 8, { align: 'center' })
+  doc.text(`THANK YOU FOR SHOPPING AT ${BRAND_EN.toUpperCase()}!`, pageWidth / 2, y + 8, { align: 'center' })
   return doc.output('blob')
 }
 
@@ -250,5 +254,64 @@ export async function invoicePdfFileFromElement(
   } catch (error) {
     console.error('Failed to generate invoice PDF from element:', error)
     throw error
+  }
+}
+
+/** Generates matching Cheras WhatsApp-format digital invoice PDF by rendering the Invoice component offscreen. */
+export async function generateInvoicePdfFromData(props: InvoiceProps): Promise<File> {
+  const formattedNo = formatInvoiceNo(props.invoiceNo)
+  if (typeof document === 'undefined') {
+    return invoicePdfFile({
+      invoiceNo: props.invoiceNo,
+      date: props.date,
+      customerName: props.customerName || '',
+      phone: props.phone || '',
+      address: props.address || '',
+      items: props.items as unknown as Array<Record<string, unknown>>,
+      subtotal: props.subtotal,
+      shipping: props.shipping || props.deliveryCharge || 0,
+      total: props.total,
+      discountAmount: props.discountAmount,
+      couponDiscount: props.discountAmount,
+      couponCode: props.couponCode,
+      manualDiscountAmount: props.manualDiscountAmount,
+      manualDiscount: props.manualDiscountAmount,
+      gstAmount: props.gstAmount,
+      cgstAmount: props.cgstAmount,
+      sgstAmount: props.sgstAmount,
+      gstRate: props.gstRate,
+      paymentMode: props.paymentMode,
+      gstin: props.gstin,
+    })
+  }
+
+  const container = document.createElement('div')
+  container.id = 'temp-invoice-render-container'
+  container.style.position = 'fixed'
+  container.style.left = '-9999px'
+  container.style.top = '0'
+  container.style.width = '680px'
+  container.style.zIndex = '-99999'
+  container.style.background = '#ffffff'
+  container.style.opacity = '1'
+  container.style.pointerEvents = 'none'
+  document.body.appendChild(container)
+
+  const root = createRoot(container)
+  root.render(React.createElement(Invoice, props))
+
+  // Allow DOM rendering and styling calculation
+  await new Promise(resolve => setTimeout(resolve, 250))
+
+  try {
+    const file = await invoicePdfFileFromElement(container, formattedNo)
+    return file
+  } finally {
+    try {
+      root.unmount()
+      container.remove()
+    } catch {
+      // ignore cleanup errors
+    }
   }
 }

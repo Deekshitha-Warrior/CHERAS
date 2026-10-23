@@ -2344,8 +2344,7 @@ export default function Dashboard() {
                 { id: 'billing', label: 'Billing' },
               ].map(sub => (
                 <button key={sub.id} onClick={() => setAnalyticsTab(sub.id)}
-                  style={analyticsTab === sub.id ? { backgroundColor: themeColor, color: '#FFFFFF' } : undefined}
-                  className={`px-4 py-2 rounded-xl text-[13px] font-bold whitespace-nowrap transition-colors cursor-pointer ${analyticsTab === sub.id ? 'shadow-sm' : 'bg-slate-50 border border-slate-200 text-gray-700 hover:bg-slate-100 hover:text-[#111111]'}`}>
+                  className={`px-4 py-2 rounded-xl text-[13px] font-bold whitespace-nowrap transition-colors cursor-pointer ${analyticsTab === sub.id ? 'bg-black text-white shadow-sm' : 'bg-slate-50 border border-slate-200 text-black hover:bg-slate-100'}`}>
                   {sub.label}
                 </button>
               ))}
@@ -2357,35 +2356,31 @@ export default function Dashboard() {
             {/* Revenue KPIs - 6 cards in 3 columns */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
-                { label: l('Total Revenue', 'மொத்த வருவாய்'),    value: formatCurrency(analytics.totalCompletedRevenue), from: 'from-emerald-50 via-emerald-50/80 to-gray-50', iconBg: 'from-emerald-400 to-gray-500', icon: <RMIcon size={16} /> },
+                { label: l('Total Revenue', 'மொத்த வருவாய்'),    value: formatCurrency(analytics.totalCompletedRevenue), icon: <RMIcon size={16} /> },
                 {
                   label: analytics.isProfitable ? l('Net Profit', 'நிகர லாபம்') : l('Net Loss', 'நிகர நஷ்டம்'),
                   value: formatCurrency(Math.abs(analytics.netProfit)),
-                  from: analytics.isProfitable ? 'from-emerald-50 via-gray-50/80 to-green-50' : 'from-rose-50 via-red-50/80 to-orange-50',
-                  iconBg: analytics.isProfitable ? 'from-emerald-500 to-gray-600' : 'from-rose-500 to-red-600',
                   icon: analytics.isProfitable ? <TrendingUp size={16} /> : <TrendingDown size={16} />,
                   arrow: analytics.isProfitable ? '↑' : '↓',
-                  arrowColor: analytics.isProfitable ? 'text-emerald-700 bg-emerald-100' : 'text-rose-700 bg-rose-100',
-                  valueColor: analytics.isProfitable ? 'text-emerald-700' : 'text-rose-700',
                 },
-                { label: l('Total Expenses', 'மொத்த செலவு'),    value: formatCurrency(analytics.totalExpenses),         from: 'from-amber-50 via-amber-50/80 to-orange-50', iconBg: 'from-amber-400 to-orange-500', icon: <Receipt size={16} /> },
-                { label: l("Today's Sales",  'இன்றைய விற்பனை'),  value: formatCurrency(analytics.todaySales),            from: 'from-gray-50 via-gray-50/80 to-gray-50', iconBg: 'from-gray-400 to-gray-500', icon: <TrendingUp size={16} /> },
-                { label: l('Offline Revenue', 'ஆஃப்லைன் வருவாய்'), value: formatCurrency(analytics.posRevenue),           from: 'from-orange-50 via-orange-50/80 to-amber-50', iconBg: 'from-orange-400 to-amber-500', icon: <RMIcon size={16} /> },
-                { label: l('Online Revenue',  'ஆன்லைன் வருவாய்'),  value: formatCurrency(analytics.onlinePosRevenue),     from: 'from-gray-50 via-gray-50/80 to-gray-50', iconBg: 'from-gray-400 to-gray-500', icon: <RMIcon size={16} /> },
-                { label: l('Cash Collected', 'பணமாக பெற்றது'), value: formatCurrency(analytics.cashCollected), from: 'from-gray-50 via-gray-50/80 to-gray-50', iconBg: 'from-gray-400 to-gray-500', icon: <Banknote size={16} /> },
-                { label: l('QR Collected', 'QR மூலம் பெற்றது'), value: formatCurrency(analytics.qrCollected), from: 'from-gray-50 via-gray-50/80 to-gray-50', iconBg: 'from-gray-400 to-gray-500', icon: <QrCode size={16} /> },
-                { label: l('Card Collected', 'கார்டு மூலம் பெற்றது'), value: formatCurrency(analytics.cardCollected), from: 'from-gray-50 via-gray-50/80 to-gray-50', iconBg: 'from-gray-400 to-gray-500', icon: <CreditCard size={16} /> },
-                ...(analytics.otherCollected > 0 ? [{ label: l('Other / Online Collected', 'பிற / ஆன்லைன்'), value: formatCurrency(analytics.otherCollected), from: 'from-gray-50 via-gray-50/80 to-gray-50', iconBg: 'from-gray-400 to-gray-500', icon: <RMIcon size={16} /> }] : []),
+                { label: l('Total Expenses', 'மொத்த செலவு'),    value: formatCurrency(analytics.totalExpenses),         icon: <Receipt size={16} /> },
+                { label: l("Today's Sales",  'இன்றைய விற்பனை'),  value: formatCurrency(analytics.todaySales),            icon: <TrendingUp size={16} /> },
+                { label: l('Offline Revenue', 'ஆஃப்லைன் வருவாய்'), value: formatCurrency(analytics.posRevenue),           icon: <RMIcon size={16} /> },
+                { label: l('Online Revenue',  'ஆன்லைன் வருவாய்'),  value: formatCurrency(analytics.onlinePosRevenue),     icon: <RMIcon size={16} /> },
+                { label: l('Cash Collected', 'பணமாக பெற்றது'), value: formatCurrency(analytics.cashCollected), icon: <Banknote size={16} /> },
+                { label: l('QR Collected', 'QR மூலம் பெற்றது'), value: formatCurrency(analytics.qrCollected), icon: <QrCode size={16} /> },
+                { label: l('Card Collected', 'கார்டு மூலம் பெற்றது'), value: formatCurrency(analytics.cardCollected), icon: <CreditCard size={16} /> },
+                ...(analytics.otherCollected > 0 ? [{ label: l('Other / Online Collected', 'பிற / ஆன்லைன்'), value: formatCurrency(analytics.otherCollected), icon: <RMIcon size={16} /> }] : []),
               ].map((card, i) => (
-                <div key={i} className={`bg-gradient-to-br ${card.from} rounded-2xl border border-white/40 p-4 sm:p-5 shadow-sm backdrop-blur-sm flex flex-col justify-between`}>
+                <div key={i} className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
                   <div className="flex items-center justify-between gap-1 mb-2">
-                    <p className="text-[11px] uppercase font-black text-[#374151] tracking-wider leading-tight">{card.label}</p>
-                    <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${card.iconBg} flex items-center justify-center text-white shrink-0 shadow-sm`}>{card.icon}</div>
+                    <p className="text-[11px] uppercase font-black text-black tracking-wider leading-tight">{card.label}</p>
+                    <div className="w-8 h-8 rounded-xl bg-gray-100 flex items-center justify-center text-black shrink-0 shadow-xs">{card.icon}</div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <p className={`text-[21px] sm:text-[23px] font-black break-words leading-tight ${card.valueColor || 'text-[#111111]'}`}>{card.value}</p>
+                    <p className="text-[21px] sm:text-[23px] font-black break-words leading-tight text-black">{card.value}</p>
                     {card.arrow && (
-                      <span className={`text-[11px] font-black px-1.5 py-0.5 rounded-md ${card.arrowColor}`}>
+                      <span className="text-[11px] font-black px-1.5 py-0.5 rounded-md bg-gray-100 text-black border border-gray-200">
                         {card.arrow}
                       </span>
                     )}
@@ -2395,15 +2390,15 @@ export default function Dashboard() {
             </div>
 
             {/* Latest POS Bills */}
-            <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-black text-[#111111]">{l('Latest POS Bills', 'POS பில்கள்')}</h3>
-                <button onClick={() => setTab('billing')} className="text-[12px] font-bold text-[#10B981] hover:underline">{l('View All →', 'அனைத்தும் →')}</button>
+                <h3 className="text-base font-black text-black">{l('Latest POS Bills', 'POS பில்கள்')}</h3>
+                <button onClick={() => setTab('billing')} className="text-[12px] font-bold text-black hover:underline">{l('View All →', 'அனைத்தும் →')}</button>
               </div>
               {latestPOS.length > 0 ? (
-                <div className="overflow-x-auto rounded-xl border border-[#F3F4F6]/30">
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
                   <table className="w-full min-w-[480px] text-[12px]">
-                    <thead className="bg-[#F9FAFB] text-[10px] uppercase tracking-wider text-[#374151]">
+                    <thead className="bg-[#F9FAFB] text-[10px] uppercase tracking-wider text-black">
                       <tr>
                         <th className="px-3 py-2.5 font-black text-left">{l('Invoice', 'பில்')}</th>
                         <th className="px-3 py-2.5 font-black text-left">{l('Customer', 'வாடிக்கையாளர்')}</th>
@@ -2413,19 +2408,18 @@ export default function Dashboard() {
                         <th className="px-3 py-2.5 font-black text-left">{l('Status', 'நிலை')}</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#F3F4F6]/20">
+                    <tbody className="divide-y divide-gray-100">
                       {latestPOS.map(o => {
                         const btLabel = normalizeOrderType(o.order_type) === 'manual_sale' ? 'MANUAL' : normalizeOrderMode(o.order_mode) === 'online' ? 'ONLINE' : 'OFFLINE'
-                        const btClass = normalizeOrderType(o.order_type) === 'manual_sale' ? 'bg-gray-100 text-gray-700' : normalizeOrderMode(o.order_mode) === 'online' ? 'bg-gray-100 text-gray-700' : 'bg-orange-100 text-orange-700'
                         return (
                           <tr key={o.id} className="hover:bg-[#F9FAFB]/50">
-                            <td className="px-3 py-2.5 font-bold text-[#10B981] text-[11px]">{formatInvoiceNo(o.invoice_no)}</td>
-                            <td className="px-3 py-2.5 font-semibold text-[#111111] max-w-[100px] break-words">{o.customer_name}</td>
-                            <td className="px-3 py-2.5 font-black text-[#111111]">{formatCurrency(getOrderTotal(o))}</td>
-                            <td className="px-3 py-2.5 text-[#6B7280] whitespace-nowrap">{new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</td>
-                            <td className="px-3 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${btClass}`}>{btLabel}</span></td>
+                            <td className="px-3 py-2.5 font-bold text-black text-[11px]">{formatInvoiceNo(o.invoice_no)}</td>
+                            <td className="px-3 py-2.5 font-semibold text-black max-w-[100px] break-words">{o.customer_name}</td>
+                            <td className="px-3 py-2.5 font-black text-black">{formatCurrency(getOrderTotal(o))}</td>
+                            <td className="px-3 py-2.5 text-black whitespace-nowrap">{new Date(o.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</td>
+                            <td className="px-3 py-2.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-100 text-black border border-gray-200">{btLabel}</span></td>
                             <td className="px-3 py-2.5">
-                              <span className={`text-[11px] font-black px-2 py-0.5 rounded-lg ${normalizeStatus(o.status) === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                              <span className="text-[11px] font-black px-2 py-0.5 rounded-lg bg-gray-100 text-black border border-gray-200">
                                 {normalizeStatus(o.status)}
                               </span>
                             </td>
@@ -2436,7 +2430,7 @@ export default function Dashboard() {
                   </table>
                 </div>
               ) : (
-                <p className="text-[13px] text-[#374151] text-center py-4">{l('No bills yet', 'பில்கள் இல்லை')}</p>
+                <p className="text-[13px] text-black text-center py-4">{l('No bills yet', 'பில்கள் இல்லை')}</p>
               )}
             </div>
             </>
@@ -2444,34 +2438,34 @@ export default function Dashboard() {
 
             {analyticsTab === 'product' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
-                  <h3 className="text-base font-black text-[#111111] mb-4">Top Products by Volume</h3>
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                  <h3 className="text-base font-black text-black mb-4">Top Products by Volume</h3>
                   <div className="space-y-3">
                     {analytics.topProducts.slice(0, 10).map((p, i) => (
-                      <div key={i} className="flex justify-between items-center bg-[#F9FAFB] p-3 rounded-xl">
+                      <div key={i} className="flex justify-between items-center bg-[#F9FAFB] p-3 rounded-xl border border-gray-100">
                         <div>
-                          <p className="text-[13px] font-bold text-[#111111]">{p.name}</p>
-                          <p className="text-[11px] text-[#374151]">{p.billCount} bills</p>
+                          <p className="text-[13px] font-bold text-black">{p.name}</p>
+                          <p className="text-[11px] text-black font-medium">{p.billCount} bills</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-[14px] font-black text-[#111111]">{p.qty}</p>
-                          <p className="text-[11px] font-bold text-[#10B981]">{formatCurrency(p.revenue)}</p>
+                          <p className="text-[14px] font-black text-black">{p.qty}</p>
+                          <p className="text-[11px] font-bold text-black">{formatCurrency(p.revenue)}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
-                  <h3 className="text-base font-black text-[#111111] mb-4">Top Categories by Revenue</h3>
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                  <h3 className="text-base font-black text-black mb-4">Top Categories by Revenue</h3>
                   <div className="space-y-3">
                     {analytics.topCategories.slice(0, 10).map((c, i) => (
-                      <div key={i} className="flex justify-between items-center bg-[#F9FAFB] p-3 rounded-xl">
+                      <div key={i} className="flex justify-between items-center bg-[#F9FAFB] p-3 rounded-xl border border-gray-100">
                         <div>
-                          <p className="text-[13px] font-bold text-[#111111]">{c.name}</p>
+                          <p className="text-[13px] font-bold text-black">{c.name}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-[14px] font-black text-[#111111]">{formatCurrency(c.revenue)}</p>
-                          <p className="text-[11px] text-[#374151]">{c.qty} sold</p>
+                          <p className="text-[14px] font-black text-black">{formatCurrency(c.revenue)}</p>
+                          <p className="text-[11px] text-black font-medium">{c.qty} sold</p>
                         </div>
                       </div>
                     ))}
@@ -2482,25 +2476,25 @@ export default function Dashboard() {
 
             {analyticsTab === 'inventory' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
-                  <h3 className="text-base font-black text-[#111111] mb-4">Low Stock Alerts</h3>
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                  <h3 className="text-base font-black text-black mb-4">Low Stock Alerts</h3>
                   <div className="space-y-3">
                     {products.filter(p => p.stock <= (p.lowStockAlert || 5)).slice(0, 10).map((p, i) => (
-                      <div key={i} className="flex justify-between items-center bg-red-50 border border-red-100 p-3 rounded-xl">
-                        <p className="text-[13px] font-bold text-red-900">{p.name}</p>
-                        <p className="text-[14px] font-black text-red-700">{p.stock} left</p>
+                      <div key={i} className="flex justify-between items-center bg-gray-50 border border-gray-200 p-3 rounded-xl">
+                        <p className="text-[13px] font-bold text-black">{p.name}</p>
+                        <p className="text-[14px] font-black text-black">{p.stock} left</p>
                       </div>
                     ))}
                     {products.filter(p => p.stock <= (p.lowStockAlert || 5)).length === 0 && (
-                      <p className="text-[13px] text-[#374151]">No low stock alerts.</p>
+                      <p className="text-[13px] text-black font-medium">No low stock alerts.</p>
                     )}
                   </div>
                 </div>
-                <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
-                  <h3 className="text-base font-black text-[#111111] mb-4">Total Inventory Value</h3>
-                  <div className="bg-[#F9FAFB] p-5 rounded-xl">
-                    <p className="text-[11px] uppercase tracking-wider font-bold text-[#374151] mb-1">Selling Value (MRP)</p>
-                    <p className="text-[24px] font-black text-[#111111]">
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                  <h3 className="text-base font-black text-black mb-4">Total Inventory Value</h3>
+                  <div className="bg-[#F9FAFB] p-5 rounded-xl border border-gray-100">
+                    <p className="text-[11px] uppercase tracking-wider font-bold text-black mb-1">Selling Value (MRP)</p>
+                    <p className="text-[24px] font-black text-black">
                       {formatCurrency(products.reduce((acc, p) => acc + (p.stock * p.price), 0))}
                     </p>
                   </div>
@@ -2510,17 +2504,17 @@ export default function Dashboard() {
 
             {analyticsTab === 'customer' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
-                  <h3 className="text-base font-black text-[#111111] mb-4">Customer Insights</h3>
-                  <div className="bg-gray-50 border border-gray-100 p-5 rounded-xl mb-4">
-                    <p className="text-[11px] uppercase tracking-wider font-bold text-gray-800 mb-1">Unique Customers</p>
-                    <p className="text-[24px] font-black text-gray-900">
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                  <h3 className="text-base font-black text-black mb-4">Customer Insights</h3>
+                  <div className="bg-gray-50 border border-gray-200 p-5 rounded-xl mb-4">
+                    <p className="text-[11px] uppercase tracking-wider font-bold text-black mb-1">Unique Customers</p>
+                    <p className="text-[24px] font-black text-black">
                       {new Set(searchResults.filter(o => o.phone).map(o => o.phone)).size}
                     </p>
                   </div>
-                  <div className="bg-[#F9FAFB] p-5 rounded-xl">
-                    <p className="text-[11px] uppercase tracking-wider font-bold text-[#374151] mb-1">Avg Order Value</p>
-                    <p className="text-[24px] font-black text-[#111111]">
+                  <div className="bg-[#F9FAFB] p-5 rounded-xl border border-gray-100">
+                    <p className="text-[11px] uppercase tracking-wider font-bold text-black mb-1">Avg Order Value</p>
+                    <p className="text-[24px] font-black text-black">
                       {formatCurrency(analytics.totalCompletedRevenue / (searchResults.filter(o => isCompletedStatus(o.status)).length || 1))}
                     </p>
                   </div>
@@ -2530,31 +2524,31 @@ export default function Dashboard() {
 
             {analyticsTab === 'billing' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
-                  <h3 className="text-base font-black text-[#111111] mb-4">Billing Metrics</h3>
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                  <h3 className="text-base font-black text-black mb-4">Billing Metrics</h3>
                   <div className="space-y-4">
-                    <div className="bg-[#F9FAFB] p-4 rounded-xl flex justify-between items-center">
-                      <span className="text-[13px] font-bold text-[#374151]">Total Invoices Generated</span>
-                      <span className="text-[16px] font-black text-[#111111]">{searchResults.length}</span>
+                    <div className="bg-[#F9FAFB] p-4 rounded-xl flex justify-between items-center border border-gray-100">
+                      <span className="text-[13px] font-bold text-black">Total Invoices Generated</span>
+                      <span className="text-[16px] font-black text-black">{searchResults.length}</span>
                     </div>
-                    <div className="bg-[#F9FAFB] p-4 rounded-xl flex justify-between items-center">
-                      <span className="text-[13px] font-bold text-[#374151]">Discounts Applied</span>
-                      <span className="text-[16px] font-black text-[#10B981]">
+                    <div className="bg-[#F9FAFB] p-4 rounded-xl flex justify-between items-center border border-gray-100">
+                      <span className="text-[13px] font-bold text-black">Discounts Applied</span>
+                      <span className="text-[16px] font-black text-black">
                         {formatCurrency(searchResults.reduce((acc, o) => acc + (toNumber(o.discount_amount, 0)), 0))}
                       </span>
                     </div>
                   </div>
                 </div>
-                <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
-                  <h3 className="text-base font-black text-[#111111] mb-4">Top Coupons</h3>
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                  <h3 className="text-base font-black text-black mb-4">Top Coupons</h3>
                   <div className="space-y-3">
                     {analytics.topCoupons.slice(0, 5).map((c, i) => (
-                      <div key={i} className="flex justify-between items-center bg-[#F9FAFB] p-3 rounded-xl">
-                        <span className="text-[13px] font-bold text-[#111111]">{c.code}</span>
-                        <span className="text-[12px] font-bold text-[#10B981]">{c.usage} uses</span>
+                      <div key={i} className="flex justify-between items-center bg-[#F9FAFB] p-3 rounded-xl border border-gray-100">
+                        <span className="text-[13px] font-bold text-black">{c.code}</span>
+                        <span className="text-[12px] font-bold text-black">{c.usage} uses</span>
                       </div>
                     ))}
-                    {analytics.topCoupons.length === 0 && <p className="text-[13px] text-[#374151]">No coupons used yet.</p>}
+                    {analytics.topCoupons.length === 0 && <p className="text-[13px] text-black">No coupons used yet.</p>}
                   </div>
                 </div>
               </div>
@@ -2835,32 +2829,28 @@ export default function Dashboard() {
                   <div className="space-y-1.5">
                     {analytics.topWACategories.slice(0, 6).map((cat, i) => (
                       <div key={cat.name} className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black flex items-center justify-center shrink-0">{i + 1}</span>
-                        <span className="text-[11px] font-bold text-[#111111] break-words flex-1">{cat.name}</span>
-                        <span className="text-[11px] font-black text-emerald-600 shrink-0">{cat.count}x</span>
+                        <span className="w-5 h-5 rounded-full bg-gray-100 text-black text-[9px] font-black flex items-center justify-center shrink-0">{i + 1}</span>
+                        <span className="text-[11px] font-bold text-black break-words flex-1">{cat.name}</span>
+                        <span className="text-[11px] font-black text-black shrink-0">{cat.count}x</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[12px] text-[#9CA3AF] text-center py-3">{l('No data', 'தரவு இல்லை')}</p>
+                  <p className="text-[12px] text-black text-center py-3">{l('No data', 'தரவு இல்லை')}</p>
                 )}
               </div>
 
               {/* Status Distribution - compact bar */}
-              <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-4 shadow-sm">
-                <h3 className="text-[13px] font-black text-[#111111] mb-3">{l('Status Distribution', 'நிலை விளக்கம்')}</h3>
+              <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+                <h3 className="text-[13px] font-black text-black mb-3">{l('Status Distribution', 'நிலை விளக்கம்')}</h3>
                 <div className="h-[144px] w-full min-w-0 relative">
                   <ResponsiveContainer width="100%" height={144} minWidth={0} minHeight={0}>
                     <BarChart data={analytics.statusDistribution} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#E8DFD0" />
-                      <XAxis dataKey="name" tick={{ fill: '#6B7280', fontSize: 9 }} axisLine={false} tickLine={false} />
-                      <YAxis allowDecimals={false} tick={{ fill: '#6B7280', fontSize: 9 }} axisLine={false} tickLine={false} width={24} />
+                      <XAxis dataKey="name" tick={{ fill: '#000000', fontSize: 9 }} axisLine={false} tickLine={false} />
+                      <YAxis allowDecimals={false} tick={{ fill: '#000000', fontSize: 9 }} axisLine={false} tickLine={false} width={24} />
                       <Tooltip formatter={(value) => toNumber(value as number | string, 0)} />
-                      <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={20}>
-                        {analytics.statusDistribution.map((entry) => (
-                          <Cell key={entry.name} fill={entry.color} />
-                        ))}
-                      </Bar>
+                      <Bar dataKey="value" radius={[6, 6, 0, 0]} barSize={20} fill="#000000" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -2876,11 +2866,11 @@ export default function Dashboard() {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div>
-                  <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: themeColor }}>{BRAND_EN}</p>
-                  <h2 className="text-[26px] font-black text-[#111111] tracking-tight">
+                  <p className="text-xs font-black uppercase tracking-widest mb-1 text-black">{BRAND_EN}</p>
+                  <h2 className="text-[26px] font-black text-black tracking-tight">
                     {analyticsGstFilter === 'gst' ? 'GST Revenue' : analyticsGstFilter === 'non_gst' ? 'Non-GST Revenue' : 'Store Revenue'}
                   </h2>
-                  <p className="text-[13px] text-[#6B7280]">
+                  <p className="text-[13px] text-black font-medium">
                     {analyticsGstFilter === 'gst'
                       ? 'GST invoices only — taxable sales dashboard'
                       : analyticsGstFilter === 'non_gst'
@@ -2891,8 +2881,8 @@ export default function Dashboard() {
 
                 {/* Right side controls: Period presets, Date Pickers, Export buttons */}
                 <div className="flex flex-col sm:items-end gap-2.5">
-                  <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-full bg-[#F3F4F6] border border-gray-200/80">
-                    <span className="text-[10px] font-black uppercase text-[#6B7280] ml-2 mr-1">Period:</span>
+                  <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-full bg-gray-100 border border-gray-300">
+                    <span className="text-[10px] font-black uppercase text-black ml-2 mr-1">Period:</span>
                     {(['all', 'today', 'week', 'month', 'year'] as const).map(preset => (
                       <button
                         key={preset}
@@ -2900,8 +2890,8 @@ export default function Dashboard() {
                         onClick={() => applyAnalyticsPreset(preset)}
                         className={`px-3.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
                           analyticsDatePreset === preset
-                            ? 'bg-[#111827] text-white shadow-xs'
-                            : 'text-[#6B7280] hover:text-[#111111]'
+                            ? 'bg-black text-white shadow-xs'
+                            : 'text-black hover:bg-gray-200'
                         }`}
                       >
                         {preset === 'all' ? 'All Time' : preset === 'today' ? 'Today' : preset === 'week' ? 'This Week' : preset === 'month' ? 'This Month' : 'This Year'}
@@ -2910,22 +2900,22 @@ export default function Dashboard() {
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center border border-gray-200 rounded-xl px-2.5 py-1 bg-white text-xs shadow-2xs">
-                      <span className="text-[10px] uppercase font-black text-gray-500 mr-2">From:</span>
+                    <div className="flex items-center border border-gray-300 rounded-xl px-2.5 py-1 bg-white text-xs shadow-2xs">
+                      <span className="text-[10px] uppercase font-black text-black mr-2">From:</span>
                       <input
                         type="date"
                         value={analyticsDateFrom}
                         onChange={e => { setAnalyticsDateFrom(e.target.value); setAnalyticsDatePreset('custom') }}
-                        className="text-[12px] font-bold text-gray-900 bg-transparent outline-none"
+                        className="text-[12px] font-bold text-black bg-transparent outline-none"
                       />
                     </div>
-                    <div className="flex items-center border border-gray-200 rounded-xl px-2.5 py-1 bg-white text-xs shadow-2xs">
-                      <span className="text-[10px] uppercase font-black text-gray-500 mr-2">To:</span>
+                    <div className="flex items-center border border-gray-300 rounded-xl px-2.5 py-1 bg-white text-xs shadow-2xs">
+                      <span className="text-[10px] uppercase font-black text-black mr-2">To:</span>
                       <input
                         type="date"
                         value={analyticsDateTo}
                         onChange={e => { setAnalyticsDateTo(e.target.value); setAnalyticsDatePreset('custom') }}
-                        className="text-[12px] font-bold text-gray-900 bg-transparent outline-none"
+                        className="text-[12px] font-bold text-black bg-transparent outline-none"
                       />
                     </div>
 
@@ -2942,10 +2932,10 @@ export default function Dashboard() {
                             dateTo: analyticsDateTo,
                           })
                         }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-200 text-gray-900 font-bold text-xs hover:bg-gray-50 shadow-2xs transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-gray-300 text-black font-bold text-xs hover:bg-gray-100 shadow-2xs transition-all cursor-pointer"
                         title="Export current analytics view to CSV"
                       >
-                        <Download size={13} style={{ color: themeColor }} />
+                        <Download size={13} className="text-black" />
                         <span>CSV</span>
                       </button>
                       <button
@@ -2967,8 +2957,7 @@ export default function Dashboard() {
                             setExportingPdf(false)
                           }
                         }}
-                        style={{ backgroundColor: themeColor, color: '#FFFFFF', borderColor: themeColor }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-black text-xs shadow-2xs transition-all cursor-pointer disabled:opacity-60 hover:opacity-90"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black border border-black text-white font-black text-xs shadow-2xs transition-all cursor-pointer disabled:opacity-60 hover:bg-gray-900"
                         title="Export PDF report"
                       >
                         {exportingPdf ? <RefreshCw size={13} className="animate-spin" /> : <FileText size={13} />}
@@ -2979,7 +2968,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Segmented GST Filter Switch (matches Image 2) */}
+              {/* Segmented GST Filter Switch */}
               <div className="pt-1">
                 <div className="inline-flex items-center gap-1 p-1 rounded-full border border-gray-300 bg-white shadow-2xs">
                   <button
@@ -2987,8 +2976,8 @@ export default function Dashboard() {
                     onClick={() => setAnalyticsGstFilter('all')}
                     className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                       analyticsGstFilter === 'all'
-                        ? 'bg-[#111827] text-white shadow-xs'
-                        : 'text-[#4B5563] hover:text-[#111827]'
+                        ? 'bg-black text-white shadow-xs'
+                        : 'text-black hover:bg-gray-100'
                     }`}
                   >
                     All Bills
@@ -2998,8 +2987,8 @@ export default function Dashboard() {
                     onClick={() => setAnalyticsGstFilter('gst')}
                     className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                       analyticsGstFilter === 'gst'
-                        ? 'bg-[#111827] text-white shadow-xs'
-                        : 'text-[#4B5563] hover:text-[#111827]'
+                        ? 'bg-black text-white shadow-xs'
+                        : 'text-black hover:bg-gray-100'
                     }`}
                   >
                     GST Invoices
@@ -3009,8 +2998,8 @@ export default function Dashboard() {
                     onClick={() => setAnalyticsGstFilter('non_gst')}
                     className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
                       analyticsGstFilter === 'non_gst'
-                        ? 'bg-[#111827] text-white shadow-xs'
-                        : 'text-[#4B5563] hover:text-[#111827]'
+                        ? 'bg-black text-white shadow-xs'
+                        : 'text-black hover:bg-gray-100'
                     }`}
                   >
                     Non-GST Bills
@@ -3034,8 +3023,8 @@ export default function Dashboard() {
                       onClick={() => setPosAnalyticsTab(id as PosAnalyticsTab)}
                       className={`pb-2.5 text-xs sm:text-[13px] font-black uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer border-b-2 ${
                         isActive
-                          ? 'border-[#111827] text-[#111827]'
-                          : 'border-transparent text-gray-500 hover:text-gray-900'
+                          ? 'border-black text-black'
+                          : 'border-transparent text-black/60 hover:text-black'
                       }`}
                     >
                       {label}
@@ -3055,8 +3044,8 @@ export default function Dashboard() {
                       helper: analyticsGstFilter === 'gst' ? 'GST invoices total' : analyticsGstFilter === 'non_gst' ? 'Non-GST bills combined' : 'POS + manual combined',
                       value: formatCurrency(analytics.totalCompletedRevenue),
                       icon: <RMIcon size={16} />,
-                      color: 'text-emerald-500',
-                      bg: 'bg-emerald-50',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     ...(analyticsGstFilter === 'gst' ? [
                       {
@@ -3064,16 +3053,16 @@ export default function Dashboard() {
                         helper: `CGST: ${formatCurrency(analytics.totalCgstCollected)} | SGST: ${formatCurrency(analytics.totalSgstCollected)}`,
                         value: formatCurrency(analytics.totalGstCollected),
                         icon: <Receipt size={16} />,
-                        color: 'text-amber-600',
-                        bg: 'bg-amber-50',
+                        color: 'text-black',
+                        bg: 'bg-gray-100',
                       },
                       {
                         label: 'Taxable Sales (Pre-Tax)',
                         helper: 'Order subtotal before tax',
                         value: formatCurrency(analytics.taxableRevenue),
                         icon: <TrendingUp size={16} />,
-                        color: 'text-blue-600',
-                        bg: 'bg-blue-50',
+                        color: 'text-black',
+                        bg: 'bg-gray-100',
                       },
                     ] : []),
                     {
@@ -3081,57 +3070,57 @@ export default function Dashboard() {
                       helper: analyticsGstFilter === 'gst' ? 'GST bills' : 'POS + manual bills',
                       value: String(analytics.completedOrders),
                       icon: <Trophy size={16} />,
-                      color: 'text-emerald-500',
-                      bg: 'bg-emerald-50',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     {
                       label: 'Offline Bills',
                       helper: 'Walk-in POS sales',
                       value: formatCurrency(analytics.posRevenue),
                       icon: <RMIcon size={16} />,
-                      color: 'text-gray-500',
-                      bg: 'bg-gray-50',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     {
                       label: 'Online Bills',
                       helper: 'Online POS sales',
                       value: formatCurrency(analytics.onlinePosRevenue),
                       icon: <RMIcon size={16} />,
-                      color: 'text-gray-500',
-                      bg: 'bg-gray-50',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     {
                       label: 'Total Offline Bills',
                       helper: 'Walk-in POS orders',
                       value: String(analytics.offlineOrderCount),
                       icon: <LayoutDashboard size={16} />,
-                      color: 'text-red-500',
-                      bg: 'bg-red-50',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     {
                       label: 'Total Online Bills',
                       helper: 'Online channel orders',
                       value: String(analytics.onlineBillCount),
                       icon: <Box size={16} />,
-                      color: 'text-gray-500',
-                      bg: 'bg-gray-50',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     {
                       label: 'Total Items Sold',
                       helper: 'From completed bills',
                       value: String(Math.round(analytics.totalProductsSold)),
                       icon: <Box size={16} />,
-                      color: 'text-gray-500',
-                      bg: 'bg-gray-50',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     {
                       label: analytics.isProfitable ? 'Net Profit' : 'Net Loss',
                       helper: `Revenue (${formatCurrency(analytics.totalCompletedRevenue)}) − Expenses (${formatCurrency(analytics.totalExpenses)})`,
                       value: formatCurrency(Math.abs(analytics.netProfit)),
                       icon: analytics.isProfitable ? <TrendingUp size={16} /> : <TrendingDown size={16} />,
-                      color: analytics.isProfitable ? 'text-emerald-600' : 'text-rose-600',
-                      bg: analytics.isProfitable ? 'bg-emerald-50' : 'bg-rose-50',
-                      valueColor: analytics.isProfitable ? 'text-emerald-600' : 'text-rose-600',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
+                      valueColor: 'text-black',
                       arrow: analytics.isProfitable ? '↑' : '↓',
                     },
                     {
@@ -3139,143 +3128,143 @@ export default function Dashboard() {
                       helper: 'Overheads from expense tracker',
                       value: formatCurrency(analytics.totalExpenses),
                       icon: <Receipt size={16} />,
-                      color: 'text-amber-500',
-                      bg: 'bg-amber-50',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     {
                       label: 'Total Items Sold',
                       helper: 'From completed bills',
                       value: String(Math.round(analytics.totalProductsSold)),
                       icon: <Box size={16} />,
-                      color: 'text-gray-500',
-                      bg: 'bg-gray-50',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     {
                       label: 'Average Revenue Per Bill',
                       helper: 'Average per bill',
                       value: formatCurrency(analytics.averageRevenuePerBill),
                       icon: <RMIcon size={16} />,
-                      color: 'text-emerald-500',
-                      bg: 'bg-emerald-50',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     {
                       label: 'Cash Collected',
                       helper: 'Cash incl. split payments',
                       value: formatCurrency(analytics.cashCollected),
                       icon: <Banknote size={16} />,
-                      color: 'text-[#B38018]',
-                      bg: 'bg-[#FFF8E7]',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     {
                       label: 'QR Collected',
                       helper: 'QR / UPI incl. split payments',
                       value: formatCurrency(analytics.qrCollected),
                       icon: <QrCode size={16} />,
-                      color: 'text-[#B38018]',
-                      bg: 'bg-[#FFF8E7]',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     {
                       label: 'Card Collected',
                       helper: 'Card incl. split payments',
                       value: formatCurrency(analytics.cardCollected),
                       icon: <CreditCard size={16} />,
-                      color: 'text-[#B38018]',
-                      bg: 'bg-[#FFF8E7]',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                     ...(analytics.otherCollected > 0 ? [{
                       label: 'Other / Online Collected',
                       helper: 'Online or unspecified payment mode',
                       value: formatCurrency(analytics.otherCollected),
                       icon: <RMIcon size={16} />,
-                      color: 'text-gray-500',
-                      bg: 'bg-gray-50',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     }] : []),
                     {
                       label: 'Top Product',
                       helper: 'Most sold item',
                       value: analytics.bestProduct || 'No sales yet',
                       icon: <Trophy size={16} />,
-                      color: 'text-gray-500',
-                      bg: 'bg-gray-50',
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
                     },
                   ].map((card, index) => (
-                    <div key={index} className="bg-white rounded-card border border-borderLight p-5 sm:p-5 shadow-soft flex flex-col justify-between hover:shadow-md transition-shadow">
+                    <div key={index} className="bg-white rounded-card border border-gray-200 p-5 sm:p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-shadow">
                       <div>
                         <div className="flex items-start justify-between gap-2 mb-3">
-                          <p className="text-[11px] font-bold text-[#111111]">{card.label}</p>
+                          <p className="text-[11px] font-bold text-black">{card.label}</p>
                           <div className={`w-8 h-8 rounded-full ${card.bg} flex items-center justify-center ${card.color} shrink-0`}>{card.icon}</div>
                         </div>
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <p className={`text-[22px] sm:text-[24px] font-bold leading-tight ${card.valueColor || 'text-[#111111]'}`}>
+                          <p className={`text-[22px] sm:text-[24px] font-black leading-tight text-black`}>
                             {card.value}
                           </p>
                           {card.arrow && (
-                            <span className={`inline-flex items-center text-xs font-black px-1.5 py-0.5 rounded-md ${card.bg} ${card.color}`}>
+                            <span className="inline-flex items-center text-xs font-black px-1.5 py-0.5 rounded-md bg-gray-100 text-black">
                               {card.arrow}
                             </span>
                           )}
                         </div>
                       </div>
-                      <p className="text-[12px] text-[#6B7280] leading-snug" title={card.helper}>{card.helper}</p>
+                      <p className="text-[12px] text-black font-medium leading-snug" title={card.helper}>{card.helper}</p>
                     </div>
                   ))}
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                  <div className="xl:col-span-2 bg-white rounded-card border border-borderLight p-6 shadow-soft">
+                  <div className="xl:col-span-2 bg-white rounded-card border border-gray-200 p-6 shadow-xs">
                     <div className="flex items-center justify-between gap-4 mb-4">
-                      <h3 className="text-[16px] font-bold text-[#111111]">Revenue Trend {analytics.chartYear}</h3>
-                      <span className="text-[12px] font-bold text-[#111111] bg-red-50 px-2.5 py-1 rounded-md">Avg {formatCurrency(analytics.monthlyRevenue || 0)}/mo</span>
+                      <h3 className="text-[16px] font-bold text-black">Revenue Trend {analytics.chartYear}</h3>
+                      <span className="text-[12px] font-bold text-black bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-md">Avg {formatCurrency(analytics.monthlyRevenue || 0)}/mo</span>
                     </div>
                     <div className="h-[192px] w-full min-w-0 relative">
                       <ResponsiveContainer width="100%" height={192} minWidth={0} minHeight={0}>
                         <BarChart data={analytics.monthlyTrend}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                          <XAxis dataKey="month" tick={{ fill: '#6B7280', fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} interval={0} angle={-45} textAnchor="end" height={60} />
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                          <XAxis dataKey="month" tick={{ fill: '#000000', fontSize: 9, fontWeight: 700 }} axisLine={false} tickLine={false} interval={0} angle={-45} textAnchor="end" height={60} />
                           <YAxis hide />
-                          <Tooltip cursor={{ fill: '#F9FAFB' }} formatter={(value) => formatCurrency(toNumber(value as number | string, 0))} />
-                          <Bar dataKey="revenue" fill="#111111" radius={[4, 4, 0, 0]} barSize={12} />
+                          <Tooltip cursor={{ fill: '#F3F4F6' }} formatter={(value) => formatCurrency(toNumber(value as number | string, 0))} />
+                          <Bar dataKey="revenue" fill="#000000" radius={[4, 4, 0, 0]} barSize={12} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
                   <div className="space-y-6">
-                    <div className="bg-white rounded-card border border-borderLight p-6 shadow-soft">
-                      <h3 className="text-[16px] font-bold text-[#111111] mb-6">Order Source</h3>
+                    <div className="bg-white rounded-card border border-gray-200 p-6 shadow-xs">
+                      <h3 className="text-[16px] font-bold text-black mb-6">Order Source</h3>
                       <div className="space-y-4">
                         <div>
                           <div className="flex justify-between text-[12px] font-bold mb-2">
-                            <span className="text-[#111111] uppercase">Offline</span>
-                            <span className="text-[#111111]">{analytics.completedOrders}</span>
+                            <span className="text-black uppercase">Offline</span>
+                            <span className="text-black">{analytics.completedOrders}</span>
                           </div>
-                          <div className="w-full bg-[#F3F4F6] rounded-full h-2.5">
-                            <div className="h-2.5 rounded-full" style={{ backgroundColor: themeColor, width: '100%' }}></div>
+                          <div className="w-full bg-gray-100 rounded-full h-2.5">
+                            <div className="h-2.5 rounded-full bg-black" style={{ width: '100%' }}></div>
                           </div>
                         </div>
                         <div>
                           <div className="flex justify-between text-[12px] font-bold mb-2">
-                            <span className="text-[#6B7280] uppercase">Online</span>
-                            <span className="text-[#111111]">0</span>
+                            <span className="text-black uppercase">Online</span>
+                            <span className="text-black">0</span>
                           </div>
-                          <div className="w-full bg-[#F3F4F6] rounded-full h-2.5">
-                            <div className="bg-[#F3F4F6] h-2.5 rounded-full" style={{ width: '0%' }}></div>
+                          <div className="w-full bg-gray-100 rounded-full h-2.5">
+                            <div className="bg-gray-200 h-2.5 rounded-full" style={{ width: '0%' }}></div>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="bg-white rounded-card border border-borderLight p-6 shadow-soft">
-                      <h3 className="text-[16px] font-bold text-[#111111] mb-4">Top Items by Revenue</h3>
+                    <div className="bg-white rounded-card border border-gray-200 p-6 shadow-xs">
+                      <h3 className="text-[16px] font-bold text-black mb-4">Top Items by Revenue</h3>
                       <div className="space-y-3">
                         {analytics.topProducts.slice(0, 3).map((p, i) => (
                           <div key={i} className="flex items-center justify-between gap-3 text-[13px]">
                             <div className="flex items-center gap-3 min-w-0 flex-1">
-                              <span className="font-bold text-[#6B7280] w-4 shrink-0">{i + 1}</span>
-                              <span className="font-bold text-[#111111] break-words whitespace-normal leading-snug min-w-0 flex-1">{p.name}</span>
+                              <span className="font-bold text-black w-4 shrink-0">{i + 1}</span>
+                              <span className="font-bold text-black break-words whitespace-normal leading-snug min-w-0 flex-1">{p.name}</span>
                             </div>
                             <div className="flex items-center gap-4 shrink-0">
-                              <span className="font-bold text-[#111111]">{formatCurrency(p.revenue)}</span>
-                              <span className="text-[#6B7280] text-[11px] w-8 text-right">{Math.round(p.qty)} pcs</span>
+                              <span className="font-bold text-black">{formatCurrency(p.revenue)}</span>
+                              <span className="text-black text-[11px] w-8 text-right font-medium">{Math.round(p.qty)} pcs</span>
                             </div>
                           </div>
                         ))}
@@ -3285,17 +3274,17 @@ export default function Dashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                  <div className="xl:col-span-2 bg-white rounded-card border border-borderLight p-6 shadow-soft">
+                  <div className="xl:col-span-2 bg-white rounded-card border border-gray-200 p-6 shadow-xs">
                     <div className="flex items-center justify-between gap-3 mb-6">
                       <div>
-                        <h3 className="text-[16px] font-bold text-[#111111]">Revenue Trend This Week</h3>
-                        <p className="mt-1 text-[12px] text-[#6B7280]">Monday to Sunday sales view for the current week.</p>
+                        <h3 className="text-[16px] font-bold text-black">Revenue Trend This Week</h3>
+                        <p className="mt-1 text-[12px] text-black font-medium">Monday to Sunday sales view for the current week.</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-[#F9FAFB] px-3 py-1 text-[11px] font-bold text-[#B38018]">
+                        <span className="rounded-full bg-gray-100 border border-gray-200 px-3 py-1 text-[11px] font-bold text-black">
                           Week {(() => { const now = new Date(); const start = new Date(now.getFullYear(), 0, 1); const diff = Math.floor((now.getTime() - start.getTime()) / 86400000); return Math.ceil((diff + start.getDay() + 1) / 7) })()} of {new Date().getFullYear()}
                         </span>
-                        <span className="rounded-full bg-[#F9FAFB] px-3 py-1 text-[11px] font-bold text-[#B38018]">
+                        <span className="rounded-full bg-gray-100 border border-gray-200 px-3 py-1 text-[11px] font-bold text-black">
                           Today: {formatCurrency(analytics.todaySales)}
                         </span>
                       </div>
@@ -3303,40 +3292,40 @@ export default function Dashboard() {
                     <div className="h-[256px] w-full min-w-0 relative">
                       <ResponsiveContainer width="100%" height={256} minWidth={0} minHeight={0}>
                         <BarChart data={analytics.weeklySales}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                          <XAxis dataKey="day" tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                          <XAxis dataKey="day" tick={{ fill: '#000000', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
                           <YAxis hide />
                           <Tooltip
-                            cursor={{ fill: '#F9FAFB' }}
+                            cursor={{ fill: '#F3F4F6' }}
                             formatter={(value) => formatCurrency(toNumber(value as number | string, 0))}
                             labelFormatter={(_, payload) => {
                               const point = payload?.[0]?.payload as { day?: string; date?: string } | undefined
                               return point ? `${point.day || 'Day'} - ${point.date || ''}` : 'Weekly Revenue'
                             }}
                           />
-                          <Bar dataKey="revenue" fill="#111111" radius={[4, 4, 0, 0]} barSize={28} />
+                          <Bar dataKey="revenue" fill="#000000" radius={[4, 4, 0, 0]} barSize={28} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-card border border-borderLight p-6 shadow-soft">
-                    <h3 className="text-[16px] font-bold text-[#111111] mb-4">Top Products This Week</h3>
+                  <div className="bg-white rounded-card border border-gray-200 p-6 shadow-xs">
+                    <h3 className="text-[16px] font-bold text-black mb-4">Top Products This Week</h3>
                     <div className="space-y-3">
                       {analytics.topProducts.slice(0, 5).map((p, i) => (
-                        <div key={`${p.name}-${i}`} className="flex items-center justify-between rounded-xl bg-[#F9FAFB] p-3">
+                        <div key={`${p.name}-${i}`} className="flex items-center justify-between rounded-xl bg-gray-50 p-3 border border-gray-200">
                           <div className="min-w-0">
-                            <p className="truncate text-[13px] font-bold text-[#111111]">{p.name}</p>
-                            <p className="text-[11px] text-[#6B7280]">{p.billCount} bills</p>
+                            <p className="truncate text-[13px] font-bold text-black">{p.name}</p>
+                            <p className="text-[11px] text-black font-medium">{p.billCount} bills</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-[13px] font-black text-[#111111]">{Math.round(p.qty)}</p>
-                            <p className="text-[11px] font-bold text-[#10B981]">{formatCurrency(p.revenue)}</p>
+                            <p className="text-[13px] font-black text-black">{Math.round(p.qty)}</p>
+                            <p className="text-[11px] font-bold text-black">{formatCurrency(p.revenue)}</p>
                           </div>
                         </div>
                       ))}
                       {analytics.topProducts.length === 0 && (
-                        <p className="text-[13px] text-[#6B7280]">No completed product sales yet.</p>
+                        <p className="text-[13px] text-black font-medium">No completed product sales yet.</p>
                       )}
                     </div>
                   </div>
@@ -3350,15 +3339,15 @@ export default function Dashboard() {
                 {/* Key metrics box grid row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
-                    { label: "TODAY'S REVENUE", value: formatCurrency(analytics.todaySales), icon: <RMIcon size={20} className="text-emerald-700" />, bg: 'bg-emerald-50', border: 'border-emerald-100' },
-                    { label: "COMPLETED ORDERS", value: String(analytics.todayCompletedOrdersCount), icon: <ShoppingCart size={20} className="text-gray-700" />, bg: 'bg-gray-50', border: 'border-gray-100' },
-                    { label: "ITEMS SOLD", value: String(Math.round(analytics.todayItemsSold)), icon: <Package size={20} className="text-gray-700" />, bg: 'bg-gray-50', border: 'border-gray-100' },
-                    { label: "AVG ORDER VALUE", value: formatCurrency(analytics.todayAvgOrderValue), icon: <Trophy size={20} className="text-amber-700" />, bg: 'bg-amber-50', border: 'border-amber-100' },
+                    { label: "TODAY'S REVENUE", value: formatCurrency(analytics.todaySales), icon: <RMIcon size={20} className="text-black" />, bg: 'bg-gray-100', border: 'border-gray-200' },
+                    { label: "COMPLETED ORDERS", value: String(analytics.todayCompletedOrdersCount), icon: <ShoppingCart size={20} className="text-black" />, bg: 'bg-gray-100', border: 'border-gray-200' },
+                    { label: "ITEMS SOLD", value: String(Math.round(analytics.todayItemsSold)), icon: <Package size={20} className="text-black" />, bg: 'bg-gray-100', border: 'border-gray-200' },
+                    { label: "AVG ORDER VALUE", value: formatCurrency(analytics.todayAvgOrderValue), icon: <Trophy size={20} className="text-black" />, bg: 'bg-gray-100', border: 'border-gray-200' },
                   ].map((card, i) => (
-                    <div key={i} className="bg-white rounded-2xl border border-gray-200/80 p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between gap-4">
+                    <div key={i} className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs hover:shadow-md transition-shadow flex items-center justify-between gap-4">
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-extrabold uppercase tracking-wider text-gray-500 mb-1">{card.label}</p>
-                        <p className="text-[22px] sm:text-[24px] font-black text-[#111111] leading-tight break-words">{card.value}</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-black mb-1">{card.label}</p>
+                        <p className="text-[22px] sm:text-[24px] font-black text-black leading-tight break-words">{card.value}</p>
                       </div>
                       <div className={`w-11 h-11 rounded-2xl ${card.bg} border ${card.border} flex items-center justify-center shrink-0 shadow-xs`}>
                         {card.icon}
@@ -3368,29 +3357,29 @@ export default function Dashboard() {
                 </div>
 
                 {/* Top products today */}
-                <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
-                  <h3 className="text-[15px] font-bold text-[#111111] mb-4">Top Products Today</h3>
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                  <h3 className="text-[15px] font-bold text-black mb-4">Top Products Today</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {analytics.todayTopProducts.map((p, i) => (
                       <div key={i} className="flex items-center justify-between bg-[#F9FAFB] p-3 rounded-xl border border-gray-100">
                         <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-bold text-[#111111] break-words">{p.name}</p>
-                          <p className="text-[11px] text-[#374151]">{Math.round(p.qty)} sold</p>
+                          <p className="text-[13px] font-bold text-black break-words">{p.name}</p>
+                          <p className="text-[11px] text-black font-medium">{Math.round(p.qty)} sold</p>
                         </div>
-                        <p className="text-[13px] font-black text-[#10B981] ml-2">{formatCurrency(p.revenue)}</p>
+                        <p className="text-[13px] font-black text-black ml-2">{formatCurrency(p.revenue)}</p>
                       </div>
                     ))}
                     {analytics.todayTopProducts.length === 0 && (
-                      <p className="col-span-full text-center text-[13px] text-[#374151] py-6">No products sold yet today.</p>
+                      <p className="col-span-full text-center text-[13px] text-black py-6">No products sold yet today.</p>
                     )}
                   </div>
                 </div>
 
                 {/* Today's latest bills */}
-                <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-[15px] font-bold text-[#111111]">Today's Bills</h3>
-                    <span className="text-[11px] font-bold text-[#10B981]">{analytics.todayCompletedOrdersCount} orders</span>
+                    <h3 className="text-[15px] font-bold text-black">Today's Bills</h3>
+                    <span className="text-[11px] font-bold text-black bg-gray-100 border border-gray-200 px-2.5 py-0.5 rounded-full">{analytics.todayCompletedOrdersCount} orders</span>
                   </div>
                   <div className="mb-3">
                     <input
@@ -3398,15 +3387,15 @@ export default function Dashboard() {
                       placeholder="Search by invoice number..."
                       value={todayBillsSearch}
                       onChange={e => setTodayBillsSearch(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-[#F9FAFB] border border-[#F3F4F6]/60 rounded-xl text-[13px] font-bold text-[#111111] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#D4AF37] transition-colors"
+                      className="w-full px-4 py-2.5 bg-[#F9FAFB] border border-gray-200 rounded-xl text-[13px] font-bold text-black placeholder:text-gray-400 focus:outline-none focus:border-black transition-colors"
                     />
                   </div>
                   {(() => {
                     const filteredBills = analytics.todayBills.filter(b => !todayBillsSearch || b.invoice_no?.toLowerCase().includes(todayBillsSearch.toLowerCase()))
                     return filteredBills.length > 0 ? (
-                    <div className="overflow-x-auto rounded-xl border border-[#F3F4F6]/30">
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
                       <table className="w-full min-w-[480px] text-[12px]">
-                        <thead className="bg-[#F9FAFB] text-[10px] uppercase tracking-wider text-[#374151]">
+                        <thead className="bg-[#F9FAFB] text-[10px] uppercase tracking-wider text-black">
                           <tr>
                             <th className="px-3 py-2.5 font-black text-left">Invoice</th>
                             <th className="px-3 py-2.5 font-black text-left">Customer</th>
@@ -3416,19 +3405,18 @@ export default function Dashboard() {
                             <th className="px-3 py-2.5 font-black text-left">Actions</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-[#F3F4F6]/20">
+                        <tbody className="divide-y divide-gray-100">
                           {filteredBills.map(o => {
                             const btLabel = normalizeOrderType(o.order_type) === 'manual_sale' ? 'MANUAL' : normalizeOrderMode(o.order_mode) === 'online' ? 'ONLINE' : 'OFFLINE'
-                            const btClass = normalizeOrderType(o.order_type) === 'manual_sale' ? 'bg-gray-100 text-gray-700' : normalizeOrderMode(o.order_mode) === 'online' ? 'bg-gray-100 text-gray-700' : 'bg-orange-100 text-orange-700'
                             return (
                               <tr key={o.id} className="hover:bg-[#F9FAFB]/50">
-                                <td className="px-3 py-2.5 font-bold text-[#10B981] text-[11px]">{formatInvoiceNo(o.invoice_no)}</td>
-                                <td className="px-3 py-2.5 font-semibold text-[#111111] max-w-[100px] break-words">{o.customer_name}</td>
-                                <td className="px-3 py-2.5 font-black text-[#111111]">{formatCurrency(getOrderTotal(o))}</td>
-                                <td className="px-3 py-2.5 text-[#374151] whitespace-nowrap">{new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</td>
-                                <td className="px-3 py-2.5"><span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${btClass}`}>{btLabel}</span></td>
+                                <td className="px-3 py-2.5 font-bold text-black text-[11px]">{formatInvoiceNo(o.invoice_no)}</td>
+                                <td className="px-3 py-2.5 font-semibold text-black max-w-[100px] break-words">{o.customer_name}</td>
+                                <td className="px-3 py-2.5 font-black text-black">{formatCurrency(getOrderTotal(o))}</td>
+                                <td className="px-3 py-2.5 text-black whitespace-nowrap">{new Date(o.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</td>
+                                <td className="px-3 py-2.5"><span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-100 text-black border border-gray-200">{btLabel}</span></td>
                                 <td className="px-3 py-2.5">
-                                  <button onClick={() => void openOrderInvoice(o, 'view')} className="inline-flex items-center gap-1 rounded-lg border border-[#F3F4F6]/60 px-2 py-1.5 text-[11px] font-black text-[#111111] hover:bg-[#F9FAFB]" title="View Invoice">
+                                  <button onClick={() => void openOrderInvoice(o, 'view')} className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-2 py-1.5 text-[11px] font-black text-black hover:bg-gray-100" title="View Invoice">
                                     <Eye size={13} /> View Invoice
                                   </button>
                                 </td>
@@ -3439,7 +3427,7 @@ export default function Dashboard() {
                       </table>
                     </div>
                   ) : (
-                    <p className="text-[13px] text-[#374151] text-center py-4">{todayBillsSearch ? 'No bills match your search.' : 'No bills yet today.'}</p>
+                    <p className="text-[13px] text-black text-center py-4">{todayBillsSearch ? 'No bills match your search.' : 'No bills yet today.'}</p>
                   )})()}
                 </div>
               </div>
@@ -3451,43 +3439,40 @@ export default function Dashboard() {
                 {/* Key metrics row: Revenue is 1st KPI card */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                   {[
-                    { label: 'Total Product Revenue', value: formatCurrency(analytics.totalCompletedRevenue), icon: <RMIcon size={18} />, from: 'from-emerald-500 to-gray-600' },
-                    { label: 'Total Products Sold', value: String(Math.round(analytics.totalProductsSold)), icon: <Package size={18} />, from: 'from-gray-500 to-gray-600' },
-                    { label: 'Average Product Revenue', value: formatCurrency(analytics.averageProductRevenue), icon: <RMIcon size={18} />, from: 'from-gray-500 to-gray-600' },
-                    { label: 'Total Product Profit', value: formatCurrency(analytics.totalProductProfit), icon: <TrendingUp size={18} />, from: analytics.totalProductProfit >= 0 ? 'from-emerald-500 to-gray-600' : 'from-rose-500 to-red-600' },
-                    { label: 'Profit Margin', value: `${analytics.overallProfitMargin.toFixed(1)}%`, icon: <Percent size={18} />, from: 'from-gray-500 to-gray-600' },
-                    { label: 'Top Product', value: analytics.bestProduct || 'No sales yet', icon: <Trophy size={18} />, from: 'from-amber-500 to-orange-600' },
+                    { label: 'Total Product Revenue', value: formatCurrency(analytics.totalCompletedRevenue), icon: <RMIcon size={18} /> },
+                    { label: 'Total Products Sold', value: String(Math.round(analytics.totalProductsSold)), icon: <Package size={18} /> },
+                    { label: 'Average Product Revenue', value: formatCurrency(analytics.averageProductRevenue), icon: <RMIcon size={18} /> },
+                    { label: 'Total Product Profit', value: formatCurrency(analytics.totalProductProfit), icon: <TrendingUp size={18} /> },
+                    { label: 'Profit Margin', value: `${analytics.overallProfitMargin.toFixed(1)}%`, icon: <Percent size={18} /> },
+                    { label: 'Top Product', value: analytics.bestProduct || 'No sales yet', icon: <Trophy size={18} /> },
                   ].map((card, i) => (
-                    <div key={i} className={`relative overflow-hidden rounded-2xl p-5 shadow-lg border border-white/20 bg-gradient-to-br ${card.from} flex flex-col justify-between min-h-[120px]`}>
-                      <div className="absolute inset-0 bg-gradient-to-tl from-white/30 via-white/10 to-transparent" />
-                      <div className="relative z-10 flex flex-col justify-between h-full">
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <p className="text-[10px] uppercase font-black text-white/80 tracking-wider">{card.label}</p>
-                          <div className="w-9 h-9 rounded-xl bg-white/25 backdrop-blur-sm flex items-center justify-center text-white shadow-sm shrink-0">{card.icon}</div>
-                        </div>
-                        <p className="text-[18px] sm:text-[22px] font-extrabold text-white drop-shadow-sm break-words leading-tight">{card.value}</p>
+                    <div key={i} className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-gray-200 flex flex-col justify-between min-h-[110px] hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <p className="text-[10px] uppercase font-bold text-black tracking-wider leading-tight">{card.label}</p>
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black shrink-0">{card.icon}</div>
                       </div>
+                      <p className="text-[18px] sm:text-[20px] font-black text-black break-words leading-tight">{card.value}</p>
                     </div>
                   ))}
                 </div>
 
                 {/* Full product table with Search by Name, SKU, Category */}
-                <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
                     <div>
-                      <h3 className="text-[15px] font-bold text-[#111111]">All Products Analytics</h3>
-                      <p className="text-[12px] text-[#6B7280]">Search by Product Name, SKU, or Category for instant statistics</p>
+                      <h3 className="text-[15px] font-bold text-black">All Products Analytics</h3>
+                      <p className="text-[12px] text-black font-medium">Search by Product Name, SKU, or Category for instant statistics</p>
                     </div>
-                    <span className="text-[11px] font-bold text-[#10B981] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 self-start sm:self-auto">{analytics.topProducts.length} products</span>
+                    <span className="text-[11px] font-bold text-black bg-gray-100 px-3 py-1 rounded-full border border-gray-200 self-start sm:self-auto">{analytics.topProducts.length} products</span>
                   </div>
-                  <p className="mb-3 text-[11px] font-semibold text-[#6B7280]">Profit = Revenue − (Cost price × Qty sold), using each product&apos;s current cost price.{analytics.productsWithoutCost > 0 ? ` ${analytics.productsWithoutCost} product${analytics.productsWithoutCost === 1 ? '' : 's'} without a cost price (or manual items) show "—" and are left out of the profit totals.` : ''}</p>
+                  <p className="mb-3 text-[11px] font-semibold text-black">Profit = Revenue − (Cost price × Qty sold), using each product&apos;s current cost price.{analytics.productsWithoutCost > 0 ? ` ${analytics.productsWithoutCost} product${analytics.productsWithoutCost === 1 ? '' : 's'} without a cost price (or manual items) show "—" and are left out of the profit totals.` : ''}</p>
                   <div className="mb-4">
                     <input
                       type="text"
                       placeholder="Search by Product Name, SKU, or Category..."
                       value={productAnalyticsSearch}
                       onChange={e => setProductAnalyticsSearch(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-[#F9FAFB] border border-[#F3F4F6]/60 rounded-xl text-[13px] font-bold text-[#111111] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#D4AF37] transition-colors"
+                      className="w-full px-4 py-2.5 bg-[#F9FAFB] border border-gray-200 rounded-xl text-[13px] font-bold text-black placeholder:text-gray-400 focus:outline-none focus:border-black transition-colors"
                     />
                   </div>
                   {(() => {
@@ -3498,9 +3483,9 @@ export default function Dashboard() {
                     })
                     return filteredProds.length > 0 ? (
                       <>
-                      <div className="overflow-x-auto rounded-xl border border-[#F3F4F6]/30">
+                      <div className="overflow-x-auto rounded-xl border border-gray-200">
                         <table className="w-full min-w-[760px] text-left text-[12px]">
-                          <thead className="bg-[#F9FAFB] text-[10px] uppercase tracking-wider text-[#374151]">
+                          <thead className="bg-[#F9FAFB] text-[10px] uppercase tracking-wider text-black">
                             <tr>
                               <th className="px-4 py-2.5 font-black">#</th>
                               <th className="px-4 py-2.5 font-black">Product</th>
@@ -3514,19 +3499,19 @@ export default function Dashboard() {
                               <th className="px-4 py-2.5 font-black">Avg Revenue/Bill</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-[#F3F4F6]/20">
+                          <tbody className="divide-y divide-gray-100">
                             {filteredProds.slice(0, 50).map((p, i) => (
                               <tr key={`${p.name}-${p.variant || i}`} className="hover:bg-[#F9FAFB]/50">
-                                <td className="px-4 py-2 text-[11px] text-[#9CA3AF] font-bold">{i + 1}</td>
-                                <td className="px-4 py-2 font-bold text-[#111111]">{p.name}</td>
-                                <td className="px-4 py-2 text-[#374151]">{p.variant || '-'}</td>
-                                <td className="px-4 py-2 font-bold">{Math.round(p.qty)}</td>
-                                <td className="px-4 py-2 font-bold text-emerald-700">{formatCurrency(p.revenue)}</td>
-                                <td className="px-4 py-2 text-[#374151]">{p.hasCost ? formatCurrency(p.cost) : '—'}</td>
-                                <td className={`px-4 py-2 font-bold ${p.hasCost ? (p.profit >= 0 ? 'text-emerald-700' : 'text-rose-600') : 'text-[#9CA3AF]'}`}>{p.hasCost ? formatCurrency(p.profit) : '—'}</td>
-                                <td className="px-4 py-2 text-[#374151]">{p.hasCost ? `${p.margin.toFixed(1)}%` : '—'}</td>
-                                <td className="px-4 py-2 text-[#374151]">{p.billCount}</td>
-                                <td className="px-4 py-2 font-bold text-[#111111]">{formatCurrency(p.billCount > 0 ? p.revenue / p.billCount : 0)}</td>
+                                <td className="px-4 py-2 text-[11px] text-black font-bold">{i + 1}</td>
+                                <td className="px-4 py-2 font-bold text-black">{p.name}</td>
+                                <td className="px-4 py-2 text-black">{p.variant || '-'}</td>
+                                <td className="px-4 py-2 font-bold text-black">{Math.round(p.qty)}</td>
+                                <td className="px-4 py-2 font-bold text-black">{formatCurrency(p.revenue)}</td>
+                                <td className="px-4 py-2 text-black">{p.hasCost ? formatCurrency(p.cost) : '—'}</td>
+                                <td className="px-4 py-2 font-bold text-black">{p.hasCost ? formatCurrency(p.profit) : '—'}</td>
+                                <td className="px-4 py-2 text-black">{p.hasCost ? `${p.margin.toFixed(1)}%` : '—'}</td>
+                                <td className="px-4 py-2 text-black">{p.billCount}</td>
+                                <td className="px-4 py-2 font-bold text-black">{formatCurrency(p.billCount > 0 ? p.revenue / p.billCount : 0)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -3534,7 +3519,7 @@ export default function Dashboard() {
                       </div>
                       </>
                     ) : (
-                      <p className="text-center text-[13px] text-[#374151] py-6">{productAnalyticsSearch ? 'No products match your search query.' : 'No product sales in selected period'}</p>
+                      <p className="text-center text-[13px] text-black py-6">{productAnalyticsSearch ? 'No products match your search query.' : 'No product sales in selected period'}</p>
                     )
                   })()}
                 </div>
@@ -3543,12 +3528,12 @@ export default function Dashboard() {
 
             {/* Categories sub-tab */}
             {posAnalyticsTab === 'categories' && (
-              <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
-                <h3 className="text-base font-black text-[#111111] mb-4">{l('Category Analytics', 'வகை பகுப்பாய்வு')}</h3>
+              <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                <h3 className="text-base font-black text-black mb-4">{l('Category Analytics', 'வகை பகுப்பாய்வு')}</h3>
                 {analytics.topCategories.length > 0 ? (
-                  <div className="overflow-x-auto rounded-xl border border-[#F3F4F6]/30">
+                  <div className="overflow-x-auto rounded-xl border border-gray-200">
                     <table className="w-full min-w-[420px] text-left text-[13px]">
-                      <thead className="bg-[#F9FAFB] text-[10px] uppercase tracking-wider text-[#374151]">
+                      <thead className="bg-[#F9FAFB] text-[10px] uppercase tracking-wider text-black">
                         <tr>
                           <th className="px-4 py-2.5 font-black">#</th>
                           <th className="px-4 py-2.5 font-black">{l('Category', 'வகை')}</th>
@@ -3556,20 +3541,20 @@ export default function Dashboard() {
                           <th className="px-4 py-2.5 font-black">{l('Qty Sold', 'விற்ற அளவு')}</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#F3F4F6]/20">
+                      <tbody className="divide-y divide-gray-100">
                         {analytics.topCategories.map((c, i) => (
                           <tr key={c.name} className="hover:bg-[#F9FAFB]/50">
-                            <td className="px-4 py-2 text-[11px] text-[#9CA3AF] font-bold">{i + 1}</td>
-                            <td className="px-4 py-2 font-bold text-[#111111]">{c.name}</td>
-                            <td className="px-4 py-2 font-bold text-emerald-700">{formatCurrency(c.revenue)}</td>
-                            <td className="px-4 py-2 text-[#374151]">{Math.round(c.qty)}</td>
+                            <td className="px-4 py-2 text-[11px] text-black font-bold">{i + 1}</td>
+                            <td className="px-4 py-2 font-bold text-black">{c.name}</td>
+                            <td className="px-4 py-2 font-bold text-black">{formatCurrency(c.revenue)}</td>
+                            <td className="px-4 py-2 text-black">{Math.round(c.qty)}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 ) : (
-                  <p className="text-center text-[13px] text-[#374151] py-6">{l('No data in selected period', 'தேர்ந்த காலத்தில் தரவு இல்லை')}</p>
+                  <p className="text-center text-[13px] text-black py-6">{l('No data in selected period', 'தேர்ந்த காலத்தில் தரவு இல்லை')}</p>
                 )}
               </div>
             )}
@@ -3580,127 +3565,118 @@ export default function Dashboard() {
                 {/* Key metrics row */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {[
-                    { label: 'Coupons Used', value: String(analytics.totalCouponOrders), icon: <ShoppingCart size={18} />, from: 'from-emerald-500 to-gray-600' },
-                    { label: 'Total Discounts Given', value: formatCurrency(analytics.totalCouponDiscounts), icon: <RMIcon size={18} />, from: 'from-gray-500 to-gray-600' },
-                    { label: 'Usage Rate', value: `${analytics.couponUsageRate.toFixed(1)}%`, icon: <TrendingUp size={18} />, from: 'from-gray-500 to-gray-600' },
-                    { label: 'Unique Coupons', value: String(analytics.topCoupons.length), icon: <Trophy size={18} />, from: 'from-amber-500 to-orange-600' },
+                    { label: 'Coupons Used', value: String(analytics.totalCouponOrders), icon: <ShoppingCart size={18} /> },
+                    { label: 'Total Discounts Given', value: formatCurrency(analytics.totalCouponDiscounts), icon: <RMIcon size={18} /> },
+                    { label: 'Usage Rate', value: `${analytics.couponUsageRate.toFixed(1)}%`, icon: <TrendingUp size={18} /> },
+                    { label: 'Unique Coupons', value: String(analytics.topCoupons.length), icon: <Trophy size={18} /> },
                   ].map((card, i) => (
-                    <div key={i} className={`relative overflow-hidden rounded-2xl p-5 shadow-lg border border-white/20 bg-gradient-to-br ${card.from} flex flex-col justify-between min-h-[120px]`}>
-                      <div className="absolute inset-0 bg-gradient-to-tl from-white/30 via-white/10 to-transparent" />
-                      <div className="relative z-10 flex flex-col justify-between h-full">
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <p className="text-[10px] uppercase font-black text-white/80 tracking-wider">{card.label}</p>
-                          <div className="w-9 h-9 rounded-xl bg-white/25 backdrop-blur-sm flex items-center justify-center text-white shadow-sm shrink-0">{card.icon}</div>
-                        </div>
-                        <p className="text-[18px] sm:text-[22px] font-extrabold text-white drop-shadow-sm break-words leading-tight">{card.value}</p>
+                    <div key={i} className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-gray-200 flex flex-col justify-between min-h-[110px] hover:shadow-md transition-shadow">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <p className="text-[10px] uppercase font-bold text-black tracking-wider leading-tight">{card.label}</p>
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-black shrink-0">{card.icon}</div>
                       </div>
+                      <p className="text-[18px] sm:text-[20px] font-black text-black break-words leading-tight">{card.value}</p>
                     </div>
                   ))}
                 </div>
 
                 {/* Coupon daily trend + Top coupons */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                  <div className="xl:col-span-2 bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
-                    <h3 className="text-[15px] font-bold text-[#111111] mb-4">Coupon Usage (Last 7 Days)</h3>
+                  <div className="xl:col-span-2 bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                    <h3 className="text-[15px] font-bold text-black mb-4">Coupon Usage (Last 7 Days)</h3>
                     {analytics.couponDailyTrend.some(d => d.orders > 0) ? (
                       <div className="h-[256px] w-full min-w-0 relative">
                         <ResponsiveContainer width="100%" height={256} minWidth={0} minHeight={0}>
                           <BarChart data={analytics.couponDailyTrend}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                            <XAxis dataKey="day" tick={{ fill: '#6B7280', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                            <XAxis dataKey="day" tick={{ fill: '#000000', fontSize: 11, fontWeight: 700 }} axisLine={false} tickLine={false} />
                             <YAxis hide />
                             <Tooltip cursor={{ fill: '#F9FAFB' }} formatter={(value, name) => [value, name === 'orders' ? 'Orders' : 'Discounts']} />
-                            <Bar dataKey="orders" fill="url(#couponGrad)" radius={[4, 4, 0, 0]} barSize={24} />
-                            <defs>
-                              <linearGradient id="couponGrad" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#10B981" />
-                                <stop offset="100%" stopColor="#111111" />
-                              </linearGradient>
-                            </defs>
+                            <Bar dataKey="orders" fill="#000000" radius={[4, 4, 0, 0]} barSize={24} />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
                     ) : (
-                      <p className="text-center text-[13px] text-[#374151] py-12">No coupon usage in the last 7 days.</p>
+                      <p className="text-center text-[13px] text-black py-12">No coupon usage in the last 7 days.</p>
                     )}
                   </div>
 
-                  <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
-                    <h3 className="text-[15px] font-bold text-[#111111] mb-4">Top Coupons</h3>
+                  <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+                    <h3 className="text-[15px] font-bold text-black mb-4">Top Coupons</h3>
                     <div className="space-y-3">
                       {analytics.topCoupons.slice(0, 8).map((coupon, i) => (
-                        <div key={coupon.code} className="flex items-center justify-between gap-2 p-3 bg-[#F9FAFB] rounded-xl">
+                        <div key={coupon.code} className="flex items-center justify-between gap-2 p-3 bg-[#F9FAFB] rounded-xl border border-gray-100">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-black text-[#9CA3AF]">{i + 1}</span>
-                              <p className="text-[13px] font-bold text-[#111111] break-words font-mono">{coupon.code}</p>
+                              <span className="text-[10px] font-black text-black">{i + 1}</span>
+                              <p className="text-[13px] font-bold text-black break-words font-mono">{coupon.code}</p>
                               {coupon.percentage ? (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-black border border-gray-200">
                                   {coupon.percentage}% OFF
                                 </span>
                               ) : null}
                               {coupon.is_active === false && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-black border border-gray-200">
                                   Inactive
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-[#374151] ml-5">{coupon.usage} order{coupon.usage !== 1 ? 's' : ''}</p>
+                            <p className="text-[11px] text-black ml-5 font-medium">{coupon.usage} order{coupon.usage !== 1 ? 's' : ''}</p>
                           </div>
                           <div className="text-right shrink-0">
-                            <p className="text-[13px] font-black text-emerald-700">{formatCurrency(coupon.discounts)}</p>
-                            <p className="text-[10px] text-[#374151]">discounted</p>
+                            <p className="text-[13px] font-black text-black">{formatCurrency(coupon.discounts)}</p>
+                            <p className="text-[10px] text-black font-medium">discounted</p>
                           </div>
                         </div>
                       ))}
                       {analytics.topCoupons.length === 0 && (
-                        <p className="text-center text-[13px] text-[#374151] py-6">No coupons created or used yet</p>
+                        <p className="text-center text-[13px] text-black py-6">No coupons created or used yet</p>
                       )}
                     </div>
                   </div>
                 </div>
 
                 {/* Coupon detail table */}
-                <div className="bg-white rounded-2xl border border-[#F3F4F6]/30 p-5 shadow-sm">
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-[15px] font-bold text-[#111111]">All Coupons Performance</h3>
-                    <span className="text-[11px] font-bold text-[#10B981]">{analytics.topCoupons.length} coupons</span>
+                    <h3 className="text-[15px] font-bold text-black">All Coupons Performance</h3>
+                    <span className="text-[11px] font-bold text-black bg-gray-100 border border-gray-200 px-2.5 py-0.5 rounded-full">{analytics.topCoupons.length} coupons</span>
                   </div>
                   {analytics.topCoupons.length > 0 ? (
                     <>
                       <div className="space-y-3 md:hidden">
                         {analytics.topCoupons.map((coupon, i) => (
-                          <div key={coupon.code} className="rounded-2xl border border-[#F3F4F6]/30 bg-[#FBFAF6] p-4">
+                          <div key={coupon.code} className="rounded-2xl border border-gray-200 bg-[#FBFAF6] p-4">
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <p className="text-[13px] font-black text-[#9CA3AF]">#{i + 1}</p>
+                                <p className="text-[13px] font-black text-black">#{i + 1}</p>
                                 <div className="flex items-center gap-1.5 mt-0.5">
-                                  <p className="text-[16px] font-bold text-[#111111] break-words font-mono">{coupon.code}</p>
+                                  <p className="text-[16px] font-bold text-black break-words font-mono">{coupon.code}</p>
                                   {coupon.percentage ? (
-                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-black border border-gray-200">
                                       {coupon.percentage}% OFF
                                     </span>
                                   ) : null}
                                 </div>
                               </div>
-                              <p className="text-[14px] font-black text-emerald-700">{formatCurrency(coupon.discounts)}</p>
+                              <p className="text-[14px] font-black text-black">{formatCurrency(coupon.discounts)}</p>
                             </div>
                             <div className="mt-3 grid grid-cols-2 gap-3 text-[13px]">
                               <div>
-                                <p className="text-[#9CA3AF] uppercase text-[11px] font-black">Orders</p>
-                                <p className="font-bold text-[#111111]">{coupon.usage}</p>
+                                <p className="text-black uppercase text-[11px] font-black">Orders</p>
+                                <p className="font-bold text-black">{coupon.usage}</p>
                               </div>
                               <div>
-                                <p className="text-[#9CA3AF] uppercase text-[11px] font-black">Avg Discount</p>
-                                <p className="font-semibold text-[#374151]">{coupon.usage > 0 ? formatCurrency(coupon.discounts / coupon.usage) : '-'}</p>
+                                <p className="text-black uppercase text-[11px] font-black">Avg Discount</p>
+                                <p className="font-semibold text-black">{coupon.usage > 0 ? formatCurrency(coupon.discounts / coupon.usage) : '-'}</p>
                               </div>
                             </div>
                           </div>
                         ))}
                       </div>
-                      <div className="hidden md:block overflow-x-auto rounded-xl border border-[#F3F4F6]/30">
+                      <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200">
                         <table className="w-full min-w-[500px] text-left text-[12px]">
-                          <thead className="bg-[#F9FAFB] text-[10px] uppercase tracking-wider text-[#374151]">
+                          <thead className="bg-[#F9FAFB] text-[10px] uppercase tracking-wider text-black">
                             <tr>
                               <th className="px-4 py-2.5 font-black">#</th>
                               <th className="px-4 py-2.5 font-black">Code</th>
@@ -3711,23 +3687,19 @@ export default function Dashboard() {
                               <th className="px-4 py-2.5 font-black text-right">Status</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-[#F3F4F6]/20">
+                          <tbody className="divide-y divide-gray-100">
                             {analytics.topCoupons.map((coupon, i) => (
                               <tr key={coupon.code} className="hover:bg-[#F9FAFB]/50">
-                                <td className="px-4 py-2 text-[11px] text-[#9CA3AF] font-bold">{i + 1}</td>
-                                <td className="px-4 py-2 font-bold text-[#111111] font-mono">{coupon.code}</td>
-                                <td className="px-4 py-2 font-bold text-amber-800">
+                                <td className="px-4 py-2 text-[11px] text-black font-bold">{i + 1}</td>
+                                <td className="px-4 py-2 font-bold text-black font-mono">{coupon.code}</td>
+                                <td className="px-4 py-2 font-bold text-black">
                                   {coupon.percentage ? `${coupon.percentage}%` : '-'}
                                 </td>
-                                <td className="px-4 py-2 font-bold">{coupon.usage}</td>
-                                <td className="px-4 py-2 font-bold text-emerald-700">{formatCurrency(coupon.discounts)}</td>
-                                <td className="px-4 py-2 text-[#374151]">{coupon.usage > 0 ? formatCurrency(coupon.discounts / coupon.usage) : '-'}</td>
+                                <td className="px-4 py-2 font-bold text-black">{coupon.usage}</td>
+                                <td className="px-4 py-2 font-bold text-black">{formatCurrency(coupon.discounts)}</td>
+                                <td className="px-4 py-2 text-black">{coupon.usage > 0 ? formatCurrency(coupon.discounts / coupon.usage) : '-'}</td>
                                 <td className="px-4 py-2 text-right">
-                                  <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black ${
-                                    coupon.is_active === false
-                                      ? 'bg-gray-100 text-gray-500'
-                                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  }`}>
+                                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-100 text-black border border-gray-200">
                                     {coupon.is_active === false ? 'Inactive' : 'Active'}
                                   </span>
                                 </td>
@@ -3738,7 +3710,7 @@ export default function Dashboard() {
                       </div>
                     </>
                   ) : (
-                    <p className="text-center text-[13px] text-[#374151] py-8">
+                    <p className="text-center text-[13px] text-black py-8">
                       No coupons configured in store yet. Add coupons from the Coupons tab to track performance.
                     </p>
                   )}

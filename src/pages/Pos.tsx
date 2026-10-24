@@ -141,7 +141,7 @@ type PosProps = {
 export default function Pos(props: PosProps = {}) {
   const embeddedMode = Boolean(props.isEmbedded)
   const { products, fetchProducts } = useProductStore()
-  const { getVariants, fetchVariants } = useVariantStore()
+  const { getVariants, fetchVariants, hasVariants } = useVariantStore()
   const { lang } = useLangStore()
   const l = (en: string, ta: string) => lang === 'ta' ? ta : en
   const navigate = useNavigate()
@@ -351,7 +351,7 @@ export default function Pos(props: PosProps = {}) {
     }
 
     // If product has variants, check its variants from DB or store
-    if (product.hasVariants) {
+    if (product.hasVariants || hasVariants(String(product.id))) {
       try {
         let vars = getVariants(String(product.id))
         if (!vars || vars.length === 0) {

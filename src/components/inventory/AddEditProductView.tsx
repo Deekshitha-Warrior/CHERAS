@@ -11,7 +11,7 @@ import {
   Edit2,
 } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
-import { useProductStore, type Product } from '../../store/store'
+import { useProductStore, useVariantStore, type Product } from '../../store/store'
 import { fetchVariantsByProduct } from '../../services/variantService'
 import { inventoryService, type CategoryRecord } from '../../services/inventoryService'
 import { normalizeBarcode } from '../../lib/barcode'
@@ -125,12 +125,18 @@ export const AddEditProductView: React.FC<{
     setLowStockAlert(existingAlert != null && Number(existingAlert) > 0 ? String(existingAlert) : '5')
     setBarcode(p.barcode || '')
     setDescription(p.description || '')
-    setHasVariants(Boolean(p.hasVariants))
     setStatusMessage(null)
 
-    if (p.hasVariants) {
-      try {
-        const vars = await fetchVariantsByProduct(String(p.id))
+    // Always fetch variants directly so any product with active variants displays its variants properly
+    try {
+      let vars = await fetchVariantsByProduct(String(p.id))
+      if (!vars || vars.length === 0) {
+        vars = useVariantStore.getState().getVariants(String(p.id))
+      }
+      const hasAnyVariants = vars.length > 0 || Boolean(p.hasVariants)
+      setHasVariants(hasAnyVariants)
+
+      if (vars.length > 0) {
         setVariantRows(
           vars.map((v) => ({
             id: v.id,
@@ -142,11 +148,36 @@ export const AddEditProductView: React.FC<{
             customBarcode: v.barcode || '',
           }))
         )
-      } catch (err) {
-        console.error('Failed to load variants for edit:', err)
+        // Self-heal: If database had has_variants = false, fix it in products table
+        if (!p.hasVariants) {
+          void supabase
+            .from('products')
+            .update({ has_variants: true, updated_at: new Date().toISOString() })
+            .eq('id', p.id)
+        }
+      } else {
+        setVariantRows([])
       }
-    } else {
-      setVariantRows([])
+    } catch (err) {
+      console.error('Failed to load variants for edit:', err)
+      const fallbackVars = useVariantStore.getState().getVariants(String(p.id))
+      if (fallbackVars && fallbackVars.length > 0) {
+        setHasVariants(true)
+        setVariantRows(
+          fallbackVars.map((v) => ({
+            id: v.id,
+            variantName: v.variantName,
+            sizeLabel: v.sizeLabel || v.variantName,
+            price: v.price,
+            costPrice: (v as any).costPrice ?? v.purchasePrice ?? 0,
+            stock: v.stock || 0,
+            customBarcode: v.barcode || '',
+          }))
+        )
+      } else {
+        setHasVariants(Boolean(p.hasVariants))
+        setVariantRows([])
+      }
     }
   }
 
@@ -300,20 +331,21 @@ export const AddEditProductView: React.FC<{
     }
 
     const validVariants = variantRows.filter((v) => v.variantName.trim() !== '')
+    const effectiveHasVariants = hasVariants || validVariants.length > 0
     const firstVariant = validVariants[0]
-    const priceNum = hasVariants && firstVariant ? (Number(firstVariant.price) || 0) : (parseFloat(price) || 0)
+    const priceNum = effectiveHasVariants && firstVariant ? (Number(firstVariant.price) || 0) : (parseFloat(price) || 0)
     const parsedCost = parseFloat(purchasePrice)
-    const costNum = hasVariants && firstVariant
+    const costNum = effectiveHasVariants && firstVariant
       ? (Number(firstVariant.costPrice) > 0 ? Number(firstVariant.costPrice) : (!isNaN(parsedCost) ? parsedCost : 0))
       : (!isNaN(parsedCost) ? parsedCost : 0)
-    const costVal = (purchasePrice.trim() !== '' || (hasVariants && firstVariant?.costPrice !== undefined && String(firstVariant.costPrice).trim() !== '')) ? costNum : null
+    const costVal = (purchasePrice.trim() !== '' || (effectiveHasVariants && firstVariant?.costPrice !== undefined && String(firstVariant.costPrice).trim() !== '')) ? costNum : null
 
-    if (!hasVariants && priceNum <= 0) {
+    if (!effectiveHasVariants && priceNum <= 0) {
       setStatusMessage({ type: 'error', text: 'Price must be greater than 0' })
       return
     }
 
-    if (hasVariants && validVariants.length === 0) {
+    if (effectiveHasVariants && validVariants.length === 0) {
       setStatusMessage({ type: 'error', text: 'Please add at least one variant SKU (e.g. Size S, 32, or custom variant)' })
       return
     }
@@ -327,7 +359,7 @@ export const AddEditProductView: React.FC<{
     try {
       if (selectedProductId) {
         // UPDATE EXISTING PRODUCT
-        if (!hasVariants) {
+        if (!effectiveHasVariants) {
           const inputStock = Math.max(0, parseInt(stockQuantity) || 0)
 
           // Check previous stock
@@ -506,7 +538,7 @@ export const AddEditProductView: React.FC<{
         }
       } else {
         // CREATE NEW PRODUCT
-        if (!hasVariants) {
+        if (!effectiveHasVariants) {
           const inputStock = Math.max(0, parseInt(stockQuantity) || 0)
 
           const { data: newProd, error: insErr } = await supabase
@@ -1119,7 +1151,25 @@ export const AddEditProductView: React.FC<{
                     type="checkbox"
                     checked={hasVariants}
                     onChange={(e) => {
-                      setHasVariants(e.target.checked)
+                      const checked = e.target.checked
+                      setHasVariants(checked)
+                      if (checked && selectedProductId && variantRows.length === 0) {
+                        fetchVariantsByProduct(String(selectedProductId)).then((vars) => {
+                          if (vars && vars.length > 0) {
+                            setVariantRows(
+                              vars.map((v) => ({
+                                id: v.id,
+                                variantName: v.variantName,
+                                sizeLabel: v.sizeLabel || v.variantName,
+                                price: v.price,
+                                costPrice: (v as any).costPrice ?? v.purchasePrice ?? 0,
+                                stock: v.stock || 0,
+                                customBarcode: v.barcode || '',
+                              }))
+                            )
+                          }
+                        })
+                      }
                     }}
                     className="sr-only peer"
                   />

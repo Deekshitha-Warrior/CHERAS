@@ -369,17 +369,25 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const [{ data, error }, { data: categoryData }] = await Promise.all([
+      const [{ data, error }, { data: categoryData }, { data: variantRows }] = await Promise.all([
         fetchAllProducts(),
         fetchAllCategories(),
+        supabase.from('product_variants').select('product_id').eq('is_active', true),
       ])
 
       if (error) throw error
 
+      const variantProductIds = new Set((variantRows || []).map(v => String(v.product_id)))
       const categoriesById = Object.fromEntries(
         (categoryData || []).map(category => [String(category.id), String(category.name_en || '').trim()]),
       )
-      const normalized = (data || []).map(product => mapDbProduct(product, categoriesById))
+      const normalized = (data || []).map(product => {
+        const p = mapDbProduct(product, categoriesById)
+        if (variantProductIds.has(String(p.id))) {
+          p.hasVariants = true
+        }
+        return p
+      })
 
       set({ products: normalized, loading: false, lastFetch: Date.now() })
     } catch (err) {

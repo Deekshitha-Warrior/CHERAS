@@ -25,6 +25,7 @@ export interface ThermalReceiptData {
   sgstAmount?: number
   gstRate?: number
   total: number
+  paymentMode?: string
   storeName?: string
   storePhone?: string
   storeAddress?: string
@@ -132,6 +133,7 @@ export function printThermalReceipt(data: ThermalReceiptData) {
           <div>Date: ${dateStr}</div>
           ${data.customerName ? `<div>Name: ${data.customerName}</div>` : ''}
           ${data.phone ? `<div>Tel: ${formatCustomerPhone(data.phone)}</div>` : ''}
+          ${data.paymentMode ? `<div>Payment: ${data.paymentMode}</div>` : ''}
         </div>
 
         <table class="border-bottom" style="width: 100%; table-layout: fixed; border-collapse: collapse;">
@@ -229,6 +231,12 @@ export function printThermalReceipt(data: ThermalReceiptData) {
               <td class="text-left" style="padding-top: 3px;">Total</td>
               <td class="text-right" style="padding-top: 3px;">${formatCurrency(data.total)}</td>
             </tr>
+            ${data.paymentMode ? `
+              <tr style="font-size: 10px;">
+                <td class="text-left" style="padding-top: 3px; color: #333;">Payment Mode</td>
+                <td class="text-right" style="padding-top: 3px; font-weight: 700;">${data.paymentMode}</td>
+              </tr>
+            ` : ''}
           </table>
         </div>
 

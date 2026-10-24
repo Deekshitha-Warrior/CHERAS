@@ -440,7 +440,19 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
         paymentForm.remarks || paymentOrder.remarks || '',
         paymentForm.method === 'split' ? splitInputToDetails(finalSplit) : undefined
       )
-      const completed: AdvanceOrder = { ...paymentOrder, status: 'completed', remaining_balance: 0, completed_at: result.completed_at, completed_order_id: result.order_id, invoice_number: result.invoice_no, final_payment_method: paymentForm.method, split_details: result.split_details }
+      const effectiveSplit = (result.split_details && splitTotal(result.split_details) > 0)
+        ? result.split_details
+        : (paymentForm.method === 'split' ? splitInputToDetails(finalSplit) : paymentOrder.split_details)
+      const completed: AdvanceOrder = {
+        ...paymentOrder,
+        status: 'completed',
+        remaining_balance: 0,
+        completed_at: result.completed_at,
+        completed_order_id: result.order_id,
+        invoice_number: result.invoice_no,
+        final_payment_method: paymentForm.method,
+        split_details: effectiveSplit
+      }
       setOrders(rows => rows.map(row => row.id === completed.id ? completed : row))
       if (selected?.id === completed.id) setSelected(completed)
       onOrderCompleted?.(completed)
@@ -455,6 +467,21 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
   }
 
   const productRows = (order: AdvanceOrder) => order.products.length ? order.products : [{ name: order.product_name, quantity: 1, base_price: order.total_amount, line_total: order.total_amount, unit: 'piece', unit_type: 'unit' }]
+  const resolveAdvanceSubtotal = (order: AdvanceOrder) => {
+    const rows = productRows(order)
+    const itemsSum = rows.reduce((acc, it) => acc + (Number(it.quantity || 1) * Number(it.base_price || 0)), 0)
+    const discount = (order.coupon_discount || 0) + (order.manual_discount || 0)
+    if (itemsSum > 0) return itemsSum
+    if (order.subtotal && order.subtotal > 0 && Math.abs(order.subtotal - order.total_amount) > 0.01) return order.subtotal
+    return order.total_amount + discount - (order.delivery_charge || 0)
+  }
+  const resolvePaymentLabel = (order: AdvanceOrder) => {
+    return formatPaymentLabel(
+      order.final_payment_method || order.deposit_payment_method || order.payment_method,
+      order.split_details || order.deposit_split_details
+    ) || order.final_payment_method || order.payment_method || 'Paid'
+  }
+
   const invoiceFile = (order: AdvanceOrder) => invoicePdfFile({
     invoiceNo: order.invoice_number || order.deposit_id,
     date: order.completed_at || new Date().toISOString(),
@@ -462,7 +489,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
     phone: order.phone,
     address: order.address,
     items: productRows(order),
-    subtotal: order.subtotal ?? order.total_amount,
+    subtotal: resolveAdvanceSubtotal(order),
     shipping: order.delivery_charge ?? 0,
     couponDiscount: order.coupon_discount ?? 0,
     couponCode: order.coupon_code,
@@ -471,7 +498,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
     sgstAmount: order.sgst_amount,
     gstRate: order.gst_rate,
     total: order.total_amount,
-    paymentMode: order.final_payment_method || 'Paid'
+    paymentMode: resolvePaymentLabel(order)
   })
   const printFinal = (order: AdvanceOrder) => printThermalReceipt({
     invoiceNo: order.invoice_number || order.deposit_id,
@@ -485,7 +512,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
       price: Number(item.base_price || 0),
       line_total: Number(item.line_total || 0)
     })),
-    subtotal: order.subtotal ?? order.total_amount,
+    subtotal: resolveAdvanceSubtotal(order),
     shipping: order.delivery_charge ?? 0,
     couponDiscount: order.coupon_discount ?? 0,
     couponCode: order.coupon_code,
@@ -493,7 +520,8 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
     cgstAmount: order.cgst_amount,
     sgstAmount: order.sgst_amount,
     gstRate: order.gst_rate,
-    total: order.total_amount
+    total: order.total_amount,
+    paymentMode: resolvePaymentLabel(order)
   })
   
   const whatsappDepositReceipt = (order: AdvanceOrder) => {

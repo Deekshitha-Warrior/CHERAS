@@ -32,6 +32,7 @@ export interface ShopSettings {
   logo_url: string
   theme_color: string
   gst_enabled: boolean
+  low_stock_alert_enabled?: boolean
   updated_at?: string
 }
 
@@ -53,6 +54,7 @@ export const DEFAULT_SHOP_SETTINGS: ShopSettings = {
   logo_url: BRAND_ICON || '/cheras-icon.png',
   theme_color: DEFAULT_THEME_COLOR,
   gst_enabled: true,
+  low_stock_alert_enabled: true,
 }
 
 const STORAGE_SETTINGS_KEY = 'cheras_store_settings_v1'
@@ -183,6 +185,7 @@ export async function fetchStoreSettings(): Promise<ShopSettings> {
           logo_url: data.logo_url || local.logo_url || DEFAULT_SHOP_SETTINGS.logo_url,
           theme_color: data.theme_color || local.theme_color || DEFAULT_SHOP_SETTINGS.theme_color,
           gst_enabled: data.gst_enabled ?? local.gst_enabled,
+          low_stock_alert_enabled: data.low_stock_alert_enabled !== undefined ? Boolean(data.low_stock_alert_enabled) : (local.low_stock_alert_enabled ?? true),
           updated_at: data.updated_at,
         }
 
@@ -251,6 +254,7 @@ export async function saveStoreSettings(settings: Partial<ShopSettings>): Promis
       if (updated.logo_url !== undefined) payload.logo_url = updated.logo_url
       if (updated.theme_color !== undefined) payload.theme_color = updated.theme_color
       if (updated.gst_enabled !== undefined) payload.gst_enabled = updated.gst_enabled
+      if (updated.low_stock_alert_enabled !== undefined) payload.low_stock_alert_enabled = updated.low_stock_alert_enabled
 
       const { data, error } = await supabase
         .from('store_settings')

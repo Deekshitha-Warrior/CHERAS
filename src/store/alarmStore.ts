@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { alarmSound } from '../lib/alarmAudio'
 import { useNavigationStore } from './navigationStore'
+import { getLocalStoreSettings } from '../services/storeSettingsService'
 
 export interface LowStockItem {
   id: string | number
@@ -15,9 +16,11 @@ export interface LowStockItem {
 interface AlarmState {
   lowStockItems: LowStockItem[]
   isAlarmActive: boolean
+  isAlertEnabled: boolean
   hasCompletedStartupAlert: boolean
   silencedItemIds: Set<string | number>
   setLowStockItems: (items: LowStockItem[]) => void
+  setLowStockAlertEnabled: (enabled: boolean) => void
   silenceAlarm: () => void
   dismissStartupAlert: () => void
   triggerInventoryAlert: () => void
@@ -27,14 +30,31 @@ interface AlarmState {
 export const useAlarmStore = create<AlarmState>((set, get) => ({
   lowStockItems: [],
   isAlarmActive: false,
+  isAlertEnabled: getLocalStoreSettings().low_stock_alert_enabled ?? true,
   hasCompletedStartupAlert: false,
   silencedItemIds: new Set<string | number>(),
+
+  setLowStockAlertEnabled: (enabled: boolean) => {
+    if (!enabled) {
+      alarmSound.stopAlert()
+      set({ isAlertEnabled: false, isAlarmActive: false })
+    } else {
+      set({ isAlertEnabled: true })
+    }
+  },
 
   setLowStockItems: (items) => {
     // Forget silenced ids that are no longer low, so an item that recovers and drops again alarms as new
     const currentIds = new Set(items.map((item) => String(item.id)))
     const silencedItemIds = new Set(Array.from(get().silencedItemIds).filter((id) => currentIds.has(String(id))))
     set({ silencedItemIds })
+
+    // If low stock alert is turned off by user in settings, never sound alarm or show popup
+    if (!get().isAlertEnabled) {
+      alarmSound.stopAlert()
+      set({ lowStockItems: items, isAlarmActive: false })
+      return
+    }
 
     // Check if the current context allows the alert:
     // Expected: ONLY at start of website (!hasCompletedStartupAlert) or when opening inventory
@@ -83,6 +103,7 @@ export const useAlarmStore = create<AlarmState>((set, get) => ({
   },
 
   triggerInventoryAlert: () => {
+    if (!get().isAlertEnabled) return
     const items = get().lowStockItems
     if (items.length > 0) {
       alarmSound.startAlert()

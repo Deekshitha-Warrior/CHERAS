@@ -1296,7 +1296,10 @@ export default function Dashboard() {
     const items = (rawItems.length ? rawItems : fallbackItems).map(normalizeStructuredOrderItem)
     if (!items.length) return null
 
-    const subtotal = items.reduce((sum, item) => sum + toNumber(item.line_total, 0), 0)
+    const itemsSubtotal = items.reduce((sum, item) => sum + toNumber(item.line_total, 0), 0)
+    // Prefer the stored subtotal from the order (pre-discount amount) over
+    // recalculating from item line_totals which may have been allocated differently.
+    const subtotal = toNumber(order.subtotal, 0) > 0 ? toNumber(order.subtotal, 0) : itemsSubtotal
     const message = buildProfessionalWhatsAppMessage({
       customerName: order.customer_name,
       phone: order.phone,
@@ -1325,7 +1328,8 @@ export default function Dashboard() {
     const rawGst = Number(order.total_gst || 0)
     const rawCgst = rawGst > 0 ? Math.round((rawGst / 2) * 100) / 100 : 0
     const rawSgst = rawGst > 0 ? Math.round((rawGst / 2) * 100) / 100 : 0
-    const subtotal = order.total - (order.delivery_charge || 0) - rawGst + (order.discount_amount || 0) + (order.manual_discount_amount || 0)
+    const subtotal = preview.subtotal || (order.total - (order.delivery_charge || 0) - rawGst + (order.discount_amount || 0) + (order.manual_discount_amount || 0))
+    const paymentMode = formatPaymentLabel(order.payment_mode || order.payment_method, order.split_details) || order.payment_mode || order.payment_method
 
     printThermalReceipt({
       invoiceNo: order.invoice_no || order.id,
@@ -1355,7 +1359,8 @@ export default function Dashboard() {
       totalGst: rawGst,
       cgstAmount: rawCgst,
       sgstAmount: rawSgst,
-      total: order.total
+      total: order.total,
+      paymentMode,
     })
   }
 
@@ -1367,6 +1372,7 @@ export default function Dashboard() {
     }
 
     const invoiceNo = order.invoice_no || order.id
+    const paymentMode = formatPaymentLabel(order.payment_mode || order.payment_method, order.split_details) || order.payment_mode || order.payment_method
     try {
       let file: File
       if (element) {
@@ -1392,7 +1398,7 @@ export default function Dashboard() {
           cgstAmount: rawCgst,
           sgstAmount: rawSgst,
           gstRate: Number(order.gst_rate || 0),
-          paymentMode: formatPaymentLabel(order.payment_mode, order.split_details) || order.payment_mode,
+          paymentMode,
           total: order.total,
           status: order.status,
         })
@@ -1428,7 +1434,7 @@ export default function Dashboard() {
         sgstAmount: rawSgst,
         gstRate: Number(order.gst_rate || 0),
         couponCode: order.coupon_code || null,
-        paymentMode: formatPaymentLabel(order.payment_mode, order.split_details) || order.payment_mode,
+        paymentMode,
         total: order.total,
       })
       const fallbackUrl = URL.createObjectURL(fallbackFile)
@@ -3074,6 +3080,16 @@ export default function Dashboard() {
                       bg: 'bg-gray-100',
                     },
                     {
+                      label: analytics.isProfitable ? 'Net Profit' : 'Net Loss',
+                      helper: `Revenue (${formatCurrency(analytics.totalCompletedRevenue)}) − Expenses (${formatCurrency(analytics.totalExpenses)})`,
+                      value: formatCurrency(Math.abs(analytics.netProfit)),
+                      icon: analytics.isProfitable ? <TrendingUp size={16} /> : <TrendingDown size={16} />,
+                      color: 'text-black',
+                      bg: 'bg-gray-100',
+                      valueColor: 'text-black',
+                      arrow: analytics.isProfitable ? '↑' : '↓',
+                    },
+                    {
                       label: 'Offline Bills',
                       helper: 'Walk-in POS sales',
                       value: formatCurrency(analytics.posRevenue),
@@ -3114,28 +3130,10 @@ export default function Dashboard() {
                       bg: 'bg-gray-100',
                     },
                     {
-                      label: analytics.isProfitable ? 'Net Profit' : 'Net Loss',
-                      helper: `Revenue (${formatCurrency(analytics.totalCompletedRevenue)}) − Expenses (${formatCurrency(analytics.totalExpenses)})`,
-                      value: formatCurrency(Math.abs(analytics.netProfit)),
-                      icon: analytics.isProfitable ? <TrendingUp size={16} /> : <TrendingDown size={16} />,
-                      color: 'text-black',
-                      bg: 'bg-gray-100',
-                      valueColor: 'text-black',
-                      arrow: analytics.isProfitable ? '↑' : '↓',
-                    },
-                    {
                       label: 'Total Expenses',
                       helper: 'Overheads from expense tracker',
                       value: formatCurrency(analytics.totalExpenses),
                       icon: <Receipt size={16} />,
-                      color: 'text-black',
-                      bg: 'bg-gray-100',
-                    },
-                    {
-                      label: 'Total Items Sold',
-                      helper: 'From completed bills',
-                      value: String(Math.round(analytics.totalProductsSold)),
-                      icon: <Box size={16} />,
                       color: 'text-black',
                       bg: 'bg-gray-100',
                     },

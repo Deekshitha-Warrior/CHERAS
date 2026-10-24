@@ -480,9 +480,12 @@ export const normalizeStructuredOrderItem = (raw: Record<string, unknown>): Stru
   const baseQuantity = normalizeBaseQuantity(raw.base_quantity ?? raw.baseQuantity ?? 1, unitType)
 
   const lineTotalRaw = toNumber(raw.line_total ?? raw.lineTotal, 0)
-  const lineTotal = Number.isFinite(lineTotalRaw)
-    ? roundTo(lineTotalRaw, 2)
-    : calculateLineTotal(quantity, unitType, baseQuantity, basePrice)
+  const calculatedTotal = calculateLineTotal(quantity, unitType, baseQuantity, basePrice)
+  // Ensure line_total reflects the undiscounted item line amount (quantity * base_price)
+  // so that item AMOUNT in invoices matches Rate * Qty and doesn't double-deduct discounts
+  const lineTotal = calculatedTotal > 0
+    ? calculatedTotal
+    : (Number.isFinite(lineTotalRaw) && lineTotalRaw > 0 ? roundTo(lineTotalRaw, 2) : calculatedTotal)
 
   // products.id is UUID in Supabase — return as string, not number
   const productIdValue = raw.product_id ?? raw.productId ?? raw.id

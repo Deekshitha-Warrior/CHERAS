@@ -16,7 +16,10 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
+  Volume2,
+  VolumeX,
 } from 'lucide-react'
+import { useAlarmStore } from '../../store/alarmStore'
 
 const InstagramIcon: React.FC<{ size?: number; className?: string }> = ({ size = 15, className = '' }) => (
   <svg
@@ -137,6 +140,24 @@ export const SettingsView: React.FC = () => {
       showNotice('success', 'Shop profile & branding details updated successfully.')
     } catch (err) {
       showNotice('error', err instanceof Error ? err.message : 'Failed to update shop details.')
+    }
+  }
+
+  // Handle toggling low stock alert
+  const handleToggleLowStockAlert = async () => {
+    const nextState = formData.low_stock_alert_enabled === false ? true : false
+    setFormData((prev) => ({ ...prev, low_stock_alert_enabled: nextState }))
+    useAlarmStore.getState().setLowStockAlertEnabled(nextState)
+    try {
+      await updateSettings({ low_stock_alert_enabled: nextState })
+      showNotice(
+        'success',
+        nextState
+          ? 'Low stock alerts & popup sound turned ON and saved to database.'
+          : 'Low stock alerts & popup sound turned OFF. All alerts silenced.'
+      )
+    } catch {
+      showNotice('error', 'Failed to save low stock alert setting to database.')
     }
   }
 
@@ -388,6 +409,60 @@ export const SettingsView: React.FC = () => {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* LOW STOCK ALARM & SOUND TOGGLE CARD */}
+          <div className="bg-white rounded-3xl border border-gray-200/90 shadow-sm p-6 sm:p-7 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${formData.low_stock_alert_enabled !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'}`}>
+                  {formData.low_stock_alert_enabled !== false ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider text-[#111111]">
+                    Low Stock Alert &amp; Sound
+                  </h3>
+                  <p className="text-[11px] text-gray-500 font-medium">
+                    Control audio alarms and popup modals when items fall below stock limits
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-gray-50 border border-gray-200/80 flex items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${formData.low_stock_alert_enabled !== false ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`} />
+                  <span className="text-xs font-black text-[#111111]">
+                    {formData.low_stock_alert_enabled !== false ? 'Low Stock Alerts Active' : 'Low Stock Alerts Turned Off'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+                  {formData.low_stock_alert_enabled !== false
+                    ? 'Popups and audio alarms will trigger when inventory drops to alert thresholds.'
+                    : 'All low stock popup modals and alarm sounds are completely muted and suppressed.'}
+                </p>
+              </div>
+
+              {/* Toggle Switch */}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={formData.low_stock_alert_enabled !== false}
+                onClick={() => void handleToggleLowStockAlert()}
+                className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  formData.low_stock_alert_enabled !== false ? 'bg-emerald-600' : 'bg-gray-300'
+                }`}
+                title={formData.low_stock_alert_enabled !== false ? 'Click to turn OFF low stock alerts' : 'Click to turn ON low stock alerts'}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    formData.low_stock_alert_enabled !== false ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
             </div>
           </div>
 

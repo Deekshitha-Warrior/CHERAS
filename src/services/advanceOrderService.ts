@@ -123,30 +123,16 @@ const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
   const sgstAmount = Number(row.sgst_amount || 0)
 
   const prods = Array.isArray(row.products) ? (row.products as Array<Record<string, unknown>>) : []
-  let resolvedSubtotal = subtotalRaw
+  const sumBase = prods.reduce((acc, p) => acc + (Number(p.quantity ?? p.qty ?? 1) * Number(p.base_price ?? p.price ?? 0)), 0)
+  let resolvedSubtotal = sumBase > 0 ? sumBase : subtotalRaw
   let resolvedTotalGst = totalGst
   let resolvedCgst = cgstAmount
   let resolvedSgst = sgstAmount
   let resolvedGstEnabled = gstEnabled
   let resolvedGstRate = gstRate
 
-  if (resolvedSubtotal === undefined && prods.length > 0) {
-    const sumBase = prods.reduce((acc, p) => acc + (Number(p.quantity ?? p.qty ?? 1) * Number(p.base_price ?? p.price ?? 0)), 0)
-    if (sumBase > 0) {
-      resolvedSubtotal = sumBase
-      const diff = total - sumBase
-      if (diff > 0 && resolvedTotalGst === 0 && deliveryCharge === 0) {
-        resolvedGstEnabled = true
-        resolvedTotalGst = diff
-        resolvedCgst = Math.round((diff / 2) * 100) / 100
-        resolvedSgst = Math.round((diff / 2) * 100) / 100
-        resolvedGstRate = Math.round((diff / sumBase) * 10000) / 100
-      }
-    } else {
-      resolvedSubtotal = total
-    }
-  } else if (resolvedSubtotal === undefined) {
-    resolvedSubtotal = total
+  if (resolvedSubtotal === undefined) {
+    resolvedSubtotal = total + couponDiscount + manualDiscount - deliveryCharge
   }
 
   // Resolve deposit payment method from attached payments, explicit fields, or local storage
@@ -162,27 +148,55 @@ const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
       ? parseSplit(row.split_details)
       : undefined
 
-  if (!depositPaymentMethod && Array.isArray(row.advance_order_payments)) {
+  let finalPaymentMethod: string | null = row.final_payment_method
+    ? String(row.final_payment_method)
+    : null
+  let finalSplit: SplitDetails | undefined = undefined
+
+  if (Array.isArray(row.advance_order_payments)) {
     const dep = (row.advance_order_payments as Array<Record<string, unknown>>).find(p => p.payment_type === 'deposit')
     if (dep) {
-      depositPaymentMethod = String(dep.payment_method || '')
+      if (!depositPaymentMethod) depositPaymentMethod = String(dep.payment_method || '')
       if (dep.split_details) {
         depositSplit = parseSplit(dep.split_details)
       }
     }
+    const rem = (row.advance_order_payments as Array<Record<string, unknown>>).find(p => p.payment_type === 'remaining')
+    if (rem) {
+      if (!finalPaymentMethod) finalPaymentMethod = String(rem.payment_method || '')
+      if (rem.split_details) {
+        finalSplit = parseSplit(rem.split_details)
+      }
+    }
   }
 
-  if (!depositPaymentMethod && row.id) {
+  if (row.id) {
     try {
-      const localDep = loadLocalPayments().find(p => p.advance_order_id === String(row.id) && p.payment_type === 'deposit')
+      const localPayments = loadLocalPayments().filter(p => p.advance_order_id === String(row.id))
+      const localDep = localPayments.find(p => p.payment_type === 'deposit')
       if (localDep) {
-        depositPaymentMethod = localDep.payment_method
-        if (localDep.split_details) {
+        if (!depositPaymentMethod) depositPaymentMethod = localDep.payment_method
+        if (localDep.split_details && !depositSplit) {
           depositSplit = parseSplit(localDep.split_details)
+        }
+      }
+      const localRem = localPayments.find(p => p.payment_type === 'remaining')
+      if (localRem) {
+        if (!finalPaymentMethod) finalPaymentMethod = localRem.payment_method
+        if (localRem.split_details && !finalSplit) {
+          finalSplit = parseSplit(localRem.split_details)
         }
       }
     } catch { /* optional */ }
   }
+
+  // Active split details: if order has an explicit split_details with values, use it;
+  // otherwise if final payment was split, use finalSplit; otherwise depositSplit.
+  const activeSplitDetails = (row.split_details && splitTotal(parseSplit(row.split_details)) > 0)
+    ? parseSplit(row.split_details)
+    : (finalSplit && splitTotal(finalSplit) > 0)
+      ? finalSplit
+      : depositSplit
 
   return {
     ...row,
@@ -208,11 +222,11 @@ const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
     completed_at: row.completed_at ? String(row.completed_at) : null,
     completed_order_id: row.completed_order_id ? String(row.completed_order_id) : null,
     invoice_number: row.invoice_number ? String(row.invoice_number) : null,
-    final_payment_method: row.final_payment_method ? String(row.final_payment_method) : null,
+    final_payment_method: finalPaymentMethod || (isCompleted ? depositPaymentMethod : null),
     deposit_payment_method: depositPaymentMethod,
-    payment_method: depositPaymentMethod,
+    payment_method: isCompleted ? (finalPaymentMethod || depositPaymentMethod) : depositPaymentMethod,
     deposit_split_details: depositSplit,
-    split_details: depositSplit ?? (row.split_details ? parseSplit(row.split_details) : undefined),
+    split_details: activeSplitDetails,
     subtotal: resolvedSubtotal,
     delivery_charge: deliveryCharge,
     discount_amount: discountAmount,

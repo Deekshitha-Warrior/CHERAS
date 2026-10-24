@@ -7,6 +7,8 @@ import { clearLocalOrders } from './lib/ordersFallback'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 import { LowStockAlarmModal } from './components/dashboard/LowStockAlarmModal'
 import { useLowStockMonitor } from './hooks/useLowStockMonitor'
+import { fetchStoreSettings } from './services/storeSettingsService'
+import { useAlarmStore } from './store/alarmStore'
 
 function lazyWithRetry<T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T }>
@@ -98,6 +100,9 @@ function AppShell() {
 
   useEffect(() => {
     document.title = BRAND_EN
+    void fetchStoreSettings().then((settings) => {
+      useAlarmStore.getState().setLowStockAlertEnabled(settings.low_stock_alert_enabled !== false)
+    })
   }, [])
 
   useEffect(() => {

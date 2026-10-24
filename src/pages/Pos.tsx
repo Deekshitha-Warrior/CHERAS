@@ -973,13 +973,10 @@ export default function Pos(props: PosProps = {}) {
     if (depositForm.paymentMethod === 'split' && Math.abs(splitTotal(splitInputToDetails(depositSplit)) - depositAmount) >= 0.01) { setError(`Split amounts must add up to the deposit of ${formatCurrency(depositAmount)}.`); return }
     setSaving(true); setError('')
     try {
-      const allocationBase = items.reduce((sum, item) => sum + item.lineTotal, 0)
-      let allocated = 0
-      const productsSnapshot = items.map((item, index) => {
-        const lineTotal = index === items.length - 1
-          ? Math.max(0, Math.round((total - allocated) * 100) / 100)
-          : Math.max(0, Math.round((allocationBase > 0 ? total * item.lineTotal / allocationBase : total / items.length) * 100) / 100)
-        allocated += lineTotal
+      const productsSnapshot = items.map((item) => {
+        // Store the undiscounted line_total (qty × base_price) so invoices show
+        // correct item amounts. Discounts/taxes are separate in the invoice summary.
+        const lineTotal = item.lineTotal
         return {
           product_id: item.parentProductId || toProductId(item.id), variant_id: item.variantId || null,
           variant_name: item.variantName || null, name: item.name, category: item.category,
@@ -1297,6 +1294,7 @@ export default function Pos(props: PosProps = {}) {
       sgstAmount: inv.gstAmount > 0 ? Math.round((inv.gstAmount / 2) * 100) / 100 : 0,
       gstRate: inv.gstRate,
       total: inv.total,
+      paymentMode: inv.paymentMode,
     })
   }
 

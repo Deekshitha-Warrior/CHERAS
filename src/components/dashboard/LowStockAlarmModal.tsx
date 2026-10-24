@@ -6,6 +6,7 @@ import { alarmSound } from '../../lib/alarmAudio'
 
 export const LowStockAlarmModal: React.FC = () => {
   const isAlarmActive = useAlarmStore((state) => state.isAlarmActive)
+  const isAlertEnabled = useAlarmStore((state) => state.isAlertEnabled)
   const lowStockItems = useAlarmStore((state) => state.lowStockItems)
   const hasCompletedStartupAlert = useAlarmStore((state) => state.hasCompletedStartupAlert)
   const silenceAlarm = useAlarmStore((state) => state.silenceAlarm)
@@ -57,7 +58,7 @@ export const LowStockAlarmModal: React.FC = () => {
   const isInventory = currentTab === 'inventory' || currentTab === 'products'
   const isAllowedScreen = !hasCompletedStartupAlert || isInventory
 
-  if (!isAlarmActive || lowStockItems.length === 0 || !isAllowedScreen) return null
+  if (!isAlertEnabled || !isAlarmActive || lowStockItems.length === 0 || !isAllowedScreen) return null
 
   return (
     <div

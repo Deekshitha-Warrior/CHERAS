@@ -434,7 +434,8 @@ export default function DigitalInvoice() {
       cgstAmount: rawCgst,
       sgstAmount: rawSgst,
       gstRate: Number(invoice.gst_rate || 0),
-      total: invoice.total > 0 ? invoice.total : (subtotal + Number(invoice.delivery_charge || 0) + rawGst - Number(invoice.discount_amount || 0) - Number(invoice.manual_discount_amount || 0))
+      total: invoice.total > 0 ? invoice.total : (subtotal + Number(invoice.delivery_charge || 0) + rawGst - Number(invoice.discount_amount || 0) - Number(invoice.manual_discount_amount || 0)),
+      paymentMode: formatPaymentLabel(invoice.payment_mode || invoice.payment_method, invoice.split_details) || invoice.payment_mode || invoice.payment_method
     })
   }
 

@@ -158,6 +158,12 @@ export function advanceReceiptPdf(order: AdvanceOrder) {
 }
 
 export function resolveAdvancePaymentLabel(order: AdvanceOrder): string {
+  if (order.status === 'completed') {
+    const mode = order.final_payment_method || order.payment_method
+    const split = order.split_details || order.deposit_split_details
+    return formatPaymentLabel(mode, split) || 'Paid'
+  }
+
   // 1. Explicit deposit payment method (e.g. 'card', 'upi', 'cash', 'split')
   const depMode = order.deposit_payment_method || order.payment_method
   const depSplit = order.deposit_split_details || order.split_details

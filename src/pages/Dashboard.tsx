@@ -5671,7 +5671,7 @@ export default function Dashboard() {
                     couponCode={invoicePreviewOrder.coupon_code || undefined}
                     manualDiscountAmount={invoicePreviewOrder.manual_discount_amount}
                     gstAmount={invoicePreviewOrder.total_gst}
-                    paymentMode={formatPaymentLabel(invoicePreviewOrder.payment_mode, invoicePreviewOrder.split_details) || invoicePreviewOrder.payment_mode}
+                    paymentMode={formatPaymentLabel(invoicePreviewOrder.payment_mode || invoicePreviewOrder.payment_method, invoicePreviewOrder.split_details) || invoicePreviewOrder.payment_mode || invoicePreviewOrder.payment_method}
                     total={invoicePreviewOrder.total}
                     status={invoicePreviewOrder.status}
                   />

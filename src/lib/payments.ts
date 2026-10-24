@@ -61,7 +61,7 @@ export function formatPaymentLabel(mode: unknown, splitRaw?: unknown): string {
   const normalized = normalizePaymentMode(mode)
   const s = parseSplit(splitRaw)
   const methodsCount = (s.cash > 0 ? 1 : 0) + (s.qr > 0 ? 1 : 0) + (s.card > 0 ? 1 : 0)
-  if (normalized === 'split' || methodsCount >= 2) {
+  if (methodsCount >= 2) {
     const parts: string[] = []
     if (s.cash > 0) parts.push(`Cash ${inr(s.cash)}`)
     if (s.qr > 0) parts.push(`QR ${inr(s.qr)}`)
@@ -72,6 +72,13 @@ export function formatPaymentLabel(mode: unknown, splitRaw?: unknown): string {
     if (s.cash > 0) return 'Cash'
     if (s.qr > 0) return 'QR'
     if (s.card > 0) return 'Card'
+  }
+  if (normalized === 'split') {
+    const parts: string[] = []
+    if (s.cash > 0) parts.push(`Cash ${inr(s.cash)}`)
+    if (s.qr > 0) parts.push(`QR ${inr(s.qr)}`)
+    if (s.card > 0) parts.push(`Card ${inr(s.card)}`)
+    return parts.length ? `Split (${parts.join(' + ')})` : 'Split'
   }
   if (normalized === 'cash') return 'Cash'
   if (normalized === 'qr') return 'QR'

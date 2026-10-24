@@ -9,7 +9,7 @@ type Props = {
 
 const formatInr = (n: number) => `₹${round2(n).toFixed(2)}`
 
-/** Cash / QR amount entry that must add up to `total`. */
+/** Cash / QR / Card amount entry that must add up to `total`. */
 export default function SplitPaymentInputs({ idPrefix, total, value, onChange }: Props) {
   const entered = splitTotal(parseSplit(value))
   const remaining = round2(total - entered)
@@ -17,11 +17,12 @@ export default function SplitPaymentInputs({ idPrefix, total, value, onChange }:
   const fields: Array<{ key: keyof SplitInputValue; label: string }> = [
     { key: 'cash', label: 'Cash' },
     { key: 'qr', label: 'QR' },
+    { key: 'card', label: 'Card' },
   ]
 
   return (
     <div className="rounded-xl border border-[#F3F4F6] bg-white p-2.5">
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {fields.map(field => (
           <label key={field.key} htmlFor={`${idPrefix}-${field.key}`} className="block">
             <span className="mb-0.5 block text-[10px] font-black uppercase tracking-wider text-[#374151]">{field.label} (₹)</span>

@@ -20,7 +20,7 @@ import { uploadInvoicePdf } from '../lib/storage'
 import { createOrderWithStock } from '../services/orderService'
 import { createAdvanceOrder, type AdvanceOrder, type AdvancePaymentMethod } from '../services/advanceOrderService'
 import SplitPaymentInputs from '../components/common/SplitPaymentInputs'
-import { emptySplitInput, formatPaymentLabel, splitInputToDetails, splitTotal, type SplitInputValue } from '../lib/payments'
+import { emptySplitInput, formatPaymentLabel, splitInputToDetails, splitTotal, type SplitDetails, type SplitInputValue } from '../lib/payments'
 import { printAdvanceReceipt } from '../lib/advanceReceipt'
 import { printThermalReceipt } from '../lib/thermalPrint'
 import {
@@ -1046,8 +1046,14 @@ export default function Pos(props: PosProps = {}) {
     if (ordermode === 'online' && !isSupabaseConfigured) { setError('Cannot place online orders while offline'); return }
     setSaving(true); setError('')
     try {
-      const paymentMode = ordermode === 'online' ? 'online' : paymentType
-      const splitDetailsForBill = ordermode !== 'online' && paymentType === 'split' ? splitInputToDetails(splitForm) : {}
+      const splitDetails = splitInputToDetails(splitForm)
+      const methodsCount = (splitDetails.cash > 0 ? 1 : 0) + (splitDetails.qr > 0 ? 1 : 0) + (splitDetails.card > 0 ? 1 : 0)
+      const paymentMode = ordermode === 'online'
+        ? 'online'
+        : paymentType === 'split'
+          ? (methodsCount >= 2 ? 'split' : (splitDetails.card > 0 ? 'card' : splitDetails.qr > 0 ? 'qr' : 'cash'))
+          : paymentType
+      const splitDetailsForBill: SplitDetails | Record<string, never> = ordermode !== 'online' && paymentType === 'split' ? splitDetails : {}
       // Determine the effective billing date/time
       const effectiveBillingDate = billingDate.trim()
         ? new Date(billingDate).toISOString()
@@ -1153,7 +1159,7 @@ export default function Pos(props: PosProps = {}) {
         address: customer.address.trim() || 'POS Counter',
         amountReceived: paymentType === 'split' ? total : cashReceivedNum,
         balanceReturned: paymentType === 'split' ? 0 : balanceToReturn,
-        paymentMode: ordermode === 'online' ? 'Online' : paymentType === 'split' ? formatPaymentLabel('split', splitDetailsForBill) : paymentType === 'qr' ? 'QR' : paymentType === 'card' ? 'Card' : 'Cash',
+        paymentMode: ordermode === 'online' ? 'Online' : formatPaymentLabel(paymentMode, splitDetailsForBill),
         paymentMethod: paymentMode,
       }
       setInvoice(createdInvoice)
@@ -1355,7 +1361,7 @@ export default function Pos(props: PosProps = {}) {
               </div>
               <div>
                 <span className="text-[10px] text-gray-400 font-bold uppercase block">Payment Mode</span>
-                <span className="font-bold text-gray-900 uppercase block">{invoice.paymentMode || 'POS'}</span>
+                <span className="font-bold text-gray-900 block">{invoice.paymentMode || 'POS'}</span>
               </div>
               {invoice.phone && (
                 <div>
@@ -2336,7 +2342,7 @@ export default function Pos(props: PosProps = {}) {
 
               {ordermode !== 'online' && paymentType === 'split' && (
               <div>
-                <label className="block text-[10px] font-black text-[#374151] tracking-wider uppercase mb-1">Split Payment — Cash / QR</label>
+                <label className="block text-[10px] font-black text-[#374151] tracking-wider uppercase mb-1">Split Payment — Cash / QR / Card</label>
                 <SplitPaymentInputs idPrefix="pos-split" total={total} value={splitForm} onChange={setSplitForm} />
               </div>
               )}
@@ -2424,7 +2430,7 @@ export default function Pos(props: PosProps = {}) {
               <label htmlFor="pos-deposit-amount" className="block"><span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-[#6B7280]">Deposit received *</span><input id="pos-deposit-amount" name="depositAmount" required autoFocus type="number" onWheel={(e) => (e.target as HTMLInputElement).blur()} min="0.01" max={Math.max(0, total - 0.01)} step="0.01" value={depositForm.amount} onFocus={(e) => e.target.select()} onChange={e => setDepositForm({...depositForm, amount:e.target.value})} className="w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:border-gray-600"/></label>
               <div className="block"><span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-[#6B7280]">Remaining balance</span><div className="rounded-xl bg-red-50 px-3 py-2.5 text-sm font-black text-red-700">{formatCurrency(Math.max(0,total-Number(depositForm.amount||0)))}</div></div>
               <label htmlFor="pos-deposit-delivery-date" className="block"><span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-[#6B7280]">Expected delivery *</span><input id="pos-deposit-delivery-date" name="deliveryDate" required type="date" value={depositForm.expectedDeliveryDate} onChange={e => setDepositForm({...depositForm, expectedDeliveryDate:e.target.value})} className="w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:border-gray-600"/></label>
-              <label htmlFor="pos-deposit-payment-method" className="block"><span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-[#6B7280]">Payment method *</span><select id="pos-deposit-payment-method" name="paymentMethod" value={depositForm.paymentMethod} onChange={e => setDepositForm({...depositForm,paymentMethod:e.target.value as AdvancePaymentMethod})} className="w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:border-gray-600"><option value="cash">Cash</option><option value="upi">QR</option><option value="card">Card</option><option value="split">Split (Cash + QR)</option></select></label>
+              <label htmlFor="pos-deposit-payment-method" className="block"><span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-[#6B7280]">Payment method *</span><select id="pos-deposit-payment-method" name="paymentMethod" value={depositForm.paymentMethod} onChange={e => setDepositForm({...depositForm,paymentMethod:e.target.value as AdvancePaymentMethod})} className="w-full rounded-xl border px-3 py-2.5 text-sm font-bold outline-none focus:border-gray-600"><option value="cash">Cash</option><option value="upi">QR</option><option value="card">Card</option><option value="split">Split (Cash / QR / Card)</option></select></label>
               {depositForm.paymentMethod === 'split' && (<div className="sm:col-span-2"><SplitPaymentInputs idPrefix="pos-deposit-split" total={Number(depositForm.amount) || 0} value={depositSplit} onChange={setDepositSplit} /></div>)}
               <label htmlFor="pos-deposit-address" className="block sm:col-span-2"><span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-[#6B7280]">Delivery address</span><textarea id="pos-deposit-address" name="deliveryAddress" autoComplete="street-address" value={depositForm.address} onChange={e => setDepositForm({...depositForm,address:e.target.value})} className="w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:border-gray-600" rows={2}/></label>
               <label htmlFor="pos-deposit-ref-no" className="block sm:col-span-2"><span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-[#6B7280]">Reference Number</span><input id="pos-deposit-ref-no" name="referenceNumber" value={depositForm.referenceNumber} onChange={e => setDepositForm({...depositForm,referenceNumber:e.target.value})} className="w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:border-gray-600" placeholder="e.g. PO-001, booking ref (optional)"/></label>

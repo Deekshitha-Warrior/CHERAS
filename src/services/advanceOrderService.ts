@@ -1,5 +1,5 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
-import { emptySplit, parseSplit, splitTotal, type SplitDetails } from '../lib/payments'
+import { emptySplit, parseSplit, splitTotal, paymentBreakdown, round2, type SplitDetails } from '../lib/payments'
 import { useProductStore, useVariantStore } from '../store/store'
 
 export type AdvanceStatus = 'pending_deposit' | 'ready_for_delivery' | 'waiting_final_payment' | 'completed' | 'cancelled'
@@ -192,11 +192,31 @@ const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
 
   // Active split details: if order has an explicit split_details with values, use it;
   // otherwise if final payment was split, use finalSplit; otherwise depositSplit.
-  const activeSplitDetails = (row.split_details && splitTotal(parseSplit(row.split_details)) > 0)
+  let activeSplitDetails = (row.split_details && splitTotal(parseSplit(row.split_details)) > 0)
     ? parseSplit(row.split_details)
     : (finalSplit && splitTotal(finalSplit) > 0)
       ? finalSplit
       : depositSplit
+
+  if (isCompleted) {
+    const depBd = paymentBreakdown(depositPaymentMethod || 'cash', depositSplit, deposit)
+    const remainingPaid = Math.max(0, total - deposit)
+    const finBd = paymentBreakdown(finalPaymentMethod || 'cash', finalSplit, remainingPaid)
+    const combinedSplit: SplitDetails = {
+      cash: round2(depBd.cash + finBd.cash),
+      qr: round2(depBd.qr + finBd.qr),
+      card: round2(depBd.card + finBd.card),
+    }
+    const methodsCount = (combinedSplit.cash > 0 ? 1 : 0) + (combinedSplit.qr > 0 ? 1 : 0) + (combinedSplit.card > 0 ? 1 : 0)
+
+    if (!activeSplitDetails || Math.abs(splitTotal(activeSplitDetails) - total) > 0.05 || (methodsCount >= 2 && splitTotal(activeSplitDetails) < total - 0.05)) {
+      activeSplitDetails = combinedSplit
+    }
+
+    if (methodsCount >= 2) {
+      finalPaymentMethod = 'split'
+    }
+  }
 
   return {
     ...row,
@@ -1146,6 +1166,33 @@ export async function completeAdvanceOrder(
   }
   const splitDetails = paymentMethod === 'split' ? parseSplit(splitInput) : {}
 
+  let existingOrder: AdvanceOrder | null = null
+  if (isSupabaseConfigured) {
+    try {
+      const { data: advData } = await supabase.from('advance_orders').select('*').eq('id', orderId).maybeSingle()
+      if (advData) existingOrder = normalizeOrder(advData)
+    } catch { /* ignore */ }
+  }
+  if (!existingOrder) {
+    existingOrder = loadLocalOrders().find(o => o.id === orderId) || null
+  }
+
+  const depBd = paymentBreakdown(
+    existingOrder?.deposit_payment_method || existingOrder?.payment_method || 'cash',
+    existingOrder?.deposit_split_details || existingOrder?.split_details,
+    Number(existingOrder?.deposit_amount || 0)
+  )
+  const finBd = paymentBreakdown(paymentMethod, splitInput, Number(finalAmount || 0))
+  const combinedSplit: SplitDetails = {
+    cash: round2(depBd.cash + finBd.cash),
+    qr: round2(depBd.qr + finBd.qr),
+    card: round2(depBd.card + finBd.card),
+  }
+  const methodsCount = (combinedSplit.cash > 0 ? 1 : 0) + (combinedSplit.qr > 0 ? 1 : 0) + (combinedSplit.card > 0 ? 1 : 0)
+  const effectivePaymentMode = methodsCount >= 2 || paymentMethod === 'split' ? 'split' : (
+    combinedSplit.card > 0 ? 'card' : combinedSplit.qr > 0 ? 'qr' : 'cash'
+  )
+
   if (isSupabaseConfigured) {
     try {
       const { data, error } = await supabase.rpc('complete_advance_order_v2', { 
@@ -1166,7 +1213,8 @@ export async function completeAdvanceOrder(
             result = {
               order_id: existing.completed_order_id || existing.id,
               invoice_no: existing.invoice_number || 'INV-COMPLETED',
-              completed_at: existing.completed_at || new Date().toISOString()
+              completed_at: existing.completed_at || new Date().toISOString(),
+              split_details: combinedSplit
             }
           } else {
             throw new Error('This order has already been completed.')
@@ -1178,13 +1226,9 @@ export async function completeAdvanceOrder(
       if (data) {
         const row = Array.isArray(data) ? data[0] : data
         result = row as { order_id: string; invoice_no: string; completed_at: string }
-        // Full collection breakdown (deposit + final) written by the database for analytics
-        try {
-          const { data: orderRow } = await supabase.from('orders').select('split_details').eq('id', result.order_id).maybeSingle()
-          if (orderRow && splitTotal(parseSplit(orderRow.split_details)) > 0) result.split_details = parseSplit(orderRow.split_details)
-        } catch { /* optional */ }
+        result.split_details = combinedSplit
 
-        // Guarantee advance order financial breakdown (subtotal, delivery, coupon, discount, GST) is synchronized to orders table
+        // Guarantee advance order financial breakdown (subtotal, delivery, coupon, discount, GST, and combined split details) is synchronized to orders table
         try {
           const { data: adv } = await supabase.from('advance_orders').select('*').eq('id', orderId).maybeSingle()
           if (adv && result.order_id) {
@@ -1209,10 +1253,20 @@ export async function completeAdvanceOrder(
               total_gst: totalGst,
               gst_amount: totalGst,
               gst_enabled: Boolean(adv.gst_enabled || totalGst > 0),
+              payment_mode: effectivePaymentMode,
+              payment_method: effectivePaymentMode,
+              split_details: combinedSplit,
               reference_number: adv.reference_number || undefined,
               remarks: remarks || adv.remarks || undefined,
               address: adv.address || undefined
             }).eq('id', result.order_id)
+
+            await supabase.from('advance_orders').update({
+              final_payment_method: effectivePaymentMode,
+              payment_method: effectivePaymentMode,
+              split_details: combinedSplit,
+              updated_at: new Date().toISOString()
+            }).eq('id', orderId)
           }
         } catch (syncErr) {
           console.warn('[completeAdvanceOrder] Order financial sync warning:', syncErr)
@@ -1234,7 +1288,7 @@ export async function completeAdvanceOrder(
     const seq = String(Math.floor(10000000 + Math.random() * 89999999))
     const invoiceNo = `INV${seq}`
     const completedOrderId = crypto.randomUUID ? crypto.randomUUID() : `ord_${Date.now()}_${Math.random().toString(36).slice(2)}`
-    result = { order_id: completedOrderId, invoice_no: invoiceNo, completed_at: now }
+    result = { order_id: completedOrderId, invoice_no: invoiceNo, completed_at: now, split_details: combinedSplit }
   }
 
   if (order) {
@@ -1245,8 +1299,9 @@ export async function completeAdvanceOrder(
       completed_at: result.completed_at,
       completed_order_id: result.order_id,
       invoice_number: result.invoice_no,
-      final_payment_method: paymentMethod,
-      split_details: result.split_details,
+      final_payment_method: effectivePaymentMode,
+      payment_method: effectivePaymentMode,
+      split_details: combinedSplit,
       remarks: remarks || order.remarks,
       updated_at: now,
     }

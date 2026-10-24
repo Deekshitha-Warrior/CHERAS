@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { CalendarDays, CheckCircle2, Clock3, Download, Edit2, Eye, FileText, MessageCircle, PackageCheck, Printer, RefreshCw, Search, X, Trash2 } from 'lucide-react'
 import { formatCurrency, formatInvoiceNo } from '../lib/retail'
 import SplitPaymentInputs from '../components/common/SplitPaymentInputs'
-import { emptySplitInput, formatPaymentLabel, splitInputToDetails, splitTotal, type SplitInputValue } from '../lib/payments'
+import { emptySplitInput, formatPaymentLabel, paymentBreakdown, round2, splitInputToDetails, splitTotal, type SplitDetails, type SplitInputValue } from '../lib/payments'
 import { invoicePdfFile } from '../lib/invoicePdf'
 import { printThermalReceipt } from '../lib/thermalPrint'
 import { buildAdvanceDepositWhatsAppMessage, buildProfessionalWhatsAppMessage, publicInvoiceUrl } from '../lib/whatsappMessage'
@@ -440,9 +440,28 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
         paymentForm.remarks || paymentOrder.remarks || '',
         paymentForm.method === 'split' ? splitInputToDetails(finalSplit) : undefined
       )
-      const effectiveSplit = (result.split_details && splitTotal(result.split_details) > 0)
+      const depBd = paymentBreakdown(
+        paymentOrder.deposit_payment_method || paymentOrder.payment_method || 'cash',
+        paymentOrder.deposit_split_details || paymentOrder.split_details,
+        paymentOrder.deposit_amount
+      )
+      const finBd = paymentBreakdown(
+        paymentForm.method,
+        paymentForm.method === 'split' ? splitInputToDetails(finalSplit) : undefined,
+        finalAmount
+      )
+      const combinedSplit: SplitDetails = (result.split_details && splitTotal(result.split_details) > 0)
         ? result.split_details
-        : (paymentForm.method === 'split' ? splitInputToDetails(finalSplit) : paymentOrder.split_details)
+        : {
+          cash: round2(depBd.cash + finBd.cash),
+          qr: round2(depBd.qr + finBd.qr),
+          card: round2(depBd.card + finBd.card),
+        }
+      const methodsCount = (combinedSplit.cash > 0 ? 1 : 0) + (combinedSplit.qr > 0 ? 1 : 0) + (combinedSplit.card > 0 ? 1 : 0)
+      const effectiveMethod = methodsCount >= 2 || paymentForm.method === 'split' ? 'split' : (
+        combinedSplit.card > 0 ? 'card' : combinedSplit.qr > 0 ? 'qr' : 'cash'
+      )
+
       const completed: AdvanceOrder = {
         ...paymentOrder,
         status: 'completed',
@@ -450,8 +469,9 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
         completed_at: result.completed_at,
         completed_order_id: result.order_id,
         invoice_number: result.invoice_no,
-        final_payment_method: paymentForm.method,
-        split_details: effectiveSplit
+        final_payment_method: effectiveMethod,
+        payment_method: effectiveMethod,
+        split_details: combinedSplit
       }
       setOrders(rows => rows.map(row => row.id === completed.id ? completed : row))
       if (selected?.id === completed.id) setSelected(completed)
@@ -476,10 +496,13 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
     return order.total_amount + discount - (order.delivery_charge || 0)
   }
   const resolvePaymentLabel = (order: AdvanceOrder) => {
-    return formatPaymentLabel(
-      order.final_payment_method || order.deposit_payment_method || order.payment_method,
-      order.split_details || order.deposit_split_details
-    ) || order.final_payment_method || order.payment_method || 'Paid'
+    const mode = order.status === 'completed'
+      ? (order.final_payment_method || order.payment_method)
+      : (order.deposit_payment_method || order.payment_method)
+    const split = order.status === 'completed'
+      ? (order.split_details || order.deposit_split_details)
+      : (order.deposit_split_details || order.split_details)
+    return formatPaymentLabel(mode, split) || mode || 'Paid'
   }
 
   const invoiceFile = (order: AdvanceOrder) => invoicePdfFile({
@@ -841,7 +864,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
             <Field label="Total Order Amount *" htmlFor="adv-total-amount"><input id="adv-total-amount" name="totalAmount" required min="0.01" step="0.01" type="number" className={inputClass} value={form.totalAmount} onFocus={(e) => e.target.select()} onChange={e=>setForm({...form,totalAmount:e.target.value})}/></Field>
             <Field label="Deposit Amount Received *" htmlFor="adv-deposit-amount"><input id="adv-deposit-amount" name="depositAmount" required min="0" step="0.01" type="number" className={inputClass} value={form.depositAmount} onFocus={(e) => e.target.select()} onChange={e=>setForm({...form,depositAmount:e.target.value})}/></Field>
             <Field label="Remaining Balance (automatic)"><div className="rounded-xl bg-[#F9FAFB] px-4 py-3 font-black text-[#111111] border border-[#F3F4F6]">{formatCurrency(Math.max(0, Number(form.totalAmount||0)-Number(form.depositAmount||0)))}</div></Field>
-            <Field label="Deposit Payment Method" htmlFor="adv-payment-method"><select id="adv-payment-method" name="paymentMethod" className={inputClass} value={form.paymentMethod} onChange={e=>setForm({...form,paymentMethod:e.target.value as AdvancePaymentMethod})}><option value="cash">Cash</option><option value="upi">QR</option><option value="card">Card</option><option value="split">Split (Cash + QR)</option></select></Field>
+            <Field label="Deposit Payment Method" htmlFor="adv-payment-method"><select id="adv-payment-method" name="paymentMethod" className={inputClass} value={form.paymentMethod} onChange={e=>setForm({...form,paymentMethod:e.target.value as AdvancePaymentMethod})}><option value="cash">Cash</option><option value="upi">QR</option><option value="card">Card</option><option value="split">Split (Cash / QR / Card)</option></select></Field>
             {form.paymentMethod === 'split' && (<div className="md:col-span-2"><SplitPaymentInputs idPrefix="adv-deposit-split" total={Number(form.depositAmount) || 0} value={depositSplit} onChange={setDepositSplit} /></div>)}
             <Field label="Expected Delivery Date *" htmlFor="adv-delivery-date"><input id="adv-delivery-date" name="deliveryDate" required type="date" className={inputClass} value={form.expectedDeliveryDate} onChange={e=>setForm({...form,expectedDeliveryDate:e.target.value})}/></Field>
             <Field label="Order Status" htmlFor="adv-status"><select id="adv-status" name="orderStatus" disabled className={inputClass} value="pending_deposit"><option value="pending_deposit">Pending Deposit</option></select></Field>
@@ -880,7 +903,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
                 <option value="cash">Cash</option>
                 <option value="upi">QR</option>
                 <option value="card">Card</option>
-                <option value="split">Split (Cash + QR)</option>
+                <option value="split">Split (Cash / QR / Card)</option>
               </select>
             </Field>
             {paymentForm.method === 'split' && (
@@ -1302,7 +1325,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500 font-semibold">Payment Mode</span>
-              <span className="font-bold text-gray-900">{formatPaymentLabel(completionModalOrder.final_payment_method, completionModalOrder.split_details)}</span>
+              <span className="font-bold text-gray-900">{formatPaymentLabel(completionModalOrder.final_payment_method || completionModalOrder.payment_method, completionModalOrder.split_details)}</span>
             </div>
             {completionModalOrder.coupon_code && (
               <div className="flex justify-between">

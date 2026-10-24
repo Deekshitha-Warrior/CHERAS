@@ -12,6 +12,7 @@ import { advanceReceiptPdf, downloadFile, printAdvanceReceipt } from '../lib/adv
 import { useAdminAuthStore, useProductStore, useVariantStore } from '../store/store'
 import {
   addAdvanceEvent, completeAdvanceOrder, createAdvanceOrder, getAdvanceOrderHistory, listAdvanceOrders, updateAdvanceStatus, deleteAdvanceOrder, updateAdvanceOrder,
+  buildAdvancePaymentDetails, buildAdvanceOverallPaymentLabel,
   type AdvanceOrder, type AdvancePayment, type AdvancePaymentMethod, type AdvanceStatus, type AdvanceTimeline,
 } from '../services/advanceOrderService'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
@@ -462,6 +463,7 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
         combinedSplit.card > 0 ? 'card' : combinedSplit.qr > 0 ? 'qr' : 'cash'
       )
 
+      const finalSplitDetails = paymentForm.method === 'split' ? splitInputToDetails(finalSplit) : undefined
       const completed: AdvanceOrder = {
         ...paymentOrder,
         status: 'completed',
@@ -469,7 +471,11 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
         completed_at: result.completed_at,
         completed_order_id: result.order_id,
         invoice_number: result.invoice_no,
-        final_payment_method: effectiveMethod,
+        final_payment_method: paymentForm.method,
+        final_split_details: finalSplitDetails,
+        final_date: result.completed_at || new Date().toISOString(),
+        deposit_payment_method: paymentOrder.deposit_payment_method,
+        deposit_split_details: paymentOrder.deposit_split_details,
         payment_method: effectiveMethod,
         split_details: combinedSplit
       }
@@ -496,56 +502,59 @@ export default function AdvanceOrders({ onOrderCompleted }: AdvanceOrdersProps =
     return order.total_amount + discount - (order.delivery_charge || 0)
   }
   const resolvePaymentLabel = (order: AdvanceOrder) => {
-    const mode = order.status === 'completed'
-      ? (order.final_payment_method || order.payment_method)
-      : (order.deposit_payment_method || order.payment_method)
-    const split = order.status === 'completed'
-      ? (order.split_details || order.deposit_split_details)
-      : (order.deposit_split_details || order.split_details)
-    return formatPaymentLabel(mode, split) || mode || 'Paid'
+    return buildAdvanceOverallPaymentLabel(order)
   }
 
-  const invoiceFile = (order: AdvanceOrder) => invoicePdfFile({
-    invoiceNo: order.invoice_number || order.deposit_id,
-    date: order.completed_at || new Date().toISOString(),
-    customerName: order.customer_name,
-    phone: order.phone,
-    address: order.address,
-    items: productRows(order),
-    subtotal: resolveAdvanceSubtotal(order),
-    shipping: order.delivery_charge ?? 0,
-    couponDiscount: order.coupon_discount ?? 0,
-    couponCode: order.coupon_code,
-    manualDiscount: order.manual_discount ?? 0,
-    cgstAmount: order.cgst_amount,
-    sgstAmount: order.sgst_amount,
-    gstRate: order.gst_rate,
-    total: order.total_amount,
-    paymentMode: resolvePaymentLabel(order)
-  })
-  const printFinal = (order: AdvanceOrder) => printThermalReceipt({
-    invoiceNo: order.invoice_number || order.deposit_id,
-    date: order.completed_at || new Date().toISOString(),
-    customerName: order.customer_name,
-    phone: order.phone,
-    items: productRows(order).map(item => ({
-      name: String(item.name || 'Product'),
-      qty: Number(item.quantity || 1),
-      unit: String(item.unit || 'piece'),
-      price: Number(item.base_price || 0),
-      line_total: Number(item.line_total || 0)
-    })),
-    subtotal: resolveAdvanceSubtotal(order),
-    shipping: order.delivery_charge ?? 0,
-    couponDiscount: order.coupon_discount ?? 0,
-    couponCode: order.coupon_code,
-    manualDiscount: order.manual_discount ?? 0,
-    cgstAmount: order.cgst_amount,
-    sgstAmount: order.sgst_amount,
-    gstRate: order.gst_rate,
-    total: order.total_amount,
-    paymentMode: resolvePaymentLabel(order)
-  })
+  const invoiceFile = (order: AdvanceOrder) => {
+    const advDetails = buildAdvancePaymentDetails(order)
+    return invoicePdfFile({
+      invoiceNo: order.invoice_number || order.deposit_id,
+      date: order.completed_at || new Date().toISOString(),
+      customerName: order.customer_name,
+      phone: order.phone,
+      address: order.address,
+      items: productRows(order),
+      subtotal: resolveAdvanceSubtotal(order),
+      shipping: order.delivery_charge ?? 0,
+      couponDiscount: order.coupon_discount ?? 0,
+      couponCode: order.coupon_code,
+      manualDiscount: order.manual_discount ?? 0,
+      cgstAmount: order.cgst_amount,
+      sgstAmount: order.sgst_amount,
+      gstRate: order.gst_rate,
+      total: order.total_amount,
+      paymentMode: buildAdvanceOverallPaymentLabel(order),
+      advanceDetails: advDetails || undefined,
+    })
+  }
+
+  const printFinal = (order: AdvanceOrder) => {
+    const advDetails = buildAdvancePaymentDetails(order)
+    return printThermalReceipt({
+      invoiceNo: order.invoice_number || order.deposit_id,
+      date: order.completed_at || new Date().toISOString(),
+      customerName: order.customer_name,
+      phone: order.phone,
+      items: productRows(order).map(item => ({
+        name: String(item.name || 'Product'),
+        qty: Number(item.quantity || 1),
+        unit: String(item.unit || 'piece'),
+        price: Number(item.base_price || 0),
+        line_total: Number(item.line_total || 0)
+      })),
+      subtotal: resolveAdvanceSubtotal(order),
+      shipping: order.delivery_charge ?? 0,
+      couponDiscount: order.coupon_discount ?? 0,
+      couponCode: order.coupon_code,
+      manualDiscount: order.manual_discount ?? 0,
+      cgstAmount: order.cgst_amount,
+      sgstAmount: order.sgst_amount,
+      gstRate: order.gst_rate,
+      total: order.total_amount,
+      paymentMode: buildAdvanceOverallPaymentLabel(order),
+      advanceDetails: advDetails || undefined,
+    })
+  }
   
   const whatsappDepositReceipt = (order: AdvanceOrder) => {
     const message = buildAdvanceDepositWhatsAppMessage({

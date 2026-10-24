@@ -2,6 +2,7 @@ import { BRAND_ADDRESS, BRAND_EMAIL, BRAND_EN, BRAND_PRIMARY_PHONE_DISPLAY, BRAN
 import { LOGO_BASE64 } from './logoBase64'
 import { formatCurrency, formatInvoiceNo } from './retail'
 import { printHtmlDocument } from './printHtml'
+import type { AdvanceOrderPaymentInfo } from '../components/Invoice'
 
 export interface ThermalReceiptData {
   invoiceNo: string
@@ -26,6 +27,7 @@ export interface ThermalReceiptData {
   gstRate?: number
   total: number
   paymentMode?: string
+  advanceDetails?: AdvanceOrderPaymentInfo
   storeName?: string
   storePhone?: string
   storeAddress?: string
@@ -235,6 +237,42 @@ export function printThermalReceipt(data: ThermalReceiptData) {
               <tr style="font-size: 10px;">
                 <td class="text-left" style="padding-top: 3px; color: #333;">Payment Mode</td>
                 <td class="text-right" style="padding-top: 3px; font-weight: 700;">${data.paymentMode}</td>
+              </tr>
+            ` : ''}
+            ${data.advanceDetails ? `
+              <tr>
+                <td colspan="2" style="padding-top: 6px; padding-bottom: 2px;">
+                  <div style="border-top: 1px dashed #777; margin-top: 4px; padding-top: 4px;"></div>
+                  <div style="font-weight: 800; font-size: 9.5px; text-transform: uppercase; color: #111;">Payment Breakdown</div>
+                </td>
+              </tr>
+              <tr style="font-size: 10px;">
+                <td class="text-left">${data.advanceDetails.depositReceived ? 'Advance Paid' : 'Advance Due'}</td>
+                <td class="text-right" style="font-weight: 700; color: ${data.advanceDetails.depositReceived ? '#15803d' : '#b91c1c'};">${formatCurrency(data.advanceDetails.depositAmount)}</td>
+              </tr>
+              ${data.advanceDetails.depositPaymentLabel ? `
+                <tr style="font-size: 8.5px; color: #555;">
+                  <td colspan="2" class="text-left" style="padding-left: 4px;">(${data.advanceDetails.depositPaymentLabel})</td>
+                </tr>
+              ` : ''}
+              <tr style="font-size: 10px;">
+                <td class="text-left">${data.advanceDetails.balanceReceived ? 'Balance Paid' : 'Balance Due'}</td>
+                <td class="text-right" style="font-weight: 700; color: ${data.advanceDetails.balanceReceived ? '#15803d' : '#b45309'};">${formatCurrency(data.advanceDetails.balanceAmount)}</td>
+              </tr>
+              ${data.advanceDetails.balanceReceived && data.advanceDetails.balancePaymentLabel ? `
+                <tr style="font-size: 8.5px; color: #555;">
+                  <td colspan="2" class="text-left" style="padding-left: 4px;">(${data.advanceDetails.balancePaymentLabel})</td>
+                </tr>
+              ` : !data.advanceDetails.balanceReceived ? `
+                <tr style="font-size: 8.5px; color: #b45309; font-style: italic;">
+                  <td colspan="2" class="text-left" style="padding-left: 4px;">(Pending collection upon delivery)</td>
+                </tr>
+              ` : ''}
+              <tr style="font-size: 10.5px; font-weight: 800; border-top: 1px solid #ccc;">
+                <td class="text-left" style="padding-top: 3px;">Remaining Balance</td>
+                <td class="text-right" style="padding-top: 3px; color: ${data.advanceDetails.balanceDue > 0 ? '#b45309' : '#15803d'};">
+                  ${data.advanceDetails.balanceDue > 0 ? formatCurrency(data.advanceDetails.balanceDue) : '₹0.00 (Settled)'}
+                </td>
               </tr>
             ` : ''}
           </table>

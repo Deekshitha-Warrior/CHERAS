@@ -20,6 +20,26 @@ export interface InvoiceItem {
   lineTotal?: number
 }
 
+export interface AdvanceOrderPaymentInfo {
+  depositId?: string
+  depositAmount: number
+  depositPaymentMethod?: string
+  depositSplitDetails?: Record<string, number>
+  depositPaymentLabel?: string
+  depositDate?: string
+  depositReceived?: boolean
+
+  balanceAmount: number
+  balancePaymentMethod?: string
+  balanceSplitDetails?: Record<string, number>
+  balancePaymentLabel?: string
+  balanceDate?: string
+  balanceReceived: boolean
+
+  totalPaid: number
+  balanceDue: number
+}
+
 export interface InvoiceProps {
   invoiceNo: string
   date: string
@@ -41,6 +61,7 @@ export interface InvoiceProps {
   status?: string
   userId?: string
   paymentMode?: string
+  advanceDetails?: AdvanceOrderPaymentInfo
   onPrintReceipt?: () => void
   gstin?: string
 }
@@ -66,6 +87,7 @@ export const Invoice: React.FC<InvoiceProps> = ({
   status = 'completed',
   userId: _userId,
   paymentMode,
+  advanceDetails,
   gstin,
 }) => {
   const formattedInvoiceNo = formatInvoiceNo(invoiceNo)
@@ -149,7 +171,7 @@ export const Invoice: React.FC<InvoiceProps> = ({
           {paymentMode && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
               <span style={{ fontSize: 10, fontWeight: 700, color: '#666', textTransform: 'uppercase' }}>Payment Mode</span>
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', textTransform: 'uppercase' }}>{paymentMode}</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', textAlign: 'right', maxWidth: '65%', wordBreak: 'break-word' }}>{paymentMode}</span>
             </div>
           )}
         </div>
@@ -161,7 +183,7 @@ export const Invoice: React.FC<InvoiceProps> = ({
           <div style={{ fontSize: 9, fontWeight: 800, color: '#888', textTransform: 'uppercase', letterSpacing: 0.7, marginTop: 6 }}>Mobile Number</div>
           <div style={{ fontSize: 12, color: '#555', lineHeight: 1.4, wordBreak: 'break-word' }}>{formatPhoneDisplay(phone) || '—'}</div>
           {address && <div style={{ fontSize: 11, color: '#777', marginTop: 4, lineHeight: 1.4, wordBreak: 'break-word' }}>{address}</div>}
-          {paymentMode && <div style={{ fontSize: 10, color: '#777', marginTop: 4 }}>Payment Mode: {paymentMode}</div>}
+          {paymentMode && <div style={{ fontSize: 10, color: '#777', marginTop: 4, wordBreak: 'break-word' }}>Payment Mode: {paymentMode}</div>}
         </div>
       </div>
 
@@ -278,6 +300,111 @@ export const Invoice: React.FC<InvoiceProps> = ({
               <span style={{ fontSize: 15, fontWeight: 900, color: '#7B1E2B', textTransform: 'uppercase', letterSpacing: 0.5 }}>Total</span>
               <span style={{ fontSize: 20, fontWeight: 900, color: '#7B1E2B', fontVariantNumeric: 'tabular-nums' }}>{formatCurrency(total)}</span>
             </div>
+
+            {advanceDetails && (
+              <div
+                style={{
+                  marginTop: 14,
+                  paddingTop: 12,
+                  borderTop: '1px dashed #d0d0d0',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 800,
+                    color: '#7B1E2B',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.8,
+                    marginBottom: 8,
+                  }}
+                >
+                  Payment & Settlement Breakdown
+                </div>
+
+                {/* Advance / Deposit Payment */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                  <span style={{ fontSize: 12, color: '#4B5563', fontWeight: 600 }}>
+                    {advanceDetails.depositReceived ? 'Advance / Deposit Paid' : 'Advance / Deposit Due'}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: advanceDetails.depositReceived ? '#16a34a' : '#dc2626',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {formatCurrency(advanceDetails.depositAmount)}
+                  </span>
+                </div>
+                {advanceDetails.depositPaymentLabel && (
+                  <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 6, paddingLeft: 2 }}>
+                    Mode: {advanceDetails.depositPaymentLabel}
+                    {advanceDetails.depositDate && ` • ${new Date(advanceDetails.depositDate).toLocaleDateString('en-IN')}`}
+                  </div>
+                )}
+
+                {/* Balance Payment */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                  <span style={{ fontSize: 12, color: '#4B5563', fontWeight: 600 }}>
+                    {advanceDetails.balanceReceived ? 'Final Balance Paid' : 'Balance Due (Pending)'}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 800,
+                      color: advanceDetails.balanceReceived ? '#16a34a' : '#d97706',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {formatCurrency(advanceDetails.balanceAmount)}
+                  </span>
+                </div>
+                {advanceDetails.balanceReceived && advanceDetails.balancePaymentLabel ? (
+                  <div style={{ fontSize: 10, color: '#6B7280', marginBottom: 6, paddingLeft: 2 }}>
+                    Mode: {advanceDetails.balancePaymentLabel}
+                    {advanceDetails.balanceDate && ` • ${new Date(advanceDetails.balanceDate).toLocaleDateString('en-IN')}`}
+                  </div>
+                ) : !advanceDetails.balanceReceived ? (
+                  <div style={{ fontSize: 10, color: '#d97706', fontStyle: 'italic', marginBottom: 6, paddingLeft: 2 }}>
+                    Pending collection upon delivery
+                  </div>
+                ) : null}
+
+                {/* Total Paid & Remaining Balance */}
+                <div
+                  style={{
+                    marginTop: 8,
+                    paddingTop: 8,
+                    borderTop: '1px solid #f0f0f0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#1F1F1F' }}>Total Paid</span>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
+                    {formatCurrency(advanceDetails.totalPaid)}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: advanceDetails.balanceDue > 0 ? '#b45309' : '#1F1F1F' }}>
+                    Remaining Balance
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: advanceDetails.balanceDue > 0 ? '#b45309' : '#16a34a',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    {advanceDetails.balanceDue > 0 ? formatCurrency(advanceDetails.balanceDue) : '₹0.00 (Fully Settled)'}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

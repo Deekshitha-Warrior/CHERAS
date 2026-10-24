@@ -6,7 +6,7 @@ import html2canvas from 'html2canvas'
 import { BRAND_ADDRESS, BRAND_EN, BRAND_PHONE_DISPLAY, BRAND_GSTIN } from './brand'
 import { formatCurrency, formatQuantityDisplay, normalizeStructuredOrderItem, formatInvoiceNo } from './retail'
 import { LOGO_BASE64 } from './logoBase64'
-import { Invoice, type InvoiceProps } from '../components/Invoice'
+import { Invoice, type InvoiceProps, type AdvanceOrderPaymentInfo } from '../components/Invoice'
 
 export type InvoicePdfData = {
   invoiceNo: string
@@ -29,6 +29,7 @@ export type InvoicePdfData = {
   gstRate?: number
   couponCode?: string | null
   paymentMode?: string
+  advanceDetails?: AdvanceOrderPaymentInfo
   gstin?: string
 }
 
@@ -87,7 +88,8 @@ export function createInvoicePdf(data: InvoicePdfData): Blob {
   doc.text(`Date: ${new Date(data.date).toLocaleDateString('en-IN')}`, right, y + 2, { align: 'right' })
   // Helvetica has no ₹ glyph: swap it for "Rs." and wrap long split-payment text so it stays inside the page
   const paymentText = `Payment: ${data.paymentMode || 'POS'}`.replace(/[₹₹]\s*/g, 'Rs. ')
-  doc.text(doc.splitTextToSize(paymentText, 72) as string[], right, y + 7, { align: 'right' })
+  const paymentLines = doc.splitTextToSize(paymentText, 85) as string[]
+  doc.text(paymentLines, right, y + 7, { align: 'right' })
   y += 32
 
   const customerName = String(data.customerName || 'Walk-in Customer').trim()
@@ -186,6 +188,75 @@ export function createInvoicePdf(data: InvoicePdfData): Blob {
   doc.setTextColor(primaryColor)
   doc.text('TOTAL', 143, y + 6, { align: 'right' })
   doc.text(money(data.total), right - 4, y + 6, { align: 'right' })
+  y += 12
+
+  if (data.advanceDetails) {
+    const adv = data.advanceDetails
+    y += 2
+    doc.setDrawColor('#E5E7EB')
+    doc.setLineWidth(0.4)
+    doc.line(118, y, right, y)
+    y += 5
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.setTextColor(primaryColor)
+    doc.text('PAYMENT DETAILS', 122, y)
+    y += 5
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.5)
+    doc.setTextColor(muted)
+    doc.text(adv.depositReceived ? 'Advance Paid' : 'Advance Due', 122, y)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(adv.depositReceived ? '#15803D' : '#B91C1C')
+    doc.text(money(adv.depositAmount), right - 4, y, { align: 'right' })
+    y += 4
+
+    if (adv.depositPaymentLabel) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(6.5)
+      doc.setTextColor(muted)
+      const depLines = doc.splitTextToSize(`(${adv.depositPaymentLabel})`.replace(/[₹₹]\s*/g, 'Rs. '), 68) as string[]
+      doc.text(depLines, 122, y)
+      y += depLines.length * 3 + 1
+    }
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.5)
+    doc.setTextColor(adv.balanceReceived ? muted : '#B45309')
+    doc.text(adv.balanceReceived ? 'Balance Paid' : 'Balance Due', 122, y)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(adv.balanceReceived ? '#15803D' : '#B45309')
+    doc.text(money(adv.balanceAmount), right - 4, y, { align: 'right' })
+    y += 4
+
+    if (adv.balanceReceived && adv.balancePaymentLabel) {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(6.5)
+      doc.setTextColor(muted)
+      const balLines = doc.splitTextToSize(`(${adv.balancePaymentLabel})`.replace(/[₹₹]\s*/g, 'Rs. '), 68) as string[]
+      doc.text(balLines, 122, y)
+      y += balLines.length * 3 + 1
+    } else if (!adv.balanceReceived) {
+      doc.setFont('helvetica', 'italic')
+      doc.setFontSize(6.5)
+      doc.setTextColor('#B45309')
+      doc.text('(Pending collection upon delivery)', 122, y)
+      y += 4
+    }
+
+    doc.setDrawColor('#E5E7EB')
+    doc.line(122, y, right - 4, y)
+    y += 4
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.setTextColor(ink)
+    doc.text('Remaining Balance', 122, y)
+    doc.setTextColor(adv.balanceDue > 0 ? '#B45309' : '#15803D')
+    doc.text(adv.balanceDue > 0 ? money(adv.balanceDue) : 'Rs. 0.00 (Settled)', right - 4, y, { align: 'right' })
+  }
 
   y = 275
   doc.setDrawColor('#F3F4F6')

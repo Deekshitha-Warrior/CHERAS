@@ -10,6 +10,8 @@ import { isUuid, normalizeStructuredOrderItem, formatInvoiceNo } from '../lib/re
 import { buildProfessionalWhatsAppMessage } from '../lib/whatsappMessage'
 import { toWhatsAppUrl } from '../lib/phone'
 import { formatPaymentLabel } from '../lib/payments'
+import { buildAdvancePaymentDetails, buildAdvanceOverallPaymentLabel } from '../services/advanceOrderService'
+import type { AdvanceOrderPaymentInfo } from '../components/Invoice'
 
 function buildLookupCandidates(id: string): string[] {
   let raw = decodeURIComponent(id || '').trim()
@@ -224,6 +226,70 @@ export default function DigitalInvoice() {
 
         if (!row) throw new Error('Invoice not found')
 
+        // Resolve Advance Order Payment Details if this order is linked to an advance order
+        try {
+          const isAdvOrder = row.order_type === 'advance_order' || row.source === 'advance_order' || candidates.some(c => c.toUpperCase().startsWith('DEP'))
+          const orConditions: string[] = []
+          if (isUuid(row.id)) orConditions.push(`completed_order_id.eq.${row.id}`, `id.eq.${row.id}`)
+          if (row.invoice_no) orConditions.push(`invoice_number.eq.${row.invoice_no}`, `deposit_id.eq.${row.invoice_no}`)
+          candidates.forEach(c => {
+            orConditions.push(`invoice_number.eq.${c}`, `deposit_id.eq.${c}`)
+          })
+
+          const { data: advList } = await supabase
+            .from('advance_orders')
+            .select('*, advance_order_payments(*)')
+            .or(orConditions.join(','))
+            .limit(1)
+
+          if (advList && advList[0]) {
+            const advRow = advList[0]
+            const payments = Array.isArray(advRow.advance_order_payments) ? advRow.advance_order_payments : []
+            const depPayment = payments.find((p: any) => p.payment_type === 'deposit')
+            const remPayment = payments.find((p: any) => p.payment_type === 'remaining')
+
+            const depAmount = Number(advRow.deposit_amount || 0)
+            const totalAmount = Number(advRow.total_amount || row.total || 0)
+            const calculatedRemaining = Math.max(0, totalAmount - depAmount)
+            const isCompleted = advRow.status === 'completed' || row.status === 'completed'
+
+            const depMethod = depPayment?.payment_method || advRow.deposit_payment_method || 'cash'
+            const depSplit = depPayment?.split_details || advRow.deposit_split_details
+            const depLabel = formatPaymentLabel(depMethod, depSplit) || depMethod
+
+            const remMethod = remPayment?.payment_method || advRow.final_payment_method || row.payment_method || 'cash'
+            const remSplit = remPayment?.split_details || (isCompleted && !advRow.deposit_split_details ? row.split_details : undefined)
+            const remLabel = remMethod ? (formatPaymentLabel(remMethod, remSplit) || remMethod) : undefined
+
+            const advInfo: AdvanceOrderPaymentInfo = {
+              depositId: advRow.deposit_id,
+              depositAmount: depAmount,
+              depositPaymentMethod: depMethod,
+              depositSplitDetails: depSplit,
+              depositPaymentLabel: depLabel,
+              depositDate: depPayment?.received_at || advRow.created_at,
+              depositReceived: depAmount > 0 && advRow.status !== 'pending_deposit',
+
+              balanceAmount: calculatedRemaining,
+              balancePaymentMethod: remMethod,
+              balanceSplitDetails: remSplit,
+              balancePaymentLabel: remLabel,
+              balanceDate: remPayment?.received_at || advRow.completed_at || row.created_at,
+              balanceReceived: isCompleted || Boolean(remPayment),
+
+              totalPaid: isCompleted ? totalAmount : (advRow.status === 'pending_deposit' ? 0 : depAmount),
+              balanceDue: isCompleted ? 0 : Math.max(0, Number(advRow.remaining_balance ?? calculatedRemaining)),
+            }
+
+            const overallMode = buildAdvanceOverallPaymentLabel(advInfo)
+            row.payment_mode = overallMode
+            row.payment_method = overallMode
+            row.advance_details = advInfo
+          }
+        } catch (advErr) {
+          console.warn('[DigitalInvoice] Failed to resolve advance order payments:', advErr)
+        }
+
         setInvoice(row)
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -294,8 +360,11 @@ export default function DigitalInvoice() {
         sgstAmount: rawSgst,
         gstRate: Number(invoice.gst_rate || 0),
         couponCode: invoice.coupon_code,
-        paymentMode: formatPaymentLabel(invoice.payment_mode || invoice.payment_method, invoice.split_details) || invoice.payment_mode,
+        paymentMode: invoice.advance_details
+          ? invoice.payment_mode
+          : (formatPaymentLabel(invoice.payment_mode || invoice.payment_method, invoice.split_details) || invoice.payment_mode),
         total: invoice.total > 0 ? invoice.total : (subtotal + (invoice.delivery_charge || 0) + rawGst - (invoice.discount_amount || 0) - (invoice.manual_discount_amount || 0)),
+        advanceDetails: invoice.advance_details,
       }
 
       // On iOS Safari: WebKit blocks blob: URL downloads and shows a blank white page.
@@ -380,7 +449,9 @@ export default function DigitalInvoice() {
       shipping: invoice.delivery_charge,
       gstAmount: invoice.total_gst || invoice.gst_amount || 0,
       total: invoice.total,
-      paymentMode: formatPaymentLabel(invoice.payment_mode || invoice.payment_method, invoice.split_details) || invoice.payment_mode || invoice.payment_method,
+      paymentMode: invoice.advance_details
+        ? invoice.payment_mode
+        : (formatPaymentLabel(invoice.payment_mode || invoice.payment_method, invoice.split_details) || invoice.payment_mode || invoice.payment_method),
     })
 
     const invoiceUrl = window.location.href
@@ -440,7 +511,10 @@ export default function DigitalInvoice() {
       sgstAmount: rawSgst,
       gstRate: Number(invoice.gst_rate || 0),
       total: invoice.total > 0 ? invoice.total : (subtotal + Number(invoice.delivery_charge || 0) + rawGst - Number(invoice.discount_amount || 0) - Number(invoice.manual_discount_amount || 0)),
-      paymentMode: formatPaymentLabel(invoice.payment_mode || invoice.payment_method, invoice.split_details) || invoice.payment_mode || invoice.payment_method
+      paymentMode: invoice.advance_details
+        ? invoice.payment_mode
+        : (formatPaymentLabel(invoice.payment_mode || invoice.payment_method, invoice.split_details) || invoice.payment_mode || invoice.payment_method),
+      advanceDetails: invoice.advance_details
     })
   }
 
@@ -507,7 +581,10 @@ export default function DigitalInvoice() {
             couponCode={invoice.coupon_code}
             total={invoice.total > 0 ? invoice.total : (subtotal + Number(invoice.delivery_charge || 0) + Number(invoice.total_gst || invoice.gst_amount || 0) - Number(invoice.discount_amount || 0) - Number(invoice.manual_discount_amount || 0))}
             status={invoice.status}
-            paymentMode={formatPaymentLabel(invoice.payment_mode || invoice.payment_method, invoice.split_details) || invoice.payment_mode || invoice.payment_method}
+            paymentMode={invoice.advance_details
+              ? invoice.payment_mode
+              : (formatPaymentLabel(invoice.payment_mode || invoice.payment_method, invoice.split_details) || invoice.payment_mode || invoice.payment_method)}
+            advanceDetails={invoice.advance_details}
           />
         </div>
       </div>

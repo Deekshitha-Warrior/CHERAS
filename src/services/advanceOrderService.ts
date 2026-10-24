@@ -1,6 +1,7 @@
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
-import { emptySplit, parseSplit, splitTotal, paymentBreakdown, round2, type SplitDetails } from '../lib/payments'
+import { emptySplit, parseSplit, splitTotal, paymentBreakdown, round2, formatPaymentLabel, type SplitDetails } from '../lib/payments'
 import { useProductStore, useVariantStore } from '../store/store'
+import type { AdvanceOrderPaymentInfo } from '../components/Invoice'
 
 export type AdvanceStatus = 'pending_deposit' | 'ready_for_delivery' | 'waiting_final_payment' | 'completed' | 'cancelled'
 export type AdvancePaymentMethod = 'cash' | 'upi' | 'card' | 'split'
@@ -32,6 +33,9 @@ export type AdvanceOrder = {
   deposit_payment_method?: string | null
   payment_method?: string | null
   deposit_split_details?: SplitDetails
+  final_split_details?: SplitDetails
+  deposit_date?: string | null
+  final_date?: string | null
   /** Full cash / QR / card amounts collected for this order (deposit + final payment). */
   split_details?: SplitDetails
   subtotal?: number
@@ -153,6 +157,9 @@ const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
     : null
   let finalSplit: SplitDetails | undefined = undefined
 
+  let depositDate: string | null = null
+  let finalDate: string | null = null
+
   if (Array.isArray(row.advance_order_payments)) {
     const dep = (row.advance_order_payments as Array<Record<string, unknown>>).find(p => p.payment_type === 'deposit')
     if (dep) {
@@ -160,12 +167,18 @@ const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
       if (dep.split_details) {
         depositSplit = parseSplit(dep.split_details)
       }
+      if (dep.received_at) {
+        depositDate = String(dep.received_at)
+      }
     }
     const rem = (row.advance_order_payments as Array<Record<string, unknown>>).find(p => p.payment_type === 'remaining')
     if (rem) {
       if (!finalPaymentMethod) finalPaymentMethod = String(rem.payment_method || '')
       if (rem.split_details) {
         finalSplit = parseSplit(rem.split_details)
+      }
+      if (rem.received_at) {
+        finalDate = String(rem.received_at)
       }
     }
   }
@@ -243,9 +256,12 @@ const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
     completed_order_id: row.completed_order_id ? String(row.completed_order_id) : null,
     invoice_number: row.invoice_number ? String(row.invoice_number) : null,
     final_payment_method: finalPaymentMethod || (isCompleted ? depositPaymentMethod : null),
+    final_split_details: finalSplit,
+    final_date: finalDate || (row.completed_at ? String(row.completed_at) : null),
     deposit_payment_method: depositPaymentMethod,
-    payment_method: isCompleted ? (finalPaymentMethod || depositPaymentMethod) : depositPaymentMethod,
     deposit_split_details: depositSplit,
+    deposit_date: depositDate || String(row.created_at || ''),
+    payment_method: isCompleted ? (finalPaymentMethod || depositPaymentMethod) : depositPaymentMethod,
     split_details: activeSplitDetails,
     subtotal: resolvedSubtotal,
     delivery_charge: deliveryCharge,
@@ -258,6 +274,66 @@ const normalizeOrder = (row: Record<string, unknown>): AdvanceOrder => {
     gst_rate: resolvedGstRate,
     cgst_amount: resolvedCgst,
     sgst_amount: resolvedSgst,
+  }
+}
+
+export function buildAdvancePaymentDetails(order: any): AdvanceOrderPaymentInfo | null {
+  if (!order) return null
+  const isAdvance = order.order_type === 'advance_order' || Boolean(order.deposit_id) || order.deposit_amount != null
+  if (!isAdvance) return null
+
+  const total = Number(order.total_amount ?? order.total ?? 0)
+  const deposit = Number(order.deposit_amount ?? 0)
+  const isCompleted = order.status === 'completed'
+  const calculatedRemaining = Math.max(0, total - deposit)
+  const remaining = isCompleted ? 0 : Number(order.remaining_balance ?? calculatedRemaining)
+  const finalAmount = calculatedRemaining
+
+  const depMethod = order.deposit_payment_method || order.payment_method || 'cash'
+  const depSplit = order.deposit_split_details || (order.payment_type === 'deposit' ? order.split_details : undefined)
+  const depLabel = formatPaymentLabel(depMethod, depSplit) || depMethod || 'Cash'
+
+  const finMethod = order.final_payment_method || (isCompleted ? (order.payment_method || 'cash') : undefined)
+  const finSplit = order.final_split_details || (isCompleted && !order.deposit_split_details ? order.split_details : undefined)
+  const finLabel = finMethod ? (formatPaymentLabel(finMethod, finSplit) || finMethod) : undefined
+
+  return {
+    depositId: order.deposit_id,
+    depositAmount: deposit,
+    depositPaymentMethod: depMethod,
+    depositSplitDetails: depSplit,
+    depositPaymentLabel: depLabel,
+    depositDate: order.deposit_date || order.created_at,
+    depositReceived: deposit > 0 && order.status !== 'pending_deposit',
+
+    balanceAmount: finalAmount,
+    balancePaymentMethod: finMethod,
+    balanceSplitDetails: finSplit,
+    balancePaymentLabel: finLabel,
+    balanceDate: order.final_date || order.completed_at,
+    balanceReceived: isCompleted,
+
+    totalPaid: isCompleted ? total : (order.status === 'pending_deposit' ? 0 : deposit),
+    balanceDue: remaining,
+  }
+}
+
+export function buildAdvanceOverallPaymentLabel(order: any): string {
+  const details = buildAdvancePaymentDetails(order)
+  if (!details) {
+    return formatPaymentLabel(order.payment_mode || order.payment_method, order.split_details) || 'Paid'
+  }
+
+  const depStr = details.depositReceived
+    ? `Advance: ₹${details.depositAmount.toFixed(2).replace(/\.00$/, '')} (${details.depositPaymentLabel || 'Paid'})`
+    : `Advance Due: ₹${details.depositAmount.toFixed(2).replace(/\.00$/, '')}`
+
+  if (details.balanceReceived) {
+    const balStr = `Balance: ₹${details.balanceAmount.toFixed(2).replace(/\.00$/, '')} (${details.balancePaymentLabel || 'Paid'})`
+    return `${depStr} + ${balStr}`
+  } else {
+    const balStr = `Balance Due: ₹${details.balanceDue.toFixed(2).replace(/\.00$/, '')}`
+    return `${depStr} | ${balStr}`
   }
 }
 
@@ -713,7 +789,7 @@ export async function listAdvanceOrders(throwOnError = false): Promise<AdvanceOr
       let data: unknown[] | null = null
       const res = await supabase
         .from('advance_orders')
-        .select('*, advance_order_payments(payment_type, payment_method, split_details)')
+        .select('*, advance_order_payments(payment_type, payment_method, split_details, amount, received_at)')
         .order('created_at', { ascending: false })
 
       if (res.error) {
@@ -1169,7 +1245,7 @@ export async function completeAdvanceOrder(
   let existingOrder: AdvanceOrder | null = null
   if (isSupabaseConfigured) {
     try {
-      const { data: advData } = await supabase.from('advance_orders').select('*').eq('id', orderId).maybeSingle()
+      const { data: advData } = await supabase.from('advance_orders').select('*, advance_order_payments(*)').eq('id', orderId).maybeSingle()
       if (advData) existingOrder = normalizeOrder(advData)
     } catch { /* ignore */ }
   }

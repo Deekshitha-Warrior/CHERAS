@@ -221,15 +221,18 @@ export const useAdminAuthStore = create<AdminAuthState>()(
       authError: null,
 
       login: async (portalId: string, password: string) => {
+        const cleanId = String(portalId || '').trim()
+        const cleanPass = String(password || '').trim()
+
         // 1. Attempt database RPC authentication first
-        const rpcResult = await loginViaPortalRpc(portalId, password)
+        const rpcResult = await loginViaPortalRpc(cleanId, cleanPass)
 
         if (rpcResult.role === 'admin' || rpcResult.role === 'staff') {
           useAlarmStore.getState().resetSilencedState()
           set({
             isLoggedIn: true,
             role: rpcResult.role,
-            adminId: portalId.trim(),
+            adminId: cleanId,
             authError: null,
           })
           return rpcResult.role

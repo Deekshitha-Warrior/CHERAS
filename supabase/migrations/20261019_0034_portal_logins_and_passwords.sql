@@ -56,50 +56,61 @@ DECLARE
   v_locked_until timestamptz;
   v_failed int;
   v_authenticated boolean := false;
+  v_clean_id text;
+  v_clean_pass text;
 BEGIN
-  -- Check if login_id is currently locked out
-  SELECT locked_until, failed_count INTO v_locked_until, v_failed 
-  FROM public.portal_login_attempts 
-  WHERE login_id = p_id;
+  v_clean_id := LOWER(TRIM(COALESCE(p_id, '')));
+  v_clean_pass := TRIM(COALESCE(p_password, ''));
 
-  IF v_locked_until IS NOT NULL AND v_locked_until > now() THEN
+  IF v_clean_id = '' OR v_clean_pass = '' THEN
     RETURN NULL;
   END IF;
 
-  -- Fetch user record
+  -- Fetch user record matching login_id (case-insensitive) OR fallback to role if p_id is 'admin' or 'staff'
   SELECT role, password, password_hash INTO v_role, v_db_password, v_db_hash
   FROM public.portal_logins
-  WHERE login_id = p_id;
+  WHERE LOWER(TRIM(login_id)) = v_clean_id
+     OR LOWER(role) = v_clean_id
+  ORDER BY (CASE WHEN LOWER(TRIM(login_id)) = v_clean_id THEN 0 ELSE 1 END)
+  LIMIT 1;
 
-  IF v_role IS NOT NULL THEN
-    -- Match against direct password or bcrypt password_hash
-    IF v_db_password IS NOT NULL AND v_db_password = p_password THEN
-      v_authenticated := true;
-    ELSIF v_db_hash IS NOT NULL AND v_db_hash = extensions.crypt(p_password, v_db_hash) THEN
-      v_authenticated := true;
-      -- Auto-sync password column if it was empty
-      IF v_db_password IS NULL OR v_db_password = '' THEN
-        UPDATE public.portal_logins SET password = p_password WHERE role = v_role;
-      END IF;
+  IF v_role IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  -- Verify password against stored password or bcrypt hash
+  IF (v_db_password IS NOT NULL AND (v_db_password = p_password OR TRIM(v_db_password) = v_clean_pass))
+     OR (v_db_hash IS NOT NULL AND (v_db_hash = extensions.crypt(p_password, v_db_hash) OR v_db_hash = extensions.crypt(v_clean_pass, v_db_hash))) THEN
+    v_authenticated := true;
+
+    -- Auto-sync password column if it was empty
+    IF v_db_password IS NULL OR v_db_password = '' THEN
+      UPDATE public.portal_logins SET password = v_clean_pass WHERE role = v_role;
     END IF;
   END IF;
 
+  -- If authenticated: clear any failed attempts and return authenticated role
   IF v_authenticated THEN
-    -- Reset brute force counter on successful authentication
-    DELETE FROM public.portal_login_attempts WHERE login_id = p_id;
+    DELETE FROM public.portal_login_attempts 
+    WHERE LOWER(TRIM(login_id)) = v_clean_id OR LOWER(TRIM(login_id)) = LOWER(v_role);
     RETURN v_role;
-  ELSE
-    -- Increment failed attempt and lock for 15 minutes after 5 consecutive failures
-    INSERT INTO public.portal_login_attempts (login_id, failed_count, locked_until)
-    VALUES (p_id, 1, NULL)
-    ON CONFLICT (login_id) DO UPDATE SET
-      failed_count = public.portal_login_attempts.failed_count + 1,
-      locked_until = CASE 
-        WHEN public.portal_login_attempts.failed_count + 1 >= 5 THEN now() + interval '15 minutes'
-        ELSE NULL
-      END;
-    RETURN NULL;
   END IF;
+
+  -- If NOT authenticated: check lockout status and record failure
+  SELECT locked_until, failed_count INTO v_locked_until, v_failed 
+  FROM public.portal_login_attempts 
+  WHERE LOWER(TRIM(login_id)) = v_clean_id;
+
+  INSERT INTO public.portal_login_attempts (login_id, failed_count, locked_until)
+  VALUES (v_clean_id, 1, NULL)
+  ON CONFLICT (login_id) DO UPDATE SET
+    failed_count = public.portal_login_attempts.failed_count + 1,
+    locked_until = CASE 
+      WHEN public.portal_login_attempts.failed_count + 1 >= 5 THEN now() + interval '15 minutes'
+      ELSE NULL
+    END;
+
+  RETURN NULL;
 END;
 $$;
 
@@ -113,15 +124,18 @@ AS $$
 DECLARE
   v_role text;
   v_result jsonb;
+  v_clean_pass text;
 BEGIN
-  -- Authenticate admin
+  v_clean_pass := TRIM(COALESCE(p_admin_password, ''));
+
+  -- Authenticate admin: match either via portal_login or direct password/hash check for admin role
   SELECT public.portal_login(p_admin_id, p_admin_password) INTO v_role;
   IF v_role <> 'admin' THEN
     IF EXISTS (
       SELECT 1 FROM public.portal_logins 
       WHERE role = 'admin' AND (
-        (password IS NOT NULL AND password = p_admin_password) OR
-        (password_hash IS NOT NULL AND password_hash = extensions.crypt(p_admin_password, password_hash))
+        (password IS NOT NULL AND (password = p_admin_password OR TRIM(password) = v_clean_pass)) OR
+        (password_hash IS NOT NULL AND (password_hash = extensions.crypt(p_admin_password, password_hash) OR password_hash = extensions.crypt(v_clean_pass, password_hash)))
       )
     ) THEN
       v_role := 'admin';
@@ -160,15 +174,22 @@ SET search_path = public, extensions
 AS $$
 DECLARE
   v_role text;
+  v_clean_pass text;
+  v_new_id text;
+  v_new_pass text;
 BEGIN
+  v_clean_pass := TRIM(COALESCE(p_admin_password, ''));
+  v_new_id := TRIM(COALESCE(p_new_login_id, ''));
+  v_new_pass := TRIM(COALESCE(p_new_password, ''));
+
   -- Authenticate admin
   SELECT public.portal_login(p_admin_id, p_admin_password) INTO v_role;
   IF v_role <> 'admin' THEN
     IF EXISTS (
       SELECT 1 FROM public.portal_logins 
       WHERE role = 'admin' AND (
-        (password IS NOT NULL AND password = p_admin_password) OR
-        (password_hash IS NOT NULL AND password_hash = extensions.crypt(p_admin_password, password_hash))
+        (password IS NOT NULL AND (password = p_admin_password OR TRIM(password) = v_clean_pass)) OR
+        (password_hash IS NOT NULL AND (password_hash = extensions.crypt(p_admin_password, password_hash) OR password_hash = extensions.crypt(v_clean_pass, password_hash)))
       )
     ) THEN
       v_role := 'admin';
@@ -178,17 +199,22 @@ BEGIN
   END IF;
 
   -- Validation: minimum length
-  IF length(trim(p_new_login_id)) < 3 OR length(trim(p_new_password)) < 6 THEN
+  IF length(v_new_id) < 3 OR length(v_new_pass) < 6 THEN
     RETURN false;
   END IF;
 
   -- Update record with both password and bcrypt hash
   UPDATE public.portal_logins
-  SET login_id = trim(p_new_login_id),
-      password = trim(p_new_password),
-      password_hash = extensions.crypt(trim(p_new_password), extensions.gen_salt('bf')),
+  SET login_id = v_new_id,
+      password = v_new_pass,
+      password_hash = extensions.crypt(v_new_pass, extensions.gen_salt('bf')),
       updated_at = now()
   WHERE role = p_target_role;
+
+  -- Clear any lockout or failed attempts for both old and new login_id
+  DELETE FROM public.portal_login_attempts 
+  WHERE LOWER(TRIM(login_id)) = LOWER(v_new_id) 
+     OR LOWER(TRIM(login_id)) = LOWER(p_target_role);
 
   RETURN true;
 END;

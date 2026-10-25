@@ -98,16 +98,20 @@ export const PortalCredentialsCard: React.FC = () => {
   }
 
   // Submit Admin Verification Popup
-  const handleVerifyAdmin = async (e: React.FormEvent) => {
+  const handleVerifyAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if (!authPassword.trim()) {
+    const form = e.currentTarget
+    const domAuthPass = (form.elements.namedItem('authPassword') as HTMLInputElement)?.value
+    const passToVerify = (domAuthPass ?? authPassword ?? '').trim()
+
+    if (!passToVerify) {
       showNotification('error', 'Please enter your current admin password.')
       return
     }
 
     setAuthLoading(true)
     const effectiveAdminId = currentAdminId || 'admin'
-    const result = await fetchPortalCredentials(effectiveAdminId, authPassword.trim())
+    const result = await fetchPortalCredentials(effectiveAdminId, passToVerify)
     setAuthLoading(false)
 
     if (!result.success || !result.data) {
@@ -117,7 +121,7 @@ export const PortalCredentialsCard: React.FC = () => {
 
     // Authentication succeeded
     setCredentials(result.data)
-    setVerifiedAdminPassword(authPassword.trim())
+    setVerifiedAdminPassword(passToVerify)
     setAuthModalOpen(false)
 
     if (pendingAction === 'reveal') {
@@ -134,11 +138,16 @@ export const PortalCredentialsCard: React.FC = () => {
   }
 
   // Submit Edit Credentials
-  const handleSaveEdit = async (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    const cleanId = editLoginId.trim()
-    const cleanPass = editNewPassword.trim()
-    const confirmPass = editConfirmPassword.trim()
+    const form = e.currentTarget
+    const formId = (form.elements.namedItem('editLoginId') as HTMLInputElement)?.value
+    const formPass = (form.elements.namedItem('editNewPassword') as HTMLInputElement)?.value
+    const formConfirm = (form.elements.namedItem('editConfirmPassword') as HTMLInputElement)?.value
+
+    const cleanId = (formId ?? editLoginId ?? '').trim()
+    const cleanPass = (formPass ?? editNewPassword ?? '').trim()
+    const confirmPass = (formConfirm ?? editConfirmPassword ?? '').trim()
 
     if (cleanId.length < 3) {
       showNotification('error', 'Login ID must be at least 3 characters.')
@@ -395,6 +404,7 @@ export const PortalCredentialsCard: React.FC = () => {
                 </label>
                 <div className="relative">
                   <input
+                    name="authPassword"
                     type={showAuthPassword ? 'text' : 'password'}
                     autoFocus
                     required
@@ -473,6 +483,7 @@ export const PortalCredentialsCard: React.FC = () => {
                   Login ID (Min 3 characters)
                 </label>
                 <input
+                  name="editLoginId"
                   type="text"
                   required
                   value={editLoginId}
@@ -488,6 +499,7 @@ export const PortalCredentialsCard: React.FC = () => {
                 </label>
                 <div className="relative">
                   <input
+                    name="editNewPassword"
                     type={showEditNewPassword ? 'text' : 'password'}
                     required
                     value={editNewPassword}
@@ -511,6 +523,7 @@ export const PortalCredentialsCard: React.FC = () => {
                 </label>
                 <div className="relative">
                   <input
+                    name="editConfirmPassword"
                     type={showEditConfirmPassword ? 'text' : 'password'}
                     required
                     value={editConfirmPassword}

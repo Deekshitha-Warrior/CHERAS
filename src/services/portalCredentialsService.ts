@@ -25,10 +25,11 @@ export async function loginViaPortalRpc(
   password: string
 ): Promise<PortalRpcLoginResult> {
   const trimmedId = portalId.trim()
+  const trimmedPassword = password.trim()
   try {
     const { data, error } = await supabase.rpc('portal_login', {
       p_id: trimmedId,
-      p_password: password,
+      p_password: trimmedPassword,
     })
 
     if (error) {

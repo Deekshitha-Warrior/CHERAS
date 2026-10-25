@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Lock, Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react'
 import { useAdminAuthStore } from '../store/store'
@@ -19,15 +19,53 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const idInputRef = useRef<HTMLInputElement>(null)
+  const passInputRef = useRef<HTMLInputElement>(null)
+
   const from = (location.state as { from?: Location })?.from?.pathname || '/dashboard'
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Sync password manager autofill when browser populates fields without synthetic React events
+  useEffect(() => {
+    const syncAutofill = () => {
+      if (idInputRef.current?.value && idInputRef.current.value !== portalId) {
+        setPortalId(idInputRef.current.value)
+      }
+      if (passInputRef.current?.value && passInputRef.current.value !== password) {
+        setPassword(passInputRef.current.value)
+      }
+    }
+    const t1 = setTimeout(syncAutofill, 200)
+    const t2 = setTimeout(syncAutofill, 600)
+    const t3 = setTimeout(syncAutofill, 1200)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+      clearTimeout(t3)
+    }
+  }, [portalId, password])
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     // Pre-unlock iOS audio context synchronously on user submit gesture
     void alarmSound.unlock()
     setError('')
     setLoading(true)
-    const role = await login(portalId.trim(), password)
+
+    // Direct DOM fallback: guarantees reading password/ID even if password manager autofill didn't fire React onChange
+    const form = e.currentTarget
+    const domId = (form.elements.namedItem('portalId') as HTMLInputElement)?.value
+    const domPass = (form.elements.namedItem('password') as HTMLInputElement)?.value
+
+    const resolvedId = (domId ?? idInputRef.current?.value ?? portalId ?? '').trim()
+    const resolvedPass = (domPass ?? passInputRef.current?.value ?? password ?? '').trim()
+
+    if (!resolvedId || !resolvedPass) {
+      setLoading(false)
+      setError(l('Please enter both Portal ID and password.', 'நுழைவு ஐடி மற்றும் கடவுச்சொல் இரண்டையும் உள்ளிடவும்.'))
+      return
+    }
+
+    const role = await login(resolvedId, resolvedPass)
     setLoading(false)
     if (role === 'admin') {
       const destination = from === '/pos' ? '/dashboard' : from
@@ -105,6 +143,7 @@ export default function AdminLogin() {
                 <span className="font-black text-red-500">*</span>
               </label>
               <input
+                ref={idInputRef}
                 id="admin-portal-id"
                 name="portalId"
                 type="text"
@@ -126,6 +165,7 @@ export default function AdminLogin() {
               </label>
               <div className="relative">
                 <input
+                  ref={passInputRef}
                   id="admin-portal-password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}

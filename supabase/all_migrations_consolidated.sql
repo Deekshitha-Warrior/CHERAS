@@ -1,7 +1,7 @@
 -- ==========================================================================
 -- CHERAS CLOTHING POS - CONSOLIDATED SUPABASE DATABASE MIGRATIONS
--- Total Production Migrations: 35
--- Generated: 2026-10-22T15:54:20.369Z
+-- Total Production Migrations: 36
+-- Generated: 2026-10-25T12:31:15.364Z
 -- ==========================================================================
 
 -- Administrative helper function for service_role migration execution
@@ -15,7 +15,7 @@ GRANT EXECUTE ON FUNCTION public.exec_sql(text) TO service_role;
 
 
 -- ==========================================================================
--- MIGRATION 1 of 35: 20260716_0001_universal_look_schema.sql
+-- MIGRATION 1 of 36: 20260716_0001_universal_look_schema.sql
 -- ==========================================================================
 
 -- Universal Look billing schema.
@@ -573,7 +573,7 @@ END;
 $$;
 
 -- ==========================================================================
--- MIGRATION 2 of 35: 20260716_0002_universal_look_catalog.sql
+-- MIGRATION 2 of 36: 20260716_0002_universal_look_catalog.sql
 -- ==========================================================================
 
 -- Universal Look initial catalog. Existing matching products are preserved.
@@ -691,7 +691,7 @@ WHERE p.category_id = c.id
   AND LOWER(BTRIM(p.name)) = LOWER(BTRIM(catalog.product_name));
 
 -- ==========================================================================
--- MIGRATION 3 of 35: 20260716_0003_order_rpc_compatibility.sql
+-- MIGRATION 3 of 36: 20260716_0003_order_rpc_compatibility.sql
 -- ==========================================================================
 
 -- Align the live legacy billing schema with the current Universal Look RPC payload.
@@ -934,7 +934,7 @@ NOTIFY pgrst, 'reload schema';
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 4 of 35: 20260719_0004_advance_orders.sql
+-- MIGRATION 4 of 36: 20260719_0004_advance_orders.sql
 -- ==========================================================================
 
 begin;
@@ -1115,7 +1115,7 @@ notify pgrst, 'reload schema';
 commit;
 
 -- ==========================================================================
--- MIGRATION 5 of 35: 20260722_0005_eight_digit_invoice_numbers.sql
+-- MIGRATION 5 of 36: 20260722_0005_eight_digit_invoice_numbers.sql
 -- ==========================================================================
 
 -- Migration: 8-digit Invoice Number Generation
@@ -1134,7 +1134,7 @@ AS $$
 $$;
 
 -- ==========================================================================
--- MIGRATION 6 of 35: 20260724_0006_fix_complete_advance_order.sql
+-- MIGRATION 6 of 36: 20260724_0006_fix_complete_advance_order.sql
 -- ==========================================================================
 
 -- Migration: Fix complete_advance_order RPC
@@ -1270,7 +1270,7 @@ GRANT EXECUTE ON FUNCTION public.complete_advance_order(uuid, text, text)
 NOTIFY pgrst, 'reload schema';
 
 -- ==========================================================================
--- MIGRATION 7 of 35: 20260724_0008_fix_public_invoice_rpc.sql
+-- MIGRATION 7 of 36: 20260724_0008_fix_public_invoice_rpc.sql
 -- ==========================================================================
 
 -- Migration: Fix missing get_public_invoice_by_number RPC
@@ -1293,7 +1293,7 @@ GRANT EXECUTE ON FUNCTION public.get_public_invoice_by_number(TEXT) TO anon, aut
 NOTIFY pgrst, 'reload schema';
 
 -- ==========================================================================
--- MIGRATION 8 of 35: 20260724_0009_create_invoices_bucket.sql
+-- MIGRATION 8 of 36: 20260724_0009_create_invoices_bucket.sql
 -- ==========================================================================
 
 -- Migration: Create invoices storage bucket
@@ -1313,7 +1313,7 @@ DROP POLICY IF EXISTS invoices_portal_update ON storage.objects;
 CREATE POLICY invoices_portal_update ON storage.objects FOR UPDATE TO anon, authenticated USING (bucket_id = 'invoices') WITH CHECK (bucket_id = 'invoices');
 
 -- ==========================================================================
--- MIGRATION 9 of 35: 20260726_0007_update_complete_advance_order_discount.sql
+-- MIGRATION 9 of 36: 20260726_0007_update_complete_advance_order_discount.sql
 -- ==========================================================================
 
 -- Migration: Update complete_advance_order to handle final amount, discounts, and coupons
@@ -1461,7 +1461,7 @@ GRANT EXECUTE ON FUNCTION public.complete_advance_order_v2(uuid, text, numeric, 
 NOTIFY pgrst, 'reload schema';
 
 -- ==========================================================================
--- MIGRATION 10 of 35: 20260728_0010_final_audit_fixes.sql
+-- MIGRATION 10 of 36: 20260728_0010_final_audit_fixes.sql
 -- ==========================================================================
 
 -- ============================================================
@@ -1585,7 +1585,7 @@ CREATE POLICY "Users can update own profile"
 NOTIFY pgrst, 'reload schema';
 
 -- ==========================================================================
--- MIGRATION 11 of 35: 20260808_0011_billing_date_and_order_fields.sql
+-- MIGRATION 11 of 36: 20260808_0011_billing_date_and_order_fields.sql
 -- ==========================================================================
 
 -- ============================================================
@@ -1620,7 +1620,7 @@ NOTIFY pgrst, 'reload schema';
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 12 of 35: 20260901_0012_inventory_barcode_addon.sql
+-- MIGRATION 12 of 36: 20260901_0012_inventory_barcode_addon.sql
 -- ==========================================================================
 
 -- ====================================================================
@@ -2192,7 +2192,7 @@ WHERE id = 1;
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 13 of 35: 20260903_0013_expense_tracker_addon.sql
+-- MIGRATION 13 of 36: 20260903_0013_expense_tracker_addon.sql
 -- ==========================================================================
 
 -- ====================================================================
@@ -2293,7 +2293,7 @@ $$;
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 14 of 35: 20260904_0015_unregistered_category.sql
+-- MIGRATION 14 of 36: 20260904_0015_unregistered_category.sql
 -- ==========================================================================
 
 -- ============================================================================
@@ -2314,7 +2314,7 @@ BEGIN
 END $$;
 
 -- ==========================================================================
--- MIGRATION 15 of 35: 20260911_0016_set_universal_look_details.sql
+-- MIGRATION 15 of 36: 20260911_0016_set_universal_look_details.sql
 -- ==========================================================================
 
 -- Migration: 20260911_0016_set_universal_look_details.sql
@@ -2374,7 +2374,7 @@ CREATE POLICY branding_portal_update ON storage.objects
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 16 of 35: 20260912_0017_update_store_address.sql
+-- MIGRATION 16 of 36: 20260912_0017_update_store_address.sql
 -- ==========================================================================
 
 -- Migration: 20260912_0017_update_store_address.sql
@@ -2390,7 +2390,7 @@ WHERE id = 1;
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 17 of 35: 20260917_0001_fix_soft_delete_unique_constraints.sql
+-- MIGRATION 17 of 36: 20260917_0001_fix_soft_delete_unique_constraints.sql
 -- ==========================================================================
 
 -- Fix for products unique constraint
@@ -2406,7 +2406,7 @@ CREATE UNIQUE INDEX product_variants_product_name_unique
   WHERE is_active = true;
 
 -- ==========================================================================
--- MIGRATION 18 of 35: 20260918_0018_advance_order_self_heal.sql
+-- MIGRATION 18 of 36: 20260918_0018_advance_order_self_heal.sql
 -- ==========================================================================
 
 -- ============================================================
@@ -2621,7 +2621,7 @@ GRANT EXECUTE ON FUNCTION public.update_advance_order_status(uuid, text, text) T
 NOTIFY pgrst, 'reload schema';
 
 -- ==========================================================================
--- MIGRATION 19 of 35: 20260918_0019_robust_public_invoice_lookup.sql
+-- MIGRATION 19 of 36: 20260918_0019_robust_public_invoice_lookup.sql
 -- ==========================================================================
 
 -- Migration: 20260918_0019_robust_public_invoice_lookup.sql
@@ -2664,7 +2664,7 @@ GRANT EXECUTE ON FUNCTION public.get_public_invoice_by_number(TEXT) TO anon, aut
 NOTIFY pgrst, 'reload schema';
 
 -- ==========================================================================
--- MIGRATION 20 of 35: 20260921_0020_rebrand_to_universal_look.sql
+-- MIGRATION 20 of 36: 20260921_0020_rebrand_to_universal_look.sql
 -- ==========================================================================
 
 -- Migration: 20260921_0020_rebrand_to_universal_look.sql
@@ -2724,7 +2724,7 @@ CREATE POLICY branding_portal_update ON storage.objects
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 21 of 35: 20260921_0021_reassign_deleted_category_to_general.sql
+-- MIGRATION 21 of 36: 20260921_0021_reassign_deleted_category_to_general.sql
 -- ==========================================================================
 
 -- Migration: 20260921_0021_reassign_deleted_category_to_general.sql
@@ -2777,7 +2777,7 @@ WHERE category_id IS NULL
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 22 of 35: 20260923_0022_fix_orders_remarks_constraint.sql
+-- MIGRATION 22 of 36: 20260923_0022_fix_orders_remarks_constraint.sql
 -- ==========================================================================
 
 -- ==========================================================================
@@ -3045,7 +3045,7 @@ NOTIFY pgrst, 'reload schema';
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 23 of 35: 20260930_0023_split_payments.sql
+-- MIGRATION 23 of 36: 20260930_0023_split_payments.sql
 -- ==========================================================================
 
 -- ============================================================
@@ -3316,7 +3316,7 @@ NOTIFY pgrst, 'reload schema';
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 24 of 35: 20261001_0024_advance_order_reference_number.sql
+-- MIGRATION 24 of 36: 20261001_0024_advance_order_reference_number.sql
 -- ==========================================================================
 
 BEGIN;
@@ -3329,7 +3329,7 @@ NOTIFY pgrst, 'reload schema';
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 25 of 35: 20261004_0025_rebrand_to_madhura_tex.sql
+-- MIGRATION 25 of 36: 20261004_0025_rebrand_to_madhura_tex.sql
 -- ==========================================================================
 
 -- Migration: 20261004_0025_rebrand_to_madhura_tex.sql
@@ -3389,7 +3389,7 @@ CREATE POLICY branding_portal_update ON storage.objects
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 26 of 35: 20261004_0026_grant_table_permissions.sql
+-- MIGRATION 26 of 36: 20261004_0026_grant_table_permissions.sql
 -- ==========================================================================
 
 -- ==============================================================================
@@ -3416,7 +3416,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authen
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
 
 -- ==========================================================================
--- MIGRATION 27 of 35: 20261006_0027_advance_order_inventory_stock.sql
+-- MIGRATION 27 of 36: 20261006_0027_advance_order_inventory_stock.sql
 -- ==========================================================================
 
 -- ==============================================================================
@@ -3438,7 +3438,7 @@ CREATE INDEX IF NOT EXISTS idx_inv_movements_ref
 COMMENT ON TABLE public.advance_orders IS 'Stores customer advance bookings and deposits with inventory stock reserved at booking.';
 
 -- ==========================================================================
--- MIGRATION 28 of 35: 20261015_0028_customer_birthdays_and_offers.sql
+-- MIGRATION 28 of 36: 20261015_0028_customer_birthdays_and_offers.sql
 -- ==========================================================================
 
 -- Migration: 20261015_0028_customer_birthdays_and_offers.sql
@@ -3540,7 +3540,7 @@ CREATE POLICY "Admins and staff can manage birthday offers"
   WITH CHECK (true);
 
 -- ==========================================================================
--- MIGRATION 29 of 35: 20261016_0030_advance_order_financial_breakdown.sql
+-- MIGRATION 29 of 36: 20261016_0030_advance_order_financial_breakdown.sql
 -- ==========================================================================
 
 -- Migration: 20261016_0030_advance_order_financial_breakdown.sql
@@ -3562,7 +3562,7 @@ ALTER TABLE public.advance_orders
 GRANT ALL ON TABLE public.advance_orders TO anon, authenticated, service_role;
 
 -- ==========================================================================
--- MIGRATION 30 of 35: 20261017_0031_sync_advance_order_breakdown_on_completion.sql
+-- MIGRATION 30 of 36: 20261017_0031_sync_advance_order_breakdown_on_completion.sql
 -- ==========================================================================
 
 -- Migration: 20261017_0031_sync_advance_order_breakdown_on_completion.sql
@@ -3775,7 +3775,7 @@ GRANT EXECUTE ON FUNCTION public.complete_advance_order_v2(uuid, text, numeric, 
 NOTIFY pgrst, 'reload schema';
 
 -- ==========================================================================
--- MIGRATION 31 of 35: 20261017_0032_universal_customer_birthdays_access.sql
+-- MIGRATION 31 of 36: 20261017_0032_universal_customer_birthdays_access.sql
 -- ==========================================================================
 
 -- Migration: 20261017_0032_universal_customer_birthdays_access.sql
@@ -3808,7 +3808,7 @@ CREATE POLICY "Allow all for birthday offers"
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.birthday_offers TO public, anon, authenticated;
 
 -- ==========================================================================
--- MIGRATION 32 of 35: 20261019_0033_settings_and_theme_customization.sql
+-- MIGRATION 32 of 36: 20261019_0033_settings_and_theme_customization.sql
 -- ==========================================================================
 
 -- Migration: 20261019_0033_settings_and_theme_customization.sql
@@ -3900,7 +3900,7 @@ CREATE POLICY store_settings_portal_manage ON public.store_settings
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 33 of 35: 20261019_0034_portal_logins_and_passwords.sql
+-- MIGRATION 33 of 36: 20261019_0034_portal_logins_and_passwords.sql
 -- ==========================================================================
 
 -- ============================================================================
@@ -3961,50 +3961,61 @@ DECLARE
   v_locked_until timestamptz;
   v_failed int;
   v_authenticated boolean := false;
+  v_clean_id text;
+  v_clean_pass text;
 BEGIN
-  -- Check if login_id is currently locked out
-  SELECT locked_until, failed_count INTO v_locked_until, v_failed 
-  FROM public.portal_login_attempts 
-  WHERE login_id = p_id;
+  v_clean_id := LOWER(TRIM(COALESCE(p_id, '')));
+  v_clean_pass := TRIM(COALESCE(p_password, ''));
 
-  IF v_locked_until IS NOT NULL AND v_locked_until > now() THEN
+  IF v_clean_id = '' OR v_clean_pass = '' THEN
     RETURN NULL;
   END IF;
 
-  -- Fetch user record
+  -- Fetch user record matching login_id (case-insensitive) OR fallback to role if p_id is 'admin' or 'staff'
   SELECT role, password, password_hash INTO v_role, v_db_password, v_db_hash
   FROM public.portal_logins
-  WHERE login_id = p_id;
+  WHERE LOWER(TRIM(login_id)) = v_clean_id
+     OR LOWER(role) = v_clean_id
+  ORDER BY (CASE WHEN LOWER(TRIM(login_id)) = v_clean_id THEN 0 ELSE 1 END)
+  LIMIT 1;
 
-  IF v_role IS NOT NULL THEN
-    -- Match against direct password or bcrypt password_hash
-    IF v_db_password IS NOT NULL AND v_db_password = p_password THEN
-      v_authenticated := true;
-    ELSIF v_db_hash IS NOT NULL AND v_db_hash = extensions.crypt(p_password, v_db_hash) THEN
-      v_authenticated := true;
-      -- Auto-sync password column if it was empty
-      IF v_db_password IS NULL OR v_db_password = '' THEN
-        UPDATE public.portal_logins SET password = p_password WHERE role = v_role;
-      END IF;
+  IF v_role IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  -- Verify password against stored password or bcrypt hash
+  IF (v_db_password IS NOT NULL AND (v_db_password = p_password OR TRIM(v_db_password) = v_clean_pass))
+     OR (v_db_hash IS NOT NULL AND (v_db_hash = extensions.crypt(p_password, v_db_hash) OR v_db_hash = extensions.crypt(v_clean_pass, v_db_hash))) THEN
+    v_authenticated := true;
+
+    -- Auto-sync password column if it was empty
+    IF v_db_password IS NULL OR v_db_password = '' THEN
+      UPDATE public.portal_logins SET password = v_clean_pass WHERE role = v_role;
     END IF;
   END IF;
 
+  -- If authenticated: clear any failed attempts and return authenticated role
   IF v_authenticated THEN
-    -- Reset brute force counter on successful authentication
-    DELETE FROM public.portal_login_attempts WHERE login_id = p_id;
+    DELETE FROM public.portal_login_attempts 
+    WHERE LOWER(TRIM(login_id)) = v_clean_id OR LOWER(TRIM(login_id)) = LOWER(v_role);
     RETURN v_role;
-  ELSE
-    -- Increment failed attempt and lock for 15 minutes after 5 consecutive failures
-    INSERT INTO public.portal_login_attempts (login_id, failed_count, locked_until)
-    VALUES (p_id, 1, NULL)
-    ON CONFLICT (login_id) DO UPDATE SET
-      failed_count = public.portal_login_attempts.failed_count + 1,
-      locked_until = CASE 
-        WHEN public.portal_login_attempts.failed_count + 1 >= 5 THEN now() + interval '15 minutes'
-        ELSE NULL
-      END;
-    RETURN NULL;
   END IF;
+
+  -- If NOT authenticated: check lockout status and record failure
+  SELECT locked_until, failed_count INTO v_locked_until, v_failed 
+  FROM public.portal_login_attempts 
+  WHERE LOWER(TRIM(login_id)) = v_clean_id;
+
+  INSERT INTO public.portal_login_attempts (login_id, failed_count, locked_until)
+  VALUES (v_clean_id, 1, NULL)
+  ON CONFLICT (login_id) DO UPDATE SET
+    failed_count = public.portal_login_attempts.failed_count + 1,
+    locked_until = CASE 
+      WHEN public.portal_login_attempts.failed_count + 1 >= 5 THEN now() + interval '15 minutes'
+      ELSE NULL
+    END;
+
+  RETURN NULL;
 END;
 $$;
 
@@ -4018,15 +4029,18 @@ AS $$
 DECLARE
   v_role text;
   v_result jsonb;
+  v_clean_pass text;
 BEGIN
-  -- Authenticate admin
+  v_clean_pass := TRIM(COALESCE(p_admin_password, ''));
+
+  -- Authenticate admin: match either via portal_login or direct password/hash check for admin role
   SELECT public.portal_login(p_admin_id, p_admin_password) INTO v_role;
   IF v_role <> 'admin' THEN
     IF EXISTS (
       SELECT 1 FROM public.portal_logins 
       WHERE role = 'admin' AND (
-        (password IS NOT NULL AND password = p_admin_password) OR
-        (password_hash IS NOT NULL AND password_hash = extensions.crypt(p_admin_password, password_hash))
+        (password IS NOT NULL AND (password = p_admin_password OR TRIM(password) = v_clean_pass)) OR
+        (password_hash IS NOT NULL AND (password_hash = extensions.crypt(p_admin_password, password_hash) OR password_hash = extensions.crypt(v_clean_pass, password_hash)))
       )
     ) THEN
       v_role := 'admin';
@@ -4065,15 +4079,22 @@ SET search_path = public, extensions
 AS $$
 DECLARE
   v_role text;
+  v_clean_pass text;
+  v_new_id text;
+  v_new_pass text;
 BEGIN
+  v_clean_pass := TRIM(COALESCE(p_admin_password, ''));
+  v_new_id := TRIM(COALESCE(p_new_login_id, ''));
+  v_new_pass := TRIM(COALESCE(p_new_password, ''));
+
   -- Authenticate admin
   SELECT public.portal_login(p_admin_id, p_admin_password) INTO v_role;
   IF v_role <> 'admin' THEN
     IF EXISTS (
       SELECT 1 FROM public.portal_logins 
       WHERE role = 'admin' AND (
-        (password IS NOT NULL AND password = p_admin_password) OR
-        (password_hash IS NOT NULL AND password_hash = extensions.crypt(p_admin_password, password_hash))
+        (password IS NOT NULL AND (password = p_admin_password OR TRIM(password) = v_clean_pass)) OR
+        (password_hash IS NOT NULL AND (password_hash = extensions.crypt(p_admin_password, password_hash) OR password_hash = extensions.crypt(v_clean_pass, password_hash)))
       )
     ) THEN
       v_role := 'admin';
@@ -4083,17 +4104,22 @@ BEGIN
   END IF;
 
   -- Validation: minimum length
-  IF length(trim(p_new_login_id)) < 3 OR length(trim(p_new_password)) < 6 THEN
+  IF length(v_new_id) < 3 OR length(v_new_pass) < 6 THEN
     RETURN false;
   END IF;
 
   -- Update record with both password and bcrypt hash
   UPDATE public.portal_logins
-  SET login_id = trim(p_new_login_id),
-      password = trim(p_new_password),
-      password_hash = extensions.crypt(trim(p_new_password), extensions.gen_salt('bf')),
+  SET login_id = v_new_id,
+      password = v_new_pass,
+      password_hash = extensions.crypt(v_new_pass, extensions.gen_salt('bf')),
       updated_at = now()
   WHERE role = p_target_role;
+
+  -- Clear any lockout or failed attempts for both old and new login_id
+  DELETE FROM public.portal_login_attempts 
+  WHERE LOWER(TRIM(login_id)) = LOWER(v_new_id) 
+     OR LOWER(TRIM(login_id)) = LOWER(p_target_role);
 
   RETURN true;
 END;
@@ -4116,7 +4142,7 @@ DROP TABLE IF EXISTS public.portal_logins;
 */
 
 -- ==========================================================================
--- MIGRATION 34 of 35: 20261022_0035_rebrand_to_cheras_clothing.sql
+-- MIGRATION 34 of 36: 20261022_0035_rebrand_to_cheras_clothing.sql
 -- ==========================================================================
 
 -- Migration: 20261022_0035_rebrand_to_cheras_clothing.sql
@@ -4174,7 +4200,7 @@ ON CONFLICT (id) DO UPDATE SET
 COMMIT;
 
 -- ==========================================================================
--- MIGRATION 35 of 35: 20261022_0036_update_barcode_prefix_to_cc.sql
+-- MIGRATION 35 of 36: 20261022_0036_update_barcode_prefix_to_cc.sql
 -- ==========================================================================
 
 -- ============================================================================
@@ -4203,13 +4229,124 @@ GRANT EXECUTE ON FUNCTION public.generate_barcode_value(TEXT) TO anon, authentic
 -- Notify PostgREST to reload schema cache
 NOTIFY pgrst, 'reload schema';
 
+-- ==========================================================================
+-- MIGRATION 36 of 36: 20261023_0037_inventory_cost_price_and_low_stock_sync.sql
+-- ==========================================================================
+
+-- ==============================================================================
+-- Migration: 20261023_0037_inventory_cost_price_and_low_stock_sync.sql
+-- Description:
+--   1. Ensures cost_price column exists on products and product_variants
+--   2. Ensures purchase_price is nullable on products and product_variants
+--   3. Ensures low_stock_alert column exists with default 5
+--   4. Backfills existing cost_price <-> purchase_price bidirectionally
+--   5. Creates robust bidirectional sync triggers so any update to cost_price or
+--      purchase_price automatically synchronizes the counterpart column
+--   6. Grants table permissions
+-- ==============================================================================
+
+-- 1. Ensure cost_price column exists on products and product_variants
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS cost_price NUMERIC(12,2);
+ALTER TABLE public.product_variants ADD COLUMN IF NOT EXISTS cost_price NUMERIC(12,2);
+
+-- 2. Drop NOT NULL on purchase_price so cost is optional (NULL allowed)
+ALTER TABLE public.products ALTER COLUMN purchase_price DROP NOT NULL;
+ALTER TABLE public.products ALTER COLUMN purchase_price SET DEFAULT NULL;
+
+ALTER TABLE public.product_variants ALTER COLUMN purchase_price DROP NOT NULL;
+ALTER TABLE public.product_variants ALTER COLUMN purchase_price SET DEFAULT NULL;
+
+-- 3. Ensure low_stock_alert exists on products with default 5
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS low_stock_alert NUMERIC(12,3) NOT NULL DEFAULT 5;
+
+-- 4. Backfill existing records bidirectionally
+UPDATE public.products
+SET cost_price = purchase_price
+WHERE cost_price IS NULL AND purchase_price IS NOT NULL;
+
+UPDATE public.products
+SET purchase_price = cost_price
+WHERE purchase_price IS NULL AND cost_price IS NOT NULL;
+
+UPDATE public.product_variants
+SET cost_price = purchase_price
+WHERE cost_price IS NULL AND purchase_price IS NOT NULL;
+
+UPDATE public.product_variants
+SET purchase_price = cost_price
+WHERE purchase_price IS NULL AND cost_price IS NOT NULL;
+
+-- 5. Bidirectional trigger for products (keeps purchase_price and cost_price in sync)
+CREATE OR REPLACE FUNCTION public.sync_product_cost_price()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.cost_price IS NOT NULL AND NEW.purchase_price IS NULL THEN
+      NEW.purchase_price := NEW.cost_price;
+    ELSIF NEW.purchase_price IS NOT NULL AND NEW.cost_price IS NULL THEN
+      NEW.cost_price := NEW.purchase_price;
+    END IF;
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF NEW.cost_price IS DISTINCT FROM OLD.cost_price AND NEW.purchase_price IS NOT DISTINCT FROM OLD.purchase_price THEN
+      NEW.purchase_price := NEW.cost_price;
+    ELSIF NEW.purchase_price IS DISTINCT FROM OLD.purchase_price AND NEW.cost_price IS NOT DISTINCT FROM OLD.cost_price THEN
+      NEW.cost_price := NEW.purchase_price;
+    ELSIF NEW.cost_price IS NOT NULL AND NEW.purchase_price IS NULL THEN
+      NEW.purchase_price := NEW.cost_price;
+    ELSIF NEW.purchase_price IS NOT NULL AND NEW.cost_price IS NULL THEN
+      NEW.cost_price := NEW.purchase_price;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_product_cost_price ON public.products;
+CREATE TRIGGER trg_sync_product_cost_price
+BEFORE INSERT OR UPDATE ON public.products
+FOR EACH ROW EXECUTE FUNCTION public.sync_product_cost_price();
+
+-- 6. Bidirectional trigger for product_variants (keeps purchase_price and cost_price in sync)
+CREATE OR REPLACE FUNCTION public.sync_variant_cost_price()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.cost_price IS NOT NULL AND NEW.purchase_price IS NULL THEN
+      NEW.purchase_price := NEW.cost_price;
+    ELSIF NEW.purchase_price IS NOT NULL AND NEW.cost_price IS NULL THEN
+      NEW.cost_price := NEW.purchase_price;
+    END IF;
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF NEW.cost_price IS DISTINCT FROM OLD.cost_price AND NEW.purchase_price IS NOT DISTINCT FROM OLD.purchase_price THEN
+      NEW.purchase_price := NEW.cost_price;
+    ELSIF NEW.purchase_price IS DISTINCT FROM OLD.purchase_price AND NEW.cost_price IS NOT DISTINCT FROM OLD.cost_price THEN
+      NEW.cost_price := NEW.purchase_price;
+    ELSIF NEW.cost_price IS NOT NULL AND NEW.purchase_price IS NULL THEN
+      NEW.purchase_price := NEW.cost_price;
+    ELSIF NEW.purchase_price IS NOT NULL AND NEW.cost_price IS NULL THEN
+      NEW.cost_price := NEW.purchase_price;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_variant_cost_price ON public.product_variants;
+CREATE TRIGGER trg_sync_variant_cost_price
+BEFORE INSERT OR UPDATE ON public.product_variants
+FOR EACH ROW EXECUTE FUNCTION public.sync_variant_cost_price();
+
+-- 7. Grant access permissions
+GRANT SELECT, INSERT, UPDATE ON public.products TO authenticated, anon, service_role;
+GRANT SELECT, INSERT, UPDATE ON public.product_variants TO authenticated, anon, service_role;
+
 
 -- ==========================================================================
 -- ==========================================================================
 -- SECTION: PROPOSED / STAGING MIGRATIONS (supabase/proposed_migrations)
 -- ==========================================================================
 -- ⚠️ IMPORTANT NOTICE FOR SUPABASE SQL EDITOR USERS:
--- Migrations 1 through 35 above are the active production migrations
+-- Migrations 1 through 36 above are the active production migrations
 -- required for Cheras Clothing POS (Catalog, Orders, Inventory, Barcodes, Advances,
 -- Expenses, Split Payments, and Customer Birthdays & Offers).
 --

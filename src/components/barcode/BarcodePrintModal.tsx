@@ -378,9 +378,9 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
 }
 
   return createPortal(
-    <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 w-screen h-screen h-[100dvh] z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-sm p-0 sm:p-4 overflow-hidden animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 backdrop-blur-sm p-0 sm:p-4 overflow-hidden animate-in fade-in duration-150">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative z-10 bg-white rounded-none sm:rounded-3xl max-w-2xl sm:max-w-3xl w-full h-screen h-[100dvh] sm:h-auto sm:max-h-[92vh] border-0 sm:border border-[#F3F4F6] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
+      <div className="relative z-10 bg-white rounded-none sm:rounded-3xl max-w-2xl sm:max-w-3xl w-full h-full max-h-[100dvh] sm:h-auto sm:max-h-[90vh] border-0 sm:border border-[#F3F4F6] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
         {/* Header */}
         <div
           style={{ backgroundColor: themeColor, color: textColor }}
@@ -411,7 +411,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
         </div>
 
         {/* Body - Scrollable */}
-        <div className="p-4 pb-28 sm:p-6 space-y-4 sm:space-y-4 overflow-y-auto flex-1 min-h-0">
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Barcode Info Card */}
           <div className="bg-[#FBFAF6] border border-[#F3F4F6] rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
@@ -641,7 +641,7 @@ export const BarcodePrintModal: React.FC<BarcodePrintModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 bg-[#FBFAF6] px-4 py-3 sm:px-6 sm:py-3.5 border-t border-[#F3F4F6] flex items-center justify-between pb-[calc(env(safe-area-inset-bottom)+0.75rem)] gap-2 sm:static sm:z-auto sm:shrink-0">
+        <div className="bg-[#FBFAF6] px-4 py-3 sm:px-6 sm:py-3.5 border-t border-[#F3F4F6] flex items-center justify-between gap-2 shrink-0 pb-[max(0.75rem,calc(env(safe-area-inset-bottom)+0.5rem))]">
           <button
             type="button"
             onClick={onClose}
